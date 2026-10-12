@@ -18,7 +18,21 @@ The **Quotes** page is where you create estimates, send them to clients for sign
 - **Create invoice** (plus icon) — appears once a quote is **Signed**, turning it into an invoice
 - **Request deposit** / **Generate installment invoices** — once **Sent**, raise a deposit or a milestone-split invoice directly from the quote, without waiting for it to be signed first
 
-There is no delete action on a quote — a client can also **Decline** it from their own [Client Portal](../client-portal.md), which is instant and reversible on your side.
+- **Delete** - available only on a **Draft** quote, after a confirmation; see [Deleting a draft](#deleting-a-draft)
+
+A client can also **Decline** a sent quote from their own [Client Portal](../client-portal.md), which is instant and reversible on your side.
+
+## Deleting a draft
+
+Choose **Delete** in a draft quote's row menu or on its own page, then confirm: the draft is removed
+permanently. The delete is refused while an invoice created from that draft still exists (delete the
+invoice first), or while a recurrence uses it as its template.
+
+:::info[Why a sent quote cannot be deleted]
+Sending a quote gives it a number, and a numbered quote is never deleted, even if you edit it back
+into a draft afterwards: **Delete** is not offered, and the server refuses it even when asked directly
+through the API. A client can still decline it, and you can simply leave it unsigned.
+:::
 
 ## Creating a quote
 
@@ -29,7 +43,7 @@ Click **Add New** and fill in:
 - **Date** (required) and **Due date** (optional). If you set quote [payment terms](../settings/payment-terms.md), the due date is filled in as soon as you pick the date; you can still change it
 - **Currency** (required)
 - **Client reference / PO number** (optional) — the buyer's own reference, shown only once you fill it in
-- **Line items** — each has a Designation, Quantity, Unit price, and VAT rate, plus a per-line **Discount %**; drag to reorder, or add a line straight from your [article catalog](../articles.md)
+- **Line items**: the same fields as an invoice line, Designation, Quantity, [Unit](invoices.md#creating-an-invoice), Unit price, VAT rate (optional on a quote), a per-line **Discount %** and a work date; drag to reorder, or add a line straight from your [article catalog](../articles.md). The quote PDF shows the Unit column like the invoice PDF
 - **Notes** (optional)
 
 There is no per-document "Payment Method" field on a quote.

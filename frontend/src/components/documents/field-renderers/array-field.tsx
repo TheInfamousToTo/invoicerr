@@ -1,14 +1,18 @@
+import { useId } from "react"
 import { Plus, Trash2 } from "lucide-react"
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form"
 import { useTranslation } from "react-i18next"
 
 import { DocumentField } from "@/components/documents/document-field"
-import { useDocumentFormReadOnly } from "@/components/documents/document-form-readonly"
+import {
+  DocumentFormReadOnlyProvider,
+  useDocumentFormReadOnly,
+} from "@/components/documents/document-form-readonly"
 import { formatTotal } from "@/components/documents/document-totals"
 import { toMinor } from "@/components/documents/totals-calculator"
 import type { DocumentFieldDescriptor } from "@/components/documents/types"
 import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
+import { FieldLabel, fieldHelpId, fieldLockId } from "@/components/ui/field-help"
 import { fetchPrefillFields } from "@/hooks/queries"
 
 import { type TextFieldCatalog, TextField } from "./primitive-fields"
@@ -207,11 +211,8 @@ function LineRowCard({
  * The one recursive core kind: a row is just another `data` object rendered against `field.fields`
  * — the same DocumentField every top-level field goes through, which is what makes "a table of
  * sub-fields" a structural feature of the core rather than a per-document-type special case.
- *
- * Uses plain <Label>, not <FormLabel>: the array as a whole isn't bound to one react-hook-form
- * Controller (each ROW's sub-fields are, individually), so there is no single field name for
- * <FormLabel>'s error-aware styling to attach to here.
  */
+// No single react-hook-form field backs the array, so the rows container names itself as a group.
 export function ArrayField({ field, name, documentTypeId }: FieldRendererProps) {
   const { t } = useTranslation()
   const {
@@ -221,7 +222,11 @@ export function ArrayField({ field, name, documentTypeId }: FieldRendererProps) 
   } = useFormContext()
   const { fields: rows, append, remove } = useFieldArray({ control, name })
   const rowFields = field.fields ?? []
-  const readOnly = useDocumentFormReadOnly()
+  const formReadOnly = useDocumentFormReadOnly()
+  const lockedBy = useWatch({ control, name: field.readOnlyWhen ?? "__readOnlyWhen_unset__" })
+  const lockedBySource = !!field.readOnlyWhen && !!lockedBy
+  const readOnly = formReadOnly || lockedBySource
+  const groupId = useId()
 
   const emptyRow = Object.fromEntries(rowFields.map((rowField) => [rowField.key, undefined]))
   const applyPrefill = (index: number, values: Record<string, unknown>) => {
@@ -236,43 +241,62 @@ export function ArrayField({ field, name, documentTypeId }: FieldRendererProps) 
       {/* Bumped past the plain field-label size — this is the one array field a document form
           reliably has (lines), and at 390px it reads as the form's own "section", not just another
           field, now that each row is its own card rather than a dense inline grid. */}
-      <Label className="text-base font-semibold">
+      <FieldLabel
+        className="text-base font-semibold"
+        required={field.required}
+        id={`${groupId}-label`}
+        description={field.helpText}
+        descriptionId={fieldHelpId(groupId)}
+        helpDataCy={`document-field-${field.key}-help`}
+        lockReason={lockedBySource ? t("documents.form.array.readOnlyFromSource") : undefined}
+        lockReasonId={fieldLockId(groupId)}
+        lockDataCy={`document-field-${field.key}-lock`}
+      >
         {field.label}
-        {field.required && <span className="text-destructive">*</span>}
-      </Label>
-      {field.helpText && <p className="text-sm text-muted-foreground">{field.helpText}</p>}
+      </FieldLabel>
 
-      <div className="space-y-4 sm:space-y-3">
-        {rows.map((row, index) => (
-          <LineRowCard
-            key={row.id}
-            arrayFieldKey={field.key}
-            name={name}
-            index={index}
-            rowFields={rowFields}
-            documentTypeId={documentTypeId}
-            onRemove={() => remove(index)}
-            removeLabel={t("documents.form.array.removeRow")}
-            readOnly={readOnly}
-            designationCatalog={
-              field.prefillFrom
-                ? {
-                    entity: field.prefillFrom.entity,
-                    onSelect: async (id) => {
-                      const values = await resolvePrefillValues(
-                        field.prefillFrom!.entity,
-                        id,
-                        field.prefillFrom!.map,
-                        rowFields,
-                      )
-                      if (values) applyPrefill(index, values)
-                    },
-                  }
-                : undefined
-            }
-          />
-        ))}
-      </div>
+      <DocumentFormReadOnlyProvider value={readOnly}>
+        <div
+          role="group"
+          aria-labelledby={`${groupId}-label`}
+          aria-describedby={
+            [field.helpText && fieldHelpId(groupId), lockedBySource && fieldLockId(groupId)]
+              .filter(Boolean)
+              .join(" ") || undefined
+          }
+          className="space-y-4 sm:space-y-3"
+        >
+          {rows.map((row, index) => (
+            <LineRowCard
+              key={row.id}
+              arrayFieldKey={field.key}
+              name={name}
+              index={index}
+              rowFields={rowFields}
+              documentTypeId={documentTypeId}
+              onRemove={() => remove(index)}
+              removeLabel={t("documents.form.array.removeRow")}
+              readOnly={readOnly}
+              designationCatalog={
+                field.prefillFrom
+                  ? {
+                      entity: field.prefillFrom.entity,
+                      onSelect: async (id) => {
+                        const values = await resolvePrefillValues(
+                          field.prefillFrom!.entity,
+                          id,
+                          field.prefillFrom!.map,
+                          rowFields,
+                        )
+                        if (values) applyPrefill(index, values)
+                      },
+                    }
+                  : undefined
+              }
+            />
+          ))}
+        </div>
+      </DocumentFormReadOnlyProvider>
 
       <Button
         type="button"

@@ -8,8 +8,8 @@ The **Credit notes** page is where you correct an invoice you already sent, or i
 
 ## Two kinds of credit note
 
-- **Linked** - corrects a specific invoice. Set **Invoice**, then pick the **Corrected lines**: the rows on that invoice this credit note credits. Amount, currency and the rendered PDF all come from the invoice's own selected rows, priced with the invoice's own per-line discount, so you never re-type figures. When you start from an invoice's **Issue credit note** button, every line arrives already checked; uncheck the ones you do not want to credit for a partial credit note.
-- **Free** - no invoice to correct (an overpayment refund, a commercial gesture). Leave **Invoice** empty and fill in your own **Lines** instead, plus a **Reason** explaining the deduction.
+- **Linked** - corrects a specific invoice. Set **Invoice**, then pick the **Corrected lines**: the rows on that invoice this credit note credits. Amount, currency and the rendered PDF all come from the invoice's own selected rows, priced with the invoice's own per-line discount, so you never re-type figures. Every line of the invoice is checked as soon as the invoice is set, whether you start from the invoice's **Issue credit note** button or pick the invoice in a new credit note; picking another invoice checks all of its lines instead. Uncheck the ones you do not want to credit for a partial credit note.
+- **Free** - no invoice to correct (an overpayment refund, a commercial gesture). Leave **Invoice** empty and fill in your own **Lines** instead, plus a **Reason** explaining the deduction. These lines have the same fields as an invoice line, Unit included.
 
 A linked credit note's **Currency** always matches the invoice it corrects and isn't editable independently. A free credit note has no client of its own (the type carries no client field), so it is archived but not delivered to anyone; deliver it yourself if the client needs a copy.
 
@@ -24,6 +24,20 @@ A linked credit note's **Currency** always matches the invoice it corrects and i
 - **View** (eye icon) - read-only details
 - **Download** - PDF, and once numbered, the same normalized XML formats as an [invoice](invoices.md#download-formats). An **Imported** credit note also offers **Download original** - see [Migrating from another tool](migrating-from-another-tool.md#downloading-the-original)
 - **Send** - issue the credit note: it is delivered on the invoice's own channel (email or e-invoicing) and archived. There is no separate "edit after issued" action; a mistake here is fixed with a further credit note
+- **Delete** - available only on a **Draft**, after a confirmation; see [Deleting a draft](#deleting-a-draft)
+
+## Deleting a draft
+
+A draft credit note has no number yet. Choose **Delete** in its row menu or on its own page, then
+confirm: the draft is removed permanently, and the invoice it pointed to is left untouched. Deleting the
+credit note is also how you free a draft invoice that it was correcting, so that invoice can be
+deleted in turn.
+
+:::info[Why an issued credit note cannot be deleted]
+Sending a credit note gives it a number from your continuous sequence. From then on it can no longer be
+deleted, through the screen or the API; a mistake is corrected by a new document, never by removing
+this one.
+:::
 
 ## Delivery
 

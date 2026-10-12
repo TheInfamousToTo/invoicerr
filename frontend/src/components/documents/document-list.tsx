@@ -29,6 +29,7 @@ import {
   canCreateDocument,
   createBlockedReasons,
   extraActionGates,
+  isOfferedOnRecord,
   pickPrimaryAction,
   secondaryActions,
   transitionHint,
@@ -36,6 +37,7 @@ import {
 import { ConfirmationDialog } from "@/components/confirmation-dialog"
 import { CreateRecurrenceDialog } from "@/components/documents/create-recurrence-dialog"
 import { getDocumentCustomComponents } from "@/components/documents/custom-slots"
+import { DocumentDeleteConfirmDialog } from "@/components/documents/document-delete-confirm-dialog"
 import {
   DOCUMENT_XML_SYNTAXES,
   downloadDocumentOriginal,
@@ -266,12 +268,15 @@ function DocumentRowActions({ descriptor, instance, onActionSuccess, children }:
     pendingAction,
     pendingDefaults,
     pendingLockConfirm,
+    pendingDeleteConfirm,
     isRunning,
     handleAction,
     executeAction,
     confirmPendingLock,
+    confirmPendingDelete,
     cancelPendingAction,
     cancelPendingLockConfirm,
+    cancelPendingDeleteConfirm,
   } = useDocumentActionRunner({
     typeId: descriptor.id,
     documentId: instance.id,
@@ -317,6 +322,7 @@ function DocumentRowActions({ descriptor, instance, onActionSuccess, children }:
           // "not an electronic signature" warning), which the row cluster does not offer. Marking a
           // quote accepted is a detail-page action, not a one-click row action.
           action.id !== "accept-manually" &&
+          isOfferedOnRecord(action, instance.displayNumber) &&
           isActionAvailable(action, instance.status),
       )
   const primary = pickPrimaryAction(availableActions, instance.status, false)
@@ -519,6 +525,15 @@ function DocumentRowActions({ descriptor, instance, onActionSuccess, children }:
         />
       )}
 
+      {pendingDeleteConfirm && (
+        <DocumentDeleteConfirmDialog
+          onCancel={cancelPendingDeleteConfirm}
+          onConfirm={confirmPendingDelete}
+          loading={isRunning}
+          dataCy={`document-row-delete-confirm-${instance.id}`}
+        />
+      )}
+
       {gates.recurrence && recurrenceDialogOpen && (
         <CreateRecurrenceDialog
           typeId={descriptor.id}
@@ -640,6 +655,14 @@ function DocumentListRow({ descriptor, instance, amount, onOpen, onActionSuccess
               data-cy={amount ? `document-row-amount-${instance.id}` : undefined}
             >
               {amount && <LtrValue>{formatTotal(amount.minor, amount.currency)}</LtrValue>}
+              {amount && !amount.fieldKey && (
+                <span
+                  className="block text-xs font-normal text-muted-foreground"
+                  data-cy={`document-row-amount-basis-${instance.id}`}
+                >
+                  {t("documents.list.amountInclVat")}
+                </span>
+              )}
             </div>
             <div
               className={cn("order-4 flex justify-end sm:order-3", !primary && "hidden sm:flex")}

@@ -87,9 +87,10 @@ jobs:
           platforms: linux/amd64
           # Same stamping as docker-pr.yml and docker-publish.yml -- this is the image most likely
           # to end up running somewhere real, so it needs the revision at least as much as either.
+          # GIT_REF_NAME is the image tag, not the branch, so /api/health names the exact dev build.
           build-args: |
             GIT_REVISION=${{ github.sha }}
-            GIT_REF_NAME=${{ github.ref_name }}
+            GIT_REF_NAME=${{ steps.vars.outputs.tag }}
           tags: ${{ steps.vars.outputs.image }}:${{ steps.vars.outputs.tag }}
           push: true
           cache-from: type=gha,scope=dev-linux-amd64
@@ -121,7 +122,7 @@ jobs:
           exit-code: '0'
 
       - name: Upload Trivy report to the Security tab
-        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4 (4.38.2)
+        uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4 (4.38.2)
         with:
           sarif_file: trivy-results.sarif
           category: trivy-dev

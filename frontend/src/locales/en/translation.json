@@ -289,7 +289,6 @@
           "setPrimary": "Set as primary",
           "primaryFromIdentity": "Comes from the identity step",
           "primaryLockedHint": "Only the person on the identity step can be the primary contact of an individual client.",
-          "primaryLockedTitle": "The primary contact of an individual client is the person on the identity step - edit the identity step to change it",
           "removeLockedTitle": "The primary contact of an individual client is the person on the identity step and cannot be removed here"
         }
       },
@@ -1533,6 +1532,10 @@
     "emptyTitle": "Nothing to show yet",
     "emptyDescription": "This will fill in once your company has some documents to report on.",
     "unsupportedKind": "Widget \"{{label}}\" has kind \"{{kind}}\", which no renderer is registered for.",
+    "basis": {
+      "inclVat": "incl. VAT",
+      "exclVat": "excl. VAT"
+    },
     "shortList": {
       "empty": "Nothing to show."
     },
@@ -3794,7 +3797,8 @@
       "suggestionsLabel": "Address suggestions"
     },
     "catalog-search": {
-      "suggestionsLabel": "Catalog suggestions"
+      "suggestionsLabel": "Catalog suggestions",
+      "noMatch": "No matching item in the catalog"
     },
     "document-language-select": {
       "automatic": "Automatic",
@@ -3828,6 +3832,14 @@
     }
   },
   "common": {
+    "fieldHelp": {
+      "trigger": "Show help",
+      "triggerFor": "Help for {{field}}"
+    },
+    "fieldLock": {
+      "trigger": "Why is this field locked?",
+      "triggerFor": "Why is {{field}} locked?"
+    },
     "loading": "Loading...",
     "finish": "Finish",
     "valueWithCurrency": "{{amount}} {{currency}}",
@@ -4418,7 +4430,8 @@
               "unit": {
                 "label": "Unit",
                 "suggestedValues": {
-                  "C62": "Piece",
+                  "H87": "Piece",
+                  "C62": "Unit",
                   "HUR": "Hour",
                   "DAY": "Day",
                   "WEE": "Week",
@@ -4563,6 +4576,25 @@
               "quantity": {
                 "label": "Quantity"
               },
+              "unit": {
+                "label": "Unit",
+                "suggestedValues": {
+                  "H87": "Piece",
+                  "C62": "Unit",
+                  "HUR": "Hour",
+                  "DAY": "Day",
+                  "WEE": "Week",
+                  "MON": "Month",
+                  "ANN": "Year",
+                  "KGM": "Kilogram",
+                  "GRM": "Gram",
+                  "LTR": "Litre",
+                  "MTR": "Metre",
+                  "KMT": "Kilometre",
+                  "SET": "Set",
+                  "BX": "Box"
+                }
+              },
               "unitPrice": {
                 "label": "Unit price"
               },
@@ -4683,11 +4715,36 @@
               "quantity": {
                 "label": "Quantity"
               },
+              "unit": {
+                "label": "Unit",
+                "suggestedValues": {
+                  "H87": "Piece",
+                  "C62": "Unit",
+                  "HUR": "Hour",
+                  "DAY": "Day",
+                  "WEE": "Week",
+                  "MON": "Month",
+                  "ANN": "Year",
+                  "KGM": "Kilogram",
+                  "GRM": "Gram",
+                  "LTR": "Litre",
+                  "MTR": "Metre",
+                  "KMT": "Kilometre",
+                  "SET": "Set",
+                  "BX": "Box"
+                }
+              },
               "unitPrice": {
                 "label": "Unit price"
               },
               "vatRate": {
                 "label": "VAT rate"
+              },
+              "discountPercent": {
+                "label": "Discount %"
+              },
+              "date": {
+                "label": "Work date"
               }
             }
           }
@@ -4836,11 +4893,36 @@
               "quantity": {
                 "label": "Quantity"
               },
+              "unit": {
+                "label": "Unit",
+                "suggestedValues": {
+                  "H87": "Piece",
+                  "C62": "Unit",
+                  "HUR": "Hour",
+                  "DAY": "Day",
+                  "WEE": "Week",
+                  "MON": "Month",
+                  "ANN": "Year",
+                  "KGM": "Kilogram",
+                  "GRM": "Gram",
+                  "LTR": "Litre",
+                  "MTR": "Metre",
+                  "KMT": "Kilometre",
+                  "SET": "Set",
+                  "BX": "Box"
+                }
+              },
               "unitPrice": {
                 "label": "Unit price (excl. VAT)"
               },
               "vatRate": {
                 "label": "VAT rate"
+              },
+              "discountPercent": {
+                "label": "Discount %"
+              },
+              "date": {
+                "label": "Work date"
               }
             }
           }
@@ -4981,10 +5063,11 @@
       },
       "array": {
         "addRow": "Add row",
-        "removeRow": "Remove row"
+        "removeRow": "Remove row",
+        "readOnlyFromSource": "These lines come from the supplier's e-invoice and cannot be edited."
       },
       "select": {
-        "lockedFromReference": "Follows the linked record — cannot be edited directly."
+        "lockedFromReference": "Follows the linked record and cannot be edited directly."
       },
       "rowSelection": {
         "selectSourceFirst": "Select the related document above first.",
@@ -5029,6 +5112,20 @@
         "transmits": "{{label}} will also send this document to {{channel}}. This cannot be undone.",
         "confirm": "Confirm",
         "cancel": "Cancel"
+      },
+      "deleteConfirmation": {
+        "title": "Delete this document?",
+        "description": "It will be removed permanently. This cannot be undone.",
+        "confirm": "Delete",
+        "cancel": "Cancel"
+      },
+      "deleteRefused": {
+        "hasDependents": "{{type}} {{number}} refers to this document. Delete it or remove the link first.",
+        "recurrenceTemplate": "A recurrence uses this document as its template. Delete the recurrence first.",
+        "numbered": "This document already has a number ({{number}}) and can no longer be deleted.",
+        "changed": "This document changed while it was being deleted. Reload it and try again.",
+        "linkGone": "A document this one links to was deleted in the meantime. Reload and try again.",
+        "unnumbered": "(draft)"
       },
       "messages": {
         "invalid": "Please fix the highlighted fields before continuing.",
@@ -5116,6 +5213,7 @@
       "downloadXmlError": "The normalized XML export could not be generated.",
       "shareLink": "Share link",
       "processing": "Processing…",
+      "amountInclVat": "incl. VAT",
       "lastActionError": "Last error: {{message}}",
       "rowMenu": "More actions",
       "sort": {

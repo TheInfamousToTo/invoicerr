@@ -4,16 +4,10 @@ import { useTranslation } from "react-i18next"
 
 import { BetterInput } from "@/components/better-input"
 import { CatalogSearchInput } from "@/components/catalog-search-input"
+import { ComboboxInput } from "@/components/combobox-input"
 import { DatePicker } from "@/components/date-picker"
 import { useDocumentFormReadOnly } from "@/components/documents/document-form-readonly"
-import {
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form"
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import SearchSelect from "@/components/search-input"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
@@ -25,18 +19,25 @@ import type { FieldRendererProps } from "./registry"
 function FieldChrome({
   field,
   children,
-  note,
+  lockReason,
   required,
-}: Pick<FieldRendererProps, "field"> & { children: React.ReactNode; note?: string; required?: boolean }) {
+}: Pick<FieldRendererProps, "field"> & {
+  children: React.ReactNode
+  lockReason?: string
+  required?: boolean
+}) {
   return (
     <FormItem data-cy={`document-field-${field.key}`}>
-      <FormLabel required={required ?? field.required}>{field.label}</FormLabel>
+      <FormLabel
+        required={required ?? field.required}
+        description={field.helpText}
+        helpDataCy={`document-field-${field.key}-help`}
+        lockReason={lockReason}
+        lockDataCy={`document-field-${field.key}-lock`}
+      >
+        {field.label}
+      </FormLabel>
       <FormControl>{children}</FormControl>
-      {field.helpText && <FormDescription>{field.helpText}</FormDescription>}
-      {/* The ONLY caller today is SelectField's own `lockedFromReference`
-          note, kept generic (a plain optional prop, not a `field.lockedFromReference` check inside
-          FieldChrome itself) the same way `helpText` above is generic across every field kind. */}
-      {note && <FormDescription data-cy={`document-field-${field.key}-note`}>{note}</FormDescription>}
       <FormMessage />
     </FormItem>
   )
@@ -178,7 +179,6 @@ export function TextField({ field, name, catalog }: FieldRendererProps & { catal
   const required = useConditionallyRequired(field)
   const readOnly = useDocumentFormReadOnly()
   const suggestionsPath = siblingSuggestionsPath(field, name)
-  const fixedListId = field.suggestedValues ? `${name.replaceAll(".", "-")}-suggested` : undefined
   // A stable, collision-safe id: `name` itself is already unique per field instance (react-hook-form
   // never reuses one), just not a valid HTML id verbatim (dots).
   const datalistId = suggestionsPath ? `${name.replace(/\./g, "-")}-suggestions` : undefined
@@ -203,24 +203,26 @@ export function TextField({ field, name, catalog }: FieldRendererProps & { catal
                 disabled={readOnly}
                 data-cy={`document-field-${field.key}-input`}
               />
+            ) : field.suggestedValues ? (
+              <ComboboxInput
+                {...rhfField}
+                value={suggestedLabelOf(field, rhfField.value ?? "")}
+                onChange={(text) => rhfField.onChange(suggestedValueOf(field, text))}
+                onOptionSelect={(option) => rhfField.onChange(option.value)}
+                options={field.suggestedValues}
+                disabled={readOnly}
+                data-cy={`document-field-${field.key}-input`}
+              />
             ) : (
               <BetterInput
                 {...rhfField}
-                value={suggestedLabelOf(field, rhfField.value ?? "")}
-                onChange={(event) => rhfField.onChange(suggestedValueOf(field, event.target.value))}
+                value={rhfField.value ?? ""}
                 disabled={readOnly}
-                list={datalistId ?? fixedListId}
+                list={datalistId}
                 data-cy={`document-field-${field.key}-input`}
               />
             )}
           </FieldChrome>
-          {fixedListId && field.suggestedValues && (
-            <datalist id={fixedListId}>
-              {field.suggestedValues.map((entry) => (
-                <option key={entry.value} value={entry.label} />
-              ))}
-            </datalist>
-          )}
           {datalistId && suggestionsPath && (
             <SiblingSuggestionsDatalist
               id={datalistId}
@@ -351,7 +353,13 @@ export function BooleanField({ field, name }: FieldRendererProps) {
           data-cy={`document-field-${field.key}`}
           className="flex flex-row items-center justify-between rounded-md border p-3"
         >
-          <FormLabel required={field.required}>{field.label}</FormLabel>
+          <FormLabel
+            required={field.required}
+            description={field.helpText}
+            helpDataCy={`document-field-${field.key}-help`}
+          >
+            {field.label}
+          </FormLabel>
           <FormControl>
             <Switch
               checked={!!rhfField.value}
@@ -445,7 +453,7 @@ export function SelectField({ field, name }: FieldRendererProps) {
       render={({ field: rhfField }) => (
         <FieldChrome
           field={field}
-          note={isLocked ? t("documents.form.select.lockedFromReference") : undefined}
+          lockReason={isLocked ? t("documents.form.select.lockedFromReference") : undefined}
         >
           <SearchSelect
             options={filtered}

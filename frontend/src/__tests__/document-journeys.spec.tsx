@@ -530,19 +530,21 @@ describe("Credit note — the mandatory reference, the locked currency, the cred
     fireEvent.click(invoiceTrigger())
     fireEvent.click(await screen.findByTestId("document-field-invoice-input-option-invoice-inv-2026-0009"))
 
-    // Picking the invoice locks the currency to ITS OWN ("EUR") — disabled, with the reference
-    // note shown — never a value the user could still pick independently.
+    // Picking the invoice locks the currency to ITS OWN ("EUR"): disabled, with the reason behind
+    // the label's lock, never a value the user could still pick independently.
     await waitFor(() => expect(currencyTrigger()).toHaveTextContent("EUR"))
     expect(currencyTrigger()).toBeDisabled()
-    expect(screen.getByTestId("document-field-currency-note")).toHaveTextContent("cannot be edited directly")
+    expect(screen.getByTestId("document-field-currency-lock")).toHaveTextContent("cannot be edited directly")
+    expect(currencyTrigger()).toHaveAccessibleDescription(/cannot be edited directly/)
 
     // "invoice"/"currency" are the wizard's own "Details" step (both `required`) — `correctedLines`
     // (kind 'rowSelection') is table-shaped and gets its own "Lines" step (stepped-dialog.tsx /
     // document-create-dialog.tsx's `buildFieldGroups`), reached via "Continue".
     fireEvent.click(screen.getByTestId("document-create-dialog-continue"))
 
-    // The corrected line, picked from the invoice's own lines (rowSelection, live off `invoice`).
-    fireEvent.click(await screen.findByTestId("document-field-correctedLines-row-line-1-checkbox"))
+    // Every line of the picked invoice starts checked (rowSelection, live off `invoice`).
+    const lineCheckbox = await screen.findByTestId("document-field-correctedLines-row-line-1-checkbox")
+    await waitFor(() => expect(lineCheckbox).toBeChecked())
 
     // No "Options" step here (every remaining field is already placed) — "Continue" on "Lines" lands
     // straight on "Summary", whose primary button is the wizard's actual save. `findByTestId`, not

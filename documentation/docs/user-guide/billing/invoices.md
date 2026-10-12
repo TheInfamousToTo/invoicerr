@@ -6,6 +6,9 @@ sidebar_position: 4
 
 The **Invoices** page is where you bill your clients. You can create invoices from scratch or convert a signed [quote](quotes.md).
 
+Each row shows the invoice's total **including VAT**, labelled "incl. VAT" under the figure,
+before any payment or credit note. What is still owed on it is in its settlement panel.
+
 ## Actions
 
 - **Add New** — create an invoice
@@ -30,6 +33,7 @@ The **Invoices** page is where you bill your clients. You can create invoices fr
 - **Mark as paid** — record payment manually, or use [Bank Reconciliation](bank-reconciliation.md)
   to confirm one from an imported bank statement
 - **Edit** — available only while the invoice is still a **Draft**; once sent, a mistake is fixed with a correction, not a re-edit
+- **Delete** - available only on a **Draft**, after a confirmation; see [Deleting a draft](#deleting-a-draft)
 - **Correct** (scale icon, appears once an invoice is **Validated**, **Sent** or **Send failed**): opens the correction routes for this invoice; see below. This is also where **cancelling** an invoice lives: an invoice that reached "Sent" is never removed, only cancelled, and only where this country's law allows it
 - **Issue credit note** - start a [credit note](credit-notes.md) correcting this invoice's own lines
 - **Create receipt** (receipt icon) — generate a [receipt](receipts.md) from this invoice
@@ -48,19 +52,68 @@ Click **Add New** and fill in:
 - **Line items** — Designation, Quantity, Unit, Unit price, VAT rate, and a per-line **Discount %**; drag to reorder, or add a line straight from your [article catalog](../articles.md)
 - **Notes** (optional)
 
-The **Unit** field suggests common units (piece, hour, day, week, month, year, kilogram, gram, litre, metre, kilometre, set, box) in your language, and you can still type any other value. A suggested unit is exported in e-invoices as its standard UN/ECE Recommendation 20 code (for example `DAY`), and a unit you type yourself is exported as the generic `C62` code unless it is a known unit name or code.
+The **Unit** field is a list you can also type into. Clicking it, or reaching it with the keyboard,
+opens the common units (piece, unit, hour, day, week, month, year, kilogram, gram, litre, metre,
+kilometre, set, box) in your language; typing narrows the list, the arrow keys and Enter pick an
+entry, and any other text you type is kept as it is. Unit is optional.
+
+A unit picked from the list is stored as its UN/ECE Recommendation 20 code (for example `HUR` for
+hour or `H87` for piece): the e-invoice XML carries that code, and the PDF prints the unit's name in
+the document's language. A unit typed by hand is printed as typed and exported as the generic code
+`C62` ("one"), so the XML stays valid. Units typed in English before the list existed (`hour`,
+`day`, `kg`, `m` and similar) keep the code they were always exported with, so the XML of an
+invoice already issued does not change.
+
+Quotes, invoices, credit notes and received invoices all offer the same line fields, Unit included.
+
+:::info[Units typed before the list existed]
+On upgrade, units typed as free text on draft quotes, invoices and credit notes are converted to
+their code when the text names exactly one unit (`h` becomes hour). Anything ambiguous, such as `m`
+(metre or minute), stays as typed. A quote that was sent, signed or accepted, and an issued invoice
+or credit note, are never modified.
+:::
+
+When you type a **Designation**, matching items from your [article catalog](../articles.md) are
+offered under the field. A small spinner shows at the right of the field while the search is
+running, and the list says so when nothing in the catalog matches.
 
 There is no per-document "Payment Method" field: every enabled [payment method](../billing/payment-methods.md) your company has turned on is printed on the invoice automatically - unless the client has its own [restriction](../clients.md#restricting-payment-methods-for-a-client), in which case only the methods you allowed for that client are printed. The one actually used is only recorded afterwards, when you mark the invoice as paid.
 
 ### Creating from a quote
 
-Once a quote is **Signed**, click **Create invoice** on the quote. All client info, line items, and details carry over. You can adjust before finalising.
+Once a quote is **Signed**, click **Create invoice** on the quote. The client, currency, notes and
+every line field (unit, discount, work date and the rest) carry over. The invoice is dated today and
+its due date is filled from your [payment terms](../settings/payment-terms.md), never from the
+quote's validity date. You can adjust everything before finalising.
+
+**Duplicate** on an invoice makes a new draft dated today, with its due date recalculated the same
+way.
 
 ### Recurring invoices
 
 There is no "recurring" choice at creation time. Once an invoice exists, its row menu offers a
 **duplicate/recurrence** action that schedules a fresh copy on a cadence you set (with an optional
 "then send" step) — see the row's own action menu on an existing invoice.
+
+## Deleting a draft
+
+A draft invoice has no number yet, so you can delete it: choose **Delete** in the row's menu or on the
+invoice's own page, then confirm. The draft is removed permanently.
+
+The delete is refused, with a message saying why, while something still depends on the draft:
+
+- a credit note names it as the invoice it corrects: delete that credit note first;
+- a recurrence uses it as its template: delete the recurrence first;
+- another invoice names it as its origin: delete that invoice first.
+
+Time entries that were billed into the draft become unbilled again, ready for another invoice.
+
+:::info[Why a numbered invoice cannot be deleted]
+Validating or sending an invoice gives it a number from your continuous sequence, and an issued number
+must never disappear from it. From then on **Delete** is no longer offered, and the server refuses it
+even when asked directly through the API. Correct the invoice with a [credit note](credit-notes.md)
+or, where your country allows it, cancel it; see [Correcting an invoice](#correcting-an-invoice).
+:::
 
 ## Correcting an invoice
 
