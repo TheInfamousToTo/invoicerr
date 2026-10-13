@@ -137,7 +137,7 @@ function LabelHint({
           onPointerLeave={hoverOut}
           onOpenAutoFocus={(event) => event.preventDefault()}
           onCloseAutoFocus={(event) => event.preventDefault()}
-          className="max-h-(--radix-popover-content-available-height) w-auto max-w-[min(20rem,calc(100vw-2rem))] overflow-y-auto overscroll-contain p-3 text-sm leading-relaxed text-pretty break-words whitespace-pre-line focus-visible:ring-[3px] focus-visible:ring-ring/50 data-more:[mask-image:linear-gradient(to_bottom,black_75%,transparent)]"
+          className="max-h-(--radix-popover-content-available-height) w-auto max-w-[min(20rem,calc(100vw-2rem))] overflow-y-auto overscroll-contain p-3 text-sm leading-relaxed text-pretty break-words whitespace-pre-line focus-visible:ring-[3px] focus-visible:ring-ring/50 data-more:after:pointer-events-none data-more:after:sticky data-more:after:bottom-0 data-more:after:-mt-10 data-more:after:block data-more:after:h-10 data-more:after:bg-linear-to-b data-more:after:from-transparent data-more:after:to-popover data-more:after:content-['']"
         >
           {children}
         </PopoverContent>
