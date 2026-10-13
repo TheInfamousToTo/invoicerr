@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { FieldLabel, fieldHelpId } from "@/components/ui/field-help"
 import { Label } from "@/components/ui/label"
-import { ProseHelp, ProseParagraphs } from "@/components/ui/prose-help"
+import { ProseHelp } from "@/components/ui/prose-help"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { Separator } from "@/components/ui/separator"
 import { useCompanies } from "@/hooks/queries"
@@ -237,7 +237,7 @@ function PlaceholderWarnings({ warnings }: { warnings: string[] }) {
       title={t("settings.emailTemplates.warningsTitle")}
       dataCy="email-template-warnings"
     >
-      <ProseParagraphs texts={warnings} />
+      {warnings}
     </ProseHelp>
   )
 }

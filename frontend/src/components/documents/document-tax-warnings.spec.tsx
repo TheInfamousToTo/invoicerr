@@ -29,7 +29,7 @@ describe("<DocumentTaxWarnings>: what the seller reads next to the amounts", () 
 
     const status = screen.getByTestId("document-tax-warnings")
     expect(status).toHaveClass("bg-warning")
-    expect(screen.getByText("About this VAT treatment")).toBeVisible()
+    expect(screen.getByText("Check how VAT was applied")).toBeVisible()
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 
@@ -55,7 +55,7 @@ describe("<DocumentTaxWarnings>: what the seller reads next to the amounts", () 
     const { container } = render(<DocumentTaxWarnings warnings={[]} />)
 
     expect(screen.queryByTestId("document-tax-warnings")).not.toBeInTheDocument()
-    expect(screen.queryByText("About this VAT treatment")).not.toBeInTheDocument()
+    expect(screen.queryByText("Check how VAT was applied")).not.toBeInTheDocument()
     expect(container).toBeEmptyDOMElement()
   })
 })

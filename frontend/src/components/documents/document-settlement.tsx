@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next"
 
 import { useDocumentSettlement, usePaymentMethods } from "@/hooks/queries"
 import { Badge } from "@/components/ui/badge"
-import { ProseHelp, ProseParagraphs } from "@/components/ui/prose-help"
+import { ProseHelp } from "@/components/ui/prose-help"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 
@@ -274,7 +274,7 @@ export function DocumentSettlementSection({ typeId, documentId }: DocumentSettle
                 title={t("documents.settlement.warningsTitle")}
                 dataCy="document-settlement-warnings"
               >
-                <ProseParagraphs texts={warnings} />
+                {warnings}
               </ProseHelp>
             )}
           </div>

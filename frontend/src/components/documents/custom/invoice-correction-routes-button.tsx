@@ -14,7 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { ProseHelp, ProseParagraphs } from "@/components/ui/prose-help"
+import { ProseHelp } from "@/components/ui/prose-help"
 import { Skeleton } from "@/components/ui/skeleton"
 import { type SelectableRowsResult, useCorrectionRoutes, useRunDocumentAction } from "@/hooks/queries"
 import { ApiError, apiFetch } from "@/hooks/use-api-query"
@@ -151,12 +151,7 @@ function CorrectionRouteRow({ route, countryCode, onChoose }: CorrectionRouteRow
           dataCy={`document-correction-route-${route.routeId}-label`}
           className="text-sm font-medium text-foreground"
         >
-          <ProseParagraphs
-            texts={[
-              t(`documents.correction.explanations.${countryCode}.${route.routeId}`, ""),
-              blockedReason ?? "",
-            ].filter(Boolean)}
-          />
+          {[t(`documents.correction.explanations.${countryCode}.${route.routeId}`, ""), blockedReason ?? ""]}
         </ProseHelp>
         <Badge
           variant={choosable ? undefined : "outline"}

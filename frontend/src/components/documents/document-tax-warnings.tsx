@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next"
 
-import { ProseHelp, ProseParagraphs } from "@/components/ui/prose-help"
+import { ProseHelp } from "@/components/ui/prose-help"
 import { useDocumentTaxWarnings } from "@/hooks/queries"
 
 interface DocumentTaxWarningsProps {
@@ -20,7 +20,7 @@ export function DocumentTaxWarnings({ warnings }: DocumentTaxWarningsProps) {
       dataCy="document-tax-warnings"
       className="mt-3"
     >
-      <ProseParagraphs texts={warnings} />
+      {warnings}
     </ProseHelp>
   )
 }

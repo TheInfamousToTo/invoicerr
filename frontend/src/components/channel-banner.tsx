@@ -65,7 +65,11 @@ export function ChannelBannerSource({ provenance, t }: { provenance?: ChannelPro
   if (!provenance) return null
   return (
     <ProseHelp
-      title={t("settings.channels.banner.source", "Legal source")}
+      title={
+        provenance.kind === "legal"
+          ? t("settings.channels.banner.source", "Legal source")
+          : t("settings.channels.banner.unverifiedSource", "Not yet verified")
+      }
       dataCy="channels-banner-source"
       className="mt-1 text-sm text-current"
     >

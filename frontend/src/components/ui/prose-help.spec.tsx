@@ -34,9 +34,26 @@ describe("<ProseHelp>", () => {
     expect(screen.getByRole("dialog")).toHaveTextContent(PROSE)
   })
 
-  it("describes its title with the full text for assistive technology", () => {
+  it("describes its help button with the full text for assistive technology", () => {
     render(<ProseHelp title="Retain until 31/12/2035">{PROSE}</ProseHelp>)
-    expect(screen.getByText("Retain until 31/12/2035")).toHaveAccessibleDescription(PROSE)
+    expect(
+      screen.getByRole("button", { name: "Help for Retain until 31/12/2035" }),
+    ).toHaveAccessibleDescription(PROSE)
+  })
+
+  it("opens several texts as separate paragraphs", () => {
+    render(<ProseHelp title="Check how VAT was applied">{["First caveat.", "Second caveat."]}</ProseHelp>)
+    fireEvent.click(screen.getByRole("button", { name: /help/i }))
+    expect(screen.getByRole("dialog")).toHaveTextContent("First caveat.Second caveat.")
+  })
+
+  it.each([
+    ["an empty text", ""],
+    ["a list of empty texts", ["", ""]],
+  ])("shows no help button for %s", (_case, children) => {
+    render(<ProseHelp title="Credit note">{children}</ProseHelp>)
+    expect(screen.getByText("Credit note")).toBeVisible()
+    expect(screen.queryByRole("button")).not.toBeInTheDocument()
   })
 
   it("keeps a warning noticeable: warning colour and an icon beside the title", () => {

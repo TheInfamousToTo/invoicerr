@@ -2142,7 +2142,7 @@
       },
       "approval": {
         "title": "Approval workflow",
-        "description": "Require an ADMIN or OWNER to send a document above a given amount. A member can still send anything at or under it; an admin or owner sending it above the limit IS the approval — there is no separate approval step to complete."
+        "description": "Require an ADMIN or OWNER to send a document above a given amount. A member can still send anything at or under it; an admin or owner sending it above the limit IS the approval; there is no separate approval step to complete."
       },
       "currency": {
         "title": "Multi-currency",
@@ -2378,7 +2378,7 @@
           "patternMismatch": "{{label}} format is invalid",
           "onFile": {
             "label": "Other identifiers on file",
-            "description": "Saved on this company before, but not requested by the currently selected country. Kept as-is rather than removed automatically — remove one only if you're sure it's no longer needed.",
+            "description": "Saved on this company before, but not requested by the currently selected country. Kept as-is rather than removed automatically: remove one only if you're sure it's no longer needed.",
             "remove": "Remove"
           }
         },
@@ -2460,7 +2460,7 @@
       },
       "reconciliation": {
         "title": "Reconciliation",
-        "description": "The leeway (as a percent) allowed between a purchase order, its goods receipt(s), and the received invoice before a line is flagged \"to review\" in the 3-way-match panel. 0 means no leeway at all — any difference is flagged."
+        "description": "The leeway (as a percent) allowed between a purchase order, its goods receipt(s), and the received invoice before a line is flagged \"to review\" in the 3-way-match panel. 0 means no leeway at all: any difference is flagged."
       }
     },
     "identifiers": {
@@ -2643,7 +2643,7 @@
       },
       "saveButton": "Save Template",
       "resetButton": "Reset to default",
-      "warningsTitle": "Unknown placeholders",
+      "warningsTitle": "Some placeholders are unknown",
       "readOnlyNotice": "Only an owner or an admin can change email templates",
       "messages": {
         "saveSuccess": "{{name}} template saved successfully",
@@ -2790,6 +2790,7 @@
         "noneBody": "Any lawful transport, including email, may be used to send your invoices.",
         "noneTitle": "No transmission channel is imposed on {{country}}",
         "source": "Legal source",
+        "unverifiedSource": "Not yet verified",
         "suggestedBody": "{{country}} recommends {{channel}} for your invoices. Not yet a legal obligation - connecting it is optional.",
         "suggestedTitle": "Recommended transmission channel"
       },
@@ -2897,6 +2898,7 @@
       "outside": {
         "automatic": "This channel is {{countries}}'s own automatic government portal, not part of your own invoicing country's rules.",
         "body": "A national e-invoicing mandate binds domestic operations only. When you invoice a foreign buyer, the invoice may travel by any channel you and the buyer agree on (email, PDF, Peppol...); what changes is which authority you must report the transaction to under your own country's rules, never a foreign platform.",
+        "bodyTitle": "Invoicing a foreign buyer",
         "elsewhere": "This channel is required or recommended in {{countries}}, not in your own invoicing country.",
         "title": "Outside your invoicing country"
       },
@@ -2975,7 +2977,7 @@
       "actions": {
         "deactivate": "Deactivate"
       },
-      "description": "Upload a PKCS#12 (.pfx / .p12) signing certificate to have this company's document PDFs signed PAdES. This is an optional capability — nothing in this product requires a signed document.",
+      "description": "Upload a PKCS#12 (.pfx / .p12) signing certificate to have this company's document PDFs signed PAdES. This is an optional capability: nothing in this product requires a signed document.",
       "emptyState": "No signing certificate configured — documents are served and sent unsigned.",
       "expires": "Expires",
       "serial": "Serial",
@@ -5091,6 +5093,7 @@
       "unsupportedKind": "Field \"{{label}}\" has kind \"{{kind}}\", which no renderer is registered for.",
       "unknownType": "Unknown document type \"{{typeId}}\".",
       "actionBlockedByPolicy": "Not available: {{reason}}",
+      "actionBlockedTitle": "Blocked by your country's rules",
       "saveLocked": {
         "invoice": "This invoice has been issued and can no longer be edited. To correct it, issue a credit note or a new invoice.",
         "creditNote": "This credit note has been issued and can no longer be edited. To correct it, issue a new credit note.",
@@ -5324,7 +5327,7 @@
       "net": "Net",
       "vat": "VAT {{rate}}% on {{base}}",
       "gross": "Total",
-      "taxWarningsTitle": "About this VAT treatment",
+      "taxWarningsTitle": "Check how VAT was applied",
       "optionAccepted": "Accepted",
       "commonToAllOptions": "Common to all options",
       "grossIncludingCommon": "Total (including common lines)",
@@ -5586,7 +5589,8 @@
       "discard": "Discard",
       "totalsTitle": "Totals",
       "notFound": "This document could not be found.",
-      "importNotTransmitted": "This document was imported with no transmission evidence declared (no SdI id, KSeF number, accredited platform reference, or ATCUD). It must be regularised with the relevant authority."
+      "importNotTransmitted": "This document was imported with no transmission evidence declared (no SdI id, KSeF number, accredited platform reference, or ATCUD). It must be regularised with the relevant authority.",
+      "importNotTransmittedTitle": "Not yet transmitted to the tax authority"
     },
     "acceptance": {
       "menuLabel": "Mark as accepted",

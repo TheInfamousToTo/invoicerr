@@ -4,7 +4,7 @@ import { Link } from "react-router"
 import { decimalsFor } from "@/components/documents/totals-calculator"
 import { DocumentStatusBadge } from "@/components/documents/document-status-badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ProseHelp, ProseParagraphs } from "@/components/ui/prose-help"
+import { ProseHelp } from "@/components/ui/prose-help"
 import { cn } from "@/lib/utils"
 
 import type { ShortListItem, ShortListWidget } from "@/components/widgets/types"
@@ -104,7 +104,7 @@ export function ShortListWidgetRenderer({ widget }: WidgetRendererProps) {
             dataCy={`widget-${shortList.id}-warnings`}
             className="mt-2"
           >
-            <ProseParagraphs texts={shortList.warnings} />
+            {shortList.warnings}
           </ProseHelp>
         ) : null}
       </CardContent>
