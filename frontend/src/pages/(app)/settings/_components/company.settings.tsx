@@ -755,6 +755,7 @@ export default function CompanySettings() {
               // instead of silently deleted. Shown explicitly, with a deliberate removal action, so
               // the user decides their fate instead of an unattended effect.
               <SettingsFieldGroup
+                dataCy="company-identifiers-on-file-group"
                 legend={t("settings.company.form.identifiers.onFile.label", "Other identifiers on file")}
                 help={t(
                   "settings.company.form.identifiers.onFile.description",
@@ -1297,6 +1298,7 @@ export default function CompanySettings() {
           <SettingsSection
             title={t("settings.company.approval.title")}
             help={t("settings.company.approval.description")}
+            dataCy="company-approval-section"
             contentClassName="grid gap-5"
           >
             <FormField
@@ -1330,6 +1332,7 @@ export default function CompanySettings() {
           <SettingsSection
             title={t("settings.company.reconciliation.title")}
             help={t("settings.company.reconciliation.description")}
+            dataCy="company-reconciliation-section"
             contentClassName="grid gap-5"
           >
             <FormField
@@ -1425,6 +1428,7 @@ export default function CompanySettings() {
               "settings.company.revenueBasis.description",
               "Which figure this company declares as its own revenue, and over which period. Defaulted from your country where a clear regime exists, always overridable. This is an aid, not tax advice - verify against your own accounting records.",
             )}
+            dataCy="company-revenue-basis-section"
             contentClassName="grid gap-5 sm:grid-cols-2"
           >
             <FormField
