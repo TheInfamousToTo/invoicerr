@@ -582,15 +582,15 @@ describe("Correct — the screen, browser level", () => {
 					// The header: the curated, translated explanation, never the backend's own raw
 					// developer note (`correction-routes.ts`'s own `LIMITATION_TEXT`, still sent by the
 					// API as `limitation` for other consumers, just not rendered here any more).
-					cy.get('[data-cy="document-correction-limitation"]')
+					cy.get('[data-cy="document-correction-limitation-help-trigger"]').click();
+					cy.get('[data-cy="document-correction-limitation-help-content"]')
 						.should("contain.text", "seller country")
 						.and("not.contain.text", "This reads the document's SELLER country only");
 
 					// The imposed route's own row: the curated, translated explanation, never the
 					// catalog's own raw `provenance.sourceText` (French, legal-quote research notes).
-					cy.get(
-						'[data-cy="document-correction-route-INTERNAL_CREDIT_NOTE-label"]',
-					)
+					cy.get('[data-cy="document-correction-route-INTERNAL_CREDIT_NOTE-label-help-trigger"]').click();
+					cy.get('[data-cy="document-correction-route-INTERNAL_CREDIT_NOTE-label-help-content"]')
 						.should("contain.text", "internal accounting write-off")
 						.and("not.contain.text", "annulation comptable")
 						.and("not.contain.text", "PPF");
