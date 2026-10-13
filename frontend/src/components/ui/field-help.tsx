@@ -125,6 +125,7 @@ function LabelHint({
         </PopoverPrimitive.Trigger>
         <PopoverContent
           ref={contentRef}
+          aria-label={triggerLabel}
           tabIndex={0}
           data-more={moreBelow || undefined}
           onScroll={measure}
