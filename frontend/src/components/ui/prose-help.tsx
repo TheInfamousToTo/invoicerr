@@ -9,13 +9,12 @@ type ProseHelpProps = Readonly<{
   title: React.ReactNode
   children: React.ReactNode
   tone?: "note" | "warning"
-  label?: string
   dataCy?: string
   className?: string
 }>
 
 // A title with a `?`: the prose opens on hover, focus and tap. A warning keeps its title visible as a status.
-export function ProseHelp({ title, children, tone = "note", label, dataCy, className }: ProseHelpProps) {
+export function ProseHelp({ title, children, tone = "note", dataCy, className }: ProseHelpProps) {
   const id = useId()
   const warning = tone === "warning"
   return (
@@ -36,7 +35,7 @@ export function ProseHelp({ title, children, tone = "note", label, dataCy, class
       </span>
       <FieldHelp
         id={id}
-        label={label ?? (typeof title === "string" ? title : undefined)}
+        label={typeof title === "string" ? title : undefined}
         dataCy={dataCy ? `${dataCy}-help` : undefined}
         className={
           warning
