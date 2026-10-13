@@ -103,7 +103,7 @@ function LabelHint({
           onPointerLeave={hoverOut}
           onOpenAutoFocus={(event) => event.preventDefault()}
           onCloseAutoFocus={(event) => event.preventDefault()}
-          className="w-auto max-w-[min(20rem,calc(100vw-2rem))] p-3 text-sm leading-relaxed text-pretty break-words whitespace-pre-line"
+          className="max-h-(--radix-popover-content-available-height) w-auto max-w-[min(20rem,calc(100vw-2rem))] overflow-y-auto p-3 text-sm leading-relaxed text-pretty break-words whitespace-pre-line"
         >
           {children}
         </PopoverContent>
