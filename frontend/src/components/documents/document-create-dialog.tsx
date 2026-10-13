@@ -8,6 +8,7 @@ import { ActionParamsDialog } from "@/components/documents/action-params-dialog"
 import { actionAssignsNumber } from "@/components/documents/action-presentation"
 import { ConfirmationDialog } from "@/components/confirmation-dialog"
 import { DocumentField } from "@/components/documents/document-field"
+import { LineTotalWarnings } from "@/components/documents/document-form"
 import { DocumentTotals, useDocumentTotals } from "@/components/documents/document-totals"
 import type {
   DocumentActionDescriptor,
@@ -130,7 +131,7 @@ function buildFieldGroups(fields: DocumentFieldDescriptor[]) {
  *  it. Only ONE step is ever mounted at a time (`SteppedDialog` renders the current step alone), so
  *  the same `data-cy` recurring across steps is never a collision at runtime.
  *
- *  `lineTotalWarnings` (a received invoice's own "lines don't sum to its stated totals" hint — see
+ *  `lineTotalWarnings` (a received invoice's own "lines don't sum to its stated totals" hint, see
  *  use-document-form.ts's `extractLineTotalWarnings`) is passed ONLY by the "Lines" step's own call
  *  below: it is about the lines, and this is the one step where they are on screen. */
 function FieldsStep({
@@ -147,15 +148,7 @@ function FieldsStep({
       {fields.map((field) => (
         <DocumentField key={field.key} field={field} name={field.key} documentTypeId={documentTypeId} />
       ))}
-      {lineTotalWarnings && lineTotalWarnings.length > 0 && (
-        <div className="space-y-1 rounded-md bg-warning p-3" data-cy="document-line-total-warnings">
-          {lineTotalWarnings.map((warning) => (
-            <p key={warning} className="text-xs text-warning-foreground">
-              {warning}
-            </p>
-          ))}
-        </div>
-      )}
+      <LineTotalWarnings warnings={lineTotalWarnings} />
     </div>
   )
 }

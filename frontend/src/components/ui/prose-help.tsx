@@ -24,7 +24,9 @@ export function ProseHelp({ title, children, tone = "note", label, dataCy, class
       data-slot="prose-help"
       className={cn(
         "flex items-center gap-1.5 text-xs",
-        warning ? "rounded-md bg-warning px-2 py-1.5 font-medium text-warning-foreground" : "text-muted-foreground",
+        warning
+          ? "rounded-md bg-warning px-2 py-1.5 font-medium text-warning-foreground"
+          : "text-muted-foreground",
         className,
       )}
     >

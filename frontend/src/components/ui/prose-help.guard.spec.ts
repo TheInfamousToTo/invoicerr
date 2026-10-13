@@ -32,13 +32,10 @@ describe("explanatory prose guard", () => {
       "a nested list of notes",
       `<ul>{period.consolidated.notes.map((note) => <li key={note}>{note}</li>)}</ul>`,
     ],
-    [
-      "a prefixed warnings list",
-      `{lineTotalWarnings.map((warning) => <p key={warning}>{warning}</p>)}`,
-    ],
+    ["a prefixed warnings list", `{lineTotalWarnings.map((warning) => <p key={warning}>{warning}</p>)}`],
     [
       "a retention citation interpolated into a visible line",
-      `<p>{t("documents.archive.retentionUntil", { date, basis: archive.retentionBasis })}</p>`,
+      `<p>{t("documents.archive.retainUntil", { date, basis: archive.retentionBasis })}</p>`,
     ],
     ["a statute quote passed to a row", `<SettingsListRow meta={obligation.provenance.sourceText} />`],
     ["a resolution note held in a variable", `const quote = provenance?.resolutionNote`],
@@ -55,10 +52,7 @@ describe("explanatory prose guard", () => {
         {warnings.map((warning) => <span key={warning}>{warning}</span>)}
       </ProseHelp>`,
     ],
-    [
-      "a citation behind a ProseHelp",
-      `<ProseHelp title={date}>{archive.retentionBasis}</ProseHelp>`,
-    ],
+    ["a citation behind a ProseHelp", `<ProseHelp title={date}>{archive.retentionBasis}</ProseHelp>`],
     [
       "a quote behind a FieldHelp",
       `<FieldHelp id={id}>{provenance.kind === "legal" ? provenance.sourceText : provenance.resolutionNote}</FieldHelp>`,

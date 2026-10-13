@@ -11,6 +11,7 @@ import type { DocumentFormState } from "@/components/documents/use-document-form
 import { useActionTransmissionPreview } from "@/hooks/queries/use-document-types"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import { ProseHelp, ProseParagraphs } from "@/components/ui/prose-help"
 
 /**
  * The rendered pieces of a document form — the fields, one action button, the params dialog —
@@ -65,20 +66,23 @@ export function DocumentFormFields({ descriptor, state, readOnly = false }: Docu
         ))}
       </DocumentFormReadOnlyProvider>
 
-      {/* See use-document-form.ts's extractLineTotalWarnings: a NAMED, never-blocking warning when
-          this record's own lines don't sum to its stated totals (rounding tolerance aside).
-          Rendered verbatim, untranslated, exactly like DocumentTotals's own `warnings` block (both
-          are backend-composed sentences, not i18n keys). */}
-      {lineTotalWarnings.length > 0 && (
-        <div className="space-y-1 rounded-md bg-warning p-3" data-cy="document-line-total-warnings">
-          {lineTotalWarnings.map((warning) => (
-            <p key={warning} className="text-xs text-warning-foreground">
-              {warning}
-            </p>
-          ))}
-        </div>
-      )}
+      <LineTotalWarnings warnings={lineTotalWarnings} />
     </form>
+  )
+}
+
+// The supplier's own lines and totals disagree: a status the user acts on, the server's figures behind its `?`.
+export function LineTotalWarnings({ warnings }: Readonly<{ warnings?: string[] }>) {
+  const { t } = useTranslation()
+  if (!warnings?.length) return null
+  return (
+    <ProseHelp
+      tone="warning"
+      title={t("documents.form.lineTotalWarningsTitle")}
+      dataCy="document-line-total-warnings"
+    >
+      <ProseParagraphs texts={warnings} />
+    </ProseHelp>
   )
 }
 
