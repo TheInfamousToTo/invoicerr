@@ -81,6 +81,46 @@ next to a control is flagged in any colour: a text element whose key, variable o
 lock belongs behind the label's lock instead.
 :::
 
+## Explanations and warnings
+
+Explanatory prose is never printed in full on a screen. A block that explains something, such as the
+legal basis of an archive's retention date, the statute quote behind a channel obligation, or what a
+correction route means, shows its title followed by the same `?` as a field description, and the text
+opens on hover, keyboard focus and tap. This applies first to text the server composes (tax warnings,
+settlement and line-total warnings, retention citations, source quotes, disclaimers), which can run
+to several sentences with interpolated figures.
+
+A warning that asks the user to act keeps a one-line visible status: a warning icon and a short title
+in the warning colour, with the long explanation behind its `?`. A pure explanation shows its title in
+the muted colour. Use `ProseHelp` from `@/components/ui/prose-help`, which wraps the field help
+popover:
+
+```tsx
+<ProseHelp tone="warning" title={t("documents.totals.taxWarningsTitle")} dataCy="document-tax-warnings">
+  <ProseParagraphs texts={warnings} />
+</ProseHelp>
+
+<ProseHelp title={t("documents.archive.retainUntil", { date })} dataCy="document-archive-retention">
+  {archive.retentionBasis}
+</ProseHelp>
+```
+
+The title stays visible and is described by the full text for screen readers. `ProseParagraphs`
+renders several server texts as separate paragraphs in one popover. Text composed on the server for
+these blocks uses commas, colons and full stops rather than em dashes; quoted statute text keeps its
+original punctuation.
+
+A short status line that is the information itself, such as the exchange rate a dashboard total was
+converted at, or "Line 3 has no usable VAT rate, counted in net only", stays visible.
+
+:::warning[Enforced in CI]
+`src/components/ui/prose-help.guard.spec.ts` fails the frontend unit tests when a list of
+`warnings` or `notes` is mapped to visible elements, or when a retention basis, source quote,
+resolution note, disclaimer or long explanation key is rendered outside a `ProseHelp` or `FieldHelp`.
+The few one-line status lists kept visible on purpose are named, file by file, in the guard's
+allow-list.
+:::
+
 ## Accessibility checks
 
 Every control has an accessible name, and that name contains the text the control shows (WCAG 2.5.3).
