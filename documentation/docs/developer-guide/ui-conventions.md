@@ -84,20 +84,21 @@ lock belongs behind the label's lock instead.
 ## Explanations and warnings
 
 Explanatory prose is never printed in full on a screen. A block that explains something, such as the
-legal basis of an archive's retention date, the statute quote behind a channel obligation, or what a
-correction route means, shows its title followed by the same `?` as a field description, and the text
-opens on hover, keyboard focus and tap. This applies first to text the server composes (tax warnings,
-settlement and line-total warnings, retention citations, source quotes, disclaimers), which can run
-to several sentences with interpolated figures.
+legal basis of an archive's retention date, the statute quote behind a channel obligation, what a
+correction route means or what a settings section does, shows its title followed by the same `?` as a
+field description, and the text opens on hover, keyboard focus and tap. This covers text the server
+composes (tax warnings, settlement and line-total warnings, retention citations, source quotes,
+disclaimers, blocked reasons) as much as long texts written in the locale files.
 
 A warning that asks the user to act keeps a one-line visible status: a warning icon and a short title
-in the warning colour, with the long explanation behind its `?`. A pure explanation shows its title in
-the muted colour. Use `ProseHelp` from `@/components/ui/prose-help`, which wraps the field help
-popover:
+in the warning colour that says what to check, with the long explanation behind its `?`. A pure
+explanation shows its title in the muted colour. Use `ProseHelp` from `@/components/ui/prose-help`,
+which wraps the field help popover. An array of texts opens as one paragraph each, and empty texts
+show no `?` at all:
 
 ```tsx
 <ProseHelp tone="warning" title={t("documents.totals.taxWarningsTitle")} dataCy="document-tax-warnings">
-  <ProseParagraphs texts={warnings} />
+  {warnings}
 </ProseHelp>
 
 <ProseHelp title={t("documents.archive.retainUntil", { date })} dataCy="document-archive-retention">
@@ -105,21 +106,44 @@ popover:
 </ProseHelp>
 ```
 
-The title stays visible and is described by the full text for screen readers. `ProseParagraphs`
-renders several server texts as separate paragraphs in one popover. Text composed on the server for
-these blocks uses commas, colons and full stops rather than em dashes; quoted statute text keeps its
-original punctuation.
+A settings page, section or field group takes the long text through its `help` prop instead of
+`description`; `description` stays for one short line:
 
-A short status line that is the information itself, such as the exchange rate a dashboard total was
-converted at, or "Line 3 has no usable VAT rate, counted in net only", stays visible.
+```tsx
+<SettingsSection title={t("settings.company.approval.title")} help={t("settings.company.approval.description")}>
+```
+
+An action blocked by a country rule keeps its button disabled. Under the button, `BlockedActionReason`
+shows the status "Blocked by your country's rules" with the rule behind its `?`; in a list row, a
+`FieldLock` next to the button carries the rule. A disabled button never shows a tooltip, so a reason
+placed only in `tooltip` is never seen.
+
+The `?` button is described by the full text (`aria-describedby`), so a screen reader announces it on
+focus without opening the popover. The popover is named after its button and is focusable: when its
+text is taller than the space it has, it fades at the bottom, scrolls with the wheel or a swipe, and the
+arrow and page keys scroll it while the `?` has focus. Text composed on the server for these blocks
+uses commas, colons and full stops rather than em dashes; quoted statute text keeps its original
+punctuation.
+
+Visible on purpose: a short status line that is the information itself, such as the exchange rate a
+dashboard total was converted at, or "Line 3 has no usable VAT rate, counted in net only", and the text
+a user must read before an irreversible action, such as the danger zone's reset and delete
+confirmations.
 
 :::warning[Enforced in CI]
-`src/components/ui/prose-help.guard.spec.ts` fails the frontend unit tests when a list of
-`warnings` or `notes` is mapped to visible elements, or when a retention basis, source quote,
-resolution note, disclaimer or long explanation key is rendered outside a `ProseHelp` or `FieldHelp`.
-The few one-line status lists kept visible on purpose are named, file by file, in the guard's
-allow-list.
+`src/components/ui/prose-help.guard.spec.ts` fails the frontend unit tests when, outside a
+`ProseHelp`, `FieldHelp`, `FieldLock`, a `help` prop or a field label's `description`:
+
+- a list of `warnings` or `notes` is mapped to elements;
+- a retention basis, source quote, resolution note, disclaimer or blocked reason is printed (testing
+  one in a condition is fine);
+- an English text of 180 characters or more is rendered, whether as a child, a description, a
+  tooltip or a title.
+
+Each exception is named in the guard's allow-list, by file and by text.
 :::
+
+`cypress/e2e/124-prose-help.cy.ts` opens a long popover on a 390 px screen and runs axe with it open.
 
 ## Accessibility checks
 
