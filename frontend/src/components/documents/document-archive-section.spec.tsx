@@ -89,7 +89,7 @@ describe("<DocumentArchiveSection>", () => {
         archive({
           id: "no-rule-archive",
           retentionUntil: null,
-          retentionBasis: "No retention rule declared for this country, no duration invented.",
+          retentionBasis: "No retention rule declared for this country, so no duration is invented.",
         }),
       ],
       isLoading: false,
