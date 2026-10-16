@@ -4,6 +4,7 @@ import { Link } from "react-router"
 import { decimalsFor } from "@/components/documents/totals-calculator"
 import { DocumentStatusBadge } from "@/components/documents/document-status-badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ProseHelp } from "@/components/ui/prose-help"
 import { cn } from "@/lib/utils"
 
 import type { ShortListItem, ShortListWidget } from "@/components/widgets/types"
@@ -102,18 +103,11 @@ export function ShortListWidgetRenderer({ widget }: WidgetRendererProps) {
             ))}
           </ul>
         )}
-        {/* Same "always shown, never thrown" convention as the metric renderer's own warnings list
-            (metric-widget.tsx) - e.g. the dashboard's active period not applying to this particular
-            list (schedules/schedule-widgets.ts's "upcoming recurrences"). */}
         {shortList.warnings?.length ? (
           <WidgetValue className="mt-2">
-            <ul className="space-y-0.5" data-cy={`widget-${shortList.id}-warnings`}>
-              {shortList.warnings.map((warning) => (
-                <li key={warning} className="text-xs text-muted-foreground">
-                  {warning}
-                </li>
-              ))}
-            </ul>
+            <ProseHelp title={t("widgets.notesTitle")} dataCy={`widget-${shortList.id}-warnings`}>
+              {shortList.warnings}
+            </ProseHelp>
           </WidgetValue>
         ) : null}
       </CardContent>

@@ -8,6 +8,7 @@ import { ActionParamsDialog } from "@/components/documents/action-params-dialog"
 import { actionAssignsNumber } from "@/components/documents/action-presentation"
 import { ConfirmationDialog } from "@/components/confirmation-dialog"
 import { DocumentField } from "@/components/documents/document-field"
+import { BlockedActionReason, LineTotalWarnings } from "@/components/documents/document-form"
 import { DocumentTotals, useDocumentTotals } from "@/components/documents/document-totals"
 import type {
   DocumentActionDescriptor,
@@ -103,7 +104,7 @@ function buildFieldGroups(fields: DocumentFieldDescriptor[]) {
  *  it. Only ONE step is ever mounted at a time (`SteppedDialog` renders the current step alone), so
  *  the same `data-cy` recurring across steps is never a collision at runtime.
  *
- *  `lineTotalWarnings` (a received invoice's own "lines don't sum to its stated totals" hint — see
+ *  `lineTotalWarnings` (a received invoice's own "lines don't sum to its stated totals" hint, see
  *  use-document-form.ts's `extractLineTotalWarnings`) is passed ONLY by the "Lines" step's own call
  *  below: it is about the lines, and this is the one step where they are on screen. */
 function FieldsStep({
@@ -120,15 +121,7 @@ function FieldsStep({
       {fields.map((field) => (
         <DocumentField key={field.key} field={field} name={field.key} documentTypeId={documentTypeId} />
       ))}
-      {lineTotalWarnings && lineTotalWarnings.length > 0 && (
-        <div className="space-y-1 rounded-md bg-warning p-3" data-cy="document-line-total-warnings">
-          {lineTotalWarnings.map((warning) => (
-            <p key={warning} className="text-xs text-warning-foreground">
-              {warning}
-            </p>
-          ))}
-        </div>
-      )}
+      <LineTotalWarnings warnings={lineTotalWarnings} />
     </div>
   )
 }
@@ -136,7 +129,6 @@ function FieldsStep({
 interface RecapStepProps {
   descriptor: DocumentTypeDescriptor
   state: DocumentFormState
-  primaryAction?: DocumentActionDescriptor
   secondaryActions: DocumentActionDescriptor[]
 }
 
@@ -150,7 +142,7 @@ interface RecapStepProps {
  * already declares as the recap's own "what will print on it" line, rather than inventing a
  * pre-save mentions endpoint.
  */
-function RecapStep({ descriptor, state, primaryAction, secondaryActions }: RecapStepProps) {
+function RecapStep({ descriptor, state, secondaryActions }: RecapStepProps) {
   const { t } = useTranslation()
   const totals = useDocumentTotals(descriptor)
 
@@ -232,11 +224,7 @@ function RecapStep({ descriptor, state, primaryAction, secondaryActions }: Recap
               variant="outline"
               loading={state.runner.isRunning && state.runner.pendingAction === undefined}
               disabled={!!action.policyBlockedReason}
-              tooltip={
-                action.policyBlockedReason
-                  ? t("documents.form.actionBlockedByPolicy", { reason: action.policyBlockedReason })
-                  : undefined
-              }
+              tooltip={action.policyBlockedReason ? t("documents.form.actionBlockedTitle") : undefined}
               onClick={() => state.runner.handleAction(action)}
               dataCy={`document-action-${action.id}`}
             >
@@ -245,10 +233,8 @@ function RecapStep({ descriptor, state, primaryAction, secondaryActions }: Recap
           ))}
         </div>
       )}
-      {primaryAction?.policyBlockedReason && (
-        <p className="text-xs text-muted-foreground" data-cy={`document-blocked-reason-${primaryAction.id}`}>
-          {t("documents.form.actionBlockedByPolicy", { reason: primaryAction.policyBlockedReason })}
-        </p>
+      {secondaryActions.map(
+        (action) => action.policyBlockedReason && <BlockedActionReason key={action.id} action={action} />,
       )}
     </div>
   )
@@ -359,20 +345,6 @@ export function DocumentCreateDialog({
   const secondaryActions = state.availableActions.filter((action) => action.id !== primaryAction?.id)
   const pendingAction = state.runner.pendingAction
 
-  // Every declared action can be blocked by the active company's country policy at once (e.g. every
-  // action a type offers is forbidden for this country right now) — `primaryAction` is then
-  // `undefined` and there is nothing `onSubmit` could run. Without this, the wizard's own final
-  // "Continue" button stayed enabled and silently did nothing when pressed, with no clue that the
-  // law — not a bug — is what's stopping it; the aggregated reason (one policy reason PER blocked
-  // action, several actions can disagree on why) is what the disabled button's tooltip shows instead.
-  const blockedReasons = Array.from(
-    new Set(
-      state.availableActions
-        .map((action) => action.policyBlockedReason)
-        .filter((reason): reason is string => !!reason),
-    ),
-  )
-
   const steps: SteppedDialogStep[] = []
   if (detailsFields.length > 0) {
     steps.push({
@@ -411,12 +383,7 @@ export function DocumentCreateDialog({
     fields: [],
     render: () =>
       withNotice(
-        <RecapStep
-          descriptor={effectiveDescriptor}
-          state={state}
-          primaryAction={primaryAction}
-          secondaryActions={secondaryActions}
-        />,
+        <RecapStep descriptor={effectiveDescriptor} state={state} secondaryActions={secondaryActions} />,
       ),
   })
 
@@ -432,11 +399,7 @@ export function DocumentCreateDialog({
         submitDataCy={primaryAction ? `document-action-${primaryAction.id}` : undefined}
         submitting={state.runner.isRunning && state.runner.pendingAction === undefined}
         submitDisabled={!primaryAction}
-        submitTooltip={
-          !primaryAction && blockedReasons.length > 0
-            ? t("documents.form.actionBlockedByPolicy", { reason: blockedReasons.join(" · ") })
-            : undefined
-        }
+        submitTooltip={primaryAction ? undefined : t("documents.form.actionBlockedTitle")}
         onSubmit={() => {
           // handleAction reports every failure through a toast.
           if (primaryAction) void state.runner.handleAction(primaryAction)
