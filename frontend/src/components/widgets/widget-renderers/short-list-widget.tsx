@@ -8,6 +8,7 @@ import { ProseHelp } from "@/components/ui/prose-help"
 import { cn } from "@/lib/utils"
 
 import type { ShortListItem, ShortListWidget } from "@/components/widgets/types"
+import { WidgetValue } from "@/components/widgets/widget-value"
 import { AmountBasisCaption } from "./amount-basis"
 import type { WidgetRendererProps } from "./registry"
 
@@ -88,24 +89,26 @@ export function ShortListWidgetRenderer({ widget }: WidgetRendererProps) {
       </CardHeader>
       <CardContent>
         {shortList.items.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("widgets.shortList.empty")}</p>
+          <WidgetValue>
+            <p className="text-sm text-muted-foreground">{t("widgets.shortList.empty")}</p>
+          </WidgetValue>
         ) : (
           <ul className="divide-y" data-cy={`widget-${shortList.id}-items`}>
             {shortList.items.map((item) => (
               <li key={item.id}>
-                <ShortListRow item={item} documentTypeId={shortList.documentTypeId} />
+                <WidgetValue>
+                  <ShortListRow item={item} documentTypeId={shortList.documentTypeId} />
+                </WidgetValue>
               </li>
             ))}
           </ul>
         )}
         {shortList.warnings?.length ? (
-          <ProseHelp
-            title={t("widgets.notesTitle")}
-            dataCy={`widget-${shortList.id}-warnings`}
-            className="mt-2"
-          >
-            {shortList.warnings}
-          </ProseHelp>
+          <WidgetValue className="mt-2">
+            <ProseHelp title={t("widgets.notesTitle")} dataCy={`widget-${shortList.id}-warnings`}>
+              {shortList.warnings}
+            </ProseHelp>
+          </WidgetValue>
         ) : null}
       </CardContent>
     </Card>

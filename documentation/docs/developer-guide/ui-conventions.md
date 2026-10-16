@@ -145,6 +145,18 @@ Each exception is named in the guard's allow-list, by file and by text.
 
 `cypress/e2e/124-prose-help.cy.ts` opens a long popover on a 390 px screen and runs axe with it open.
 
+## Loading states
+
+Loading never moves or resizes what is already on screen, and never shows figures that no longer
+apply. When a filter or a period changes, each card keeps its size, its title and its caption, and
+only its figures (a value, list rows, a chart, table rows) turn into skeletons of the same size until
+the new ones arrive: the query keeps the previous result as `placeholderData: keepPreviousData`, and
+the widget renderers wrap every figure in `WidgetValue`, which hides it behind a skeleton while the
+grid reloads. The grid carries `aria-busy` and a screen-reader-only "Loading…" status. A first load shows skeletons
+with the dimensions of the content they stand for: the widget grid reuses the card heights it last
+measured at the same window width. `e2e/cypress/e2e/124-dashboard-stable-loading.cy.ts` compares
+card bounding boxes before and during a load, the pattern to follow for another screen.
+
 ## Accessibility checks
 
 Every control has an accessible name, and that name contains the text the control shows (WCAG 2.5.3).
