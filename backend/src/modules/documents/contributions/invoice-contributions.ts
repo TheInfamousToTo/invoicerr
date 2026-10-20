@@ -430,7 +430,7 @@ export const buildInvoiceDashboardWidgets: ContributionHandler = async ({ compan
             },
           ]
         : issuedThisMonth
-            .sort(([currencyA], [currencyB]) => currencyA.localeCompare(currencyB))
+            .toSorted(([currencyA], [currencyB]) => currencyA.localeCompare(currencyB))
             .map(([currency, { thisMonth, lastMonth }]) => ({
               id: `invoice:issued-this-month:${currency}`,
               kind: 'metric',
@@ -558,7 +558,7 @@ export const buildInvoiceDashboardWidgets: ContributionHandler = async ({ compan
       collectedThisMonth.length === 0
         ? [{ id: 'invoice:collected-this-month', kind: 'metric', label: 'Collected this month', value: 0 }]
         : collectedThisMonth
-            .sort(([currencyA], [currencyB]) => currencyA.localeCompare(currencyB))
+            .toSorted(([currencyA], [currencyB]) => currencyA.localeCompare(currencyB))
             .map(([currency, { thisMonth, lastMonth }]) => ({
               id: `invoice:collected-this-month:${currency}`,
               kind: 'metric',
