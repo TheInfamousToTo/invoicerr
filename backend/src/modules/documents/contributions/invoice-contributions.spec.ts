@@ -696,6 +696,27 @@ describe('Collections - cash actually received (issue #417)', () => {
     };
   }
 
+  /** One sent invoice per row, issued in July, with the payments recorded against it. The collected
+   *  figure only reads the payments, so the invoice's own amount is the same for every row. */
+  function seedPaidInvoices(
+    rows: { id: string; currency: string; payments: { amountMinor: number; paidAt: string }[] }[],
+  ) {
+    seedDocuments(
+      rows.map(({ id, currency }) =>
+        invoice({
+          id,
+          status: 'sent',
+          data: { currency, issueDate: '2026-07-01', lines: [{ quantity: 1, unitPrice: 100 }] },
+        }),
+      ),
+    );
+    listPaymentsInRange.mockResolvedValue(
+      rows.flatMap(({ id, currency, payments }) =>
+        payments.map(({ amountMinor, paidAt }) => payment({ documentId: id, amountMinor, currency, paidAt })),
+      ),
+    );
+  }
+
   beforeEach(() => {
     vi.useFakeTimers().setSystemTime(new Date('2026-08-30')); // "this month" = 2026-08
     listAllDocuments.mockReset();
@@ -774,23 +795,17 @@ describe('Collections - cash actually received (issue #417)', () => {
   });
 
   it('collected last month only: no "0, -100%" tile for that currency (issue #598)', async () => {
-    seedDocuments([
-      invoice({
-        id: 'eur-invoice',
-        status: 'sent',
-        data: { currency: 'EUR', issueDate: '2026-07-01', lines: [{ quantity: 1, unitPrice: 100 }] },
-      }),
-      invoice({
-        id: 'usd-invoice',
-        status: 'sent',
-        data: { currency: 'USD', issueDate: '2026-07-01', lines: [{ quantity: 1, unitPrice: 200 }] },
-      }),
-    ]);
     // EUR is collected in both months, USD in July only.
-    listPaymentsInRange.mockResolvedValue([
-      payment({ documentId: 'eur-invoice', amountMinor: 4000, currency: 'EUR', paidAt: '2026-07-20' }),
-      payment({ documentId: 'eur-invoice', amountMinor: 6000, currency: 'EUR', paidAt: '2026-08-10' }),
-      payment({ documentId: 'usd-invoice', amountMinor: 20000, currency: 'USD', paidAt: '2026-07-11' }),
+    seedPaidInvoices([
+      {
+        id: 'eur-invoice',
+        currency: 'EUR',
+        payments: [
+          { amountMinor: 4000, paidAt: '2026-07-20' },
+          { amountMinor: 6000, paidAt: '2026-08-10' },
+        ],
+      },
+      { id: 'usd-invoice', currency: 'USD', payments: [{ amountMinor: 20000, paidAt: '2026-07-11' }] },
     ]);
 
     const widgets = await buildInvoiceDashboardWidgets({ companyId: 'c1' });
@@ -804,15 +819,8 @@ describe('Collections - cash actually received (issue #417)', () => {
   });
 
   it('collected last month only, in every currency: ONE currency-less zero (issue #598)', async () => {
-    seedDocuments([
-      invoice({
-        id: 'eur-invoice',
-        status: 'sent',
-        data: { currency: 'EUR', issueDate: '2026-07-01', lines: [{ quantity: 1, unitPrice: 100 }] },
-      }),
-    ]);
-    listPaymentsInRange.mockResolvedValue([
-      payment({ documentId: 'eur-invoice', amountMinor: 10000, currency: 'EUR', paidAt: '2026-07-20' }),
+    seedPaidInvoices([
+      { id: 'eur-invoice', currency: 'EUR', payments: [{ amountMinor: 10000, paidAt: '2026-07-20' }] },
     ]);
 
     const widgets = await buildInvoiceDashboardWidgets({ companyId: 'c1' });
