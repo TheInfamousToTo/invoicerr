@@ -150,11 +150,14 @@ export function MetricWidgetRenderer({ widget }: WidgetRendererProps) {
               <span className="ms-1 text-sm font-normal text-muted-foreground">{metric.unit}</span>
             ) : null}
           </p>
-          {metric.previousValue !== undefined && (
-            <div className="mt-1.5">
+          {/* The chip's row is always reserved, so a tile without a chip is as tall as one with it
+              (issue #598). A current value of 0 never gets a chip: "0" next to "-100%" reads as a
+              contradiction, whatever the contribution sends. */}
+          <div className="mt-1.5 min-h-4" data-cy={`widget-${metric.id}-trend`}>
+            {metric.previousValue !== undefined && metric.value !== 0 && (
               <VariationChip value={metric.value} previousValue={metric.previousValue} unit={metric.unit} />
-            </div>
-          )}
+            )}
+          </div>
           {metric.warnings?.length ? (
             <ul className="mt-2 space-y-0.5" data-cy={`widget-${metric.id}-warnings`}>
               {metric.warnings.map((warning) => (
