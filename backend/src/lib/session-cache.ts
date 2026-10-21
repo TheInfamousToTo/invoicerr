@@ -129,32 +129,17 @@ export function createSessionCache(options: SessionCacheOptions): SessionCache {
       const connection = value === undefined ? null : redis();
       if (value === undefined || !connection) return load();
 
+      let snapshot: [string, string];
       try {
         const cached = entries.get(value);
         if (cached && cached.expiresAt > now() && (await isCurrent(cached, connection))) {
           return structuredClone(cached.value) as Awaited<ReturnType<typeof load>>;
         }
         entries.delete(value);
-
-        const [generation, sequence] = (await connection.eval(
-          SNAPSHOT_SCRIPT,
-          2,
-          generationKey,
-          sequenceKey,
-          randomUUID(),
-        )) as [string, string];
-        const session = await load();
-        if (session && session.session.token === unsignedToken(value)) {
-          const sessionExpiresAt = new Date(session.session.expiresAt).getTime();
-          store(value, {
-            value: structuredClone(session),
-            userId: session.user.id,
-            generation,
-            sequence: Number(sequence),
-            expiresAt: Math.min(now() + ttlMs, sessionExpiresAt),
-          });
-        }
-        return session;
+        snapshot = (await connection.eval(SNAPSHOT_SCRIPT, 2, generationKey, sequenceKey, randomUUID())) as [
+          string,
+          string,
+        ];
       } catch (error) {
         logger.warn('Session cache unavailable, loading the session directly', {
           category: 'auth',
@@ -162,6 +147,19 @@ export function createSessionCache(options: SessionCacheOptions): SessionCache {
         });
         return load();
       }
+
+      const session = await load();
+      if (session && session.session.token === unsignedToken(value)) {
+        const [generation, sequence] = snapshot;
+        store(value, {
+          value: structuredClone(session),
+          userId: session.user.id,
+          generation,
+          sequence: Number(sequence),
+          expiresAt: Math.min(now() + ttlMs, new Date(session.session.expiresAt).getTime()),
+        });
+      }
+      return session;
     },
 
     async invalidateUsers(userIds) {

@@ -247,6 +247,17 @@ describeWithRedis('createSessionCache with Redis', () => {
     expect(load).toHaveBeenCalledTimes(2);
   });
 
+  it('lets a failing load reach the caller, without loading twice', async () => {
+    const cache = await connected(replica());
+    const load = vi.fn(async (): Promise<FakeSession | null> => {
+      throw new Error('refused');
+    });
+
+    await expect(cache.read(cookieFor('token-1'), load)).rejects.toThrow('refused');
+
+    expect(load).toHaveBeenCalledTimes(1);
+  });
+
   it('hands every request its own copy of the session', async () => {
     const cache = await connected(replica());
     const load = loaderFor('user-1', 'token-1', { activeCompanyId: 'company-a' });
