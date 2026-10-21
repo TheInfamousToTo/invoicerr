@@ -330,6 +330,12 @@ jobs:
           ALLOW_PRIVATE_WEBHOOK_URLS: '1'
         run: cd backend && ./node_modules/.bin/vitest run --no-file-parallelism modules/documents/queue/__tests__ modules/webhooks/queue/__tests__
 
+      # Session cache invalidation, one test per write, against this job's real Redis and Postgres.
+      - name: Run session cache invalidation specs
+        env:
+          SESSION_CACHE_REDIS_TESTS: '1'
+        run: cd backend && ./node_modules/.bin/vitest run --no-file-parallelism src/lib/session-cache
+
       # The migration-vs-schema enum tripwire: deploys the FULL migration chain on
       # its own disposable database (never `invoicerr_test`, the one this job already migrated above)
       # and compares the resulting `pg_enum` against the generated client's enum exports, for every
