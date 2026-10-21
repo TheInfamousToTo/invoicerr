@@ -47,6 +47,7 @@ import { createPendingSignupStore, createRedisClientForPendingSignups } from './
 import { CLIENT_IP_HEADER } from './client-ip-header';
 import { devOnlyOrigins } from './dev-origins';
 import { normalizeSignupLocale } from '../modules/auth-extended/signup-locale';
+import { sessionCache } from './session-cache';
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 
@@ -586,7 +587,26 @@ export const auth = betterAuth({
       // mode this hook must avoid.
       update: {
         after: async (user) => {
+          await sessionCache.invalidateUsers([user.id]);
           await syncPolarMemberEmailForUser(user.id, user.email, user.name || null);
+        },
+      },
+      delete: {
+        after: async (user) => {
+          await sessionCache.invalidateUsers([user.id]);
+        },
+      },
+    },
+    // Sign-out, revocations, password changes and expiry all reach the session row through these.
+    session: {
+      update: {
+        after: async (session) => {
+          if (session) await sessionCache.invalidateUsers([session.userId]);
+        },
+      },
+      delete: {
+        after: async (session) => {
+          await sessionCache.invalidateUsers([session.userId]);
         },
       },
     },

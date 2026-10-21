@@ -55,6 +55,7 @@
  * leave behind.
  */
 import prisma from '@/prisma/prisma.service';
+import { memberIdsOf, sessionCache } from '@/lib/session-cache';
 
 import {
   drainStorageErasureJournal,
@@ -149,6 +150,7 @@ export async function deleteCompanyPermanently(
     }
   }
 
+  const members = await memberIdsOf(companyId);
   const deleted = await prisma.$transaction(async (tx) => {
     // Re-read INSIDE the same transaction as the delete itself, right before it: the Polar revoke
     // above is a real network round-trip, exactly the kind of window a webhook can land in between
@@ -172,7 +174,10 @@ export async function deleteCompanyPermanently(
   // Only once the rows are really gone, and never inside the transaction: object storage has no
   // rollback, so bytes deleted under a transaction that later aborts are simply lost. Never throws —
   // whatever it could not erase stays in the journal for an operator (see its own header).
-  if (deleted) await drainStorageErasureJournal({ companyId, now });
+  if (deleted) {
+    await sessionCache.invalidateUsers(members);
+    await drainStorageErasureJournal({ companyId, now });
+  }
   return deleted;
 }
 
@@ -209,6 +214,7 @@ export async function deleteCompanyPermanentlyNow(
     }
   }
 
+  const members = await memberIdsOf(companyId);
   await prisma.$transaction(async (tx) => {
     // The inventory of this company's stored bytes, taken in the same commit that removes the rows
     // pointing at them, see this file's own header, and `company-storage-erasure.ts`'s, for why the
@@ -218,6 +224,7 @@ export async function deleteCompanyPermanentlyNow(
     await tx.company.delete({ where: { id: companyId } });
   });
 
+  await sessionCache.invalidateUsers(members);
   // Post-commit, best effort, never throwing: this function's callers report "nothing was deleted"
   // when it throws (`danger.service.ts#deleteCompany`), and by this point that would be a lie.
   await drainStorageErasureJournal({ companyId });

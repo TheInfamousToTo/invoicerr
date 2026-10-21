@@ -66,6 +66,7 @@ import { deleteArchivedArtifacts } from '../src/modules/documents/archive/storag
 import { createRng } from '../src/modules/demo/generators/rng';
 import { SupportedCountryCode } from '../src/modules/demo/generators/data-pools';
 import { seedCountryCompany } from '../src/modules/demo/seed-runtime/seed-company';
+import { sessionCache } from '../src/lib/session-cache';
 
 const logger = new Logger('demo-reset');
 
@@ -185,12 +186,14 @@ async function main(): Promise<void> {
       await prisma.company.deleteMany({ where: { id: { in: oldCompanyIds } } });
       logger.log(`Deleted ${oldCompanyIds.length} old demo company(ies).`);
     }
+    await sessionCache.invalidateUsers([userId]);
 
     logger.log(
       `demo:reset complete: ${newCompanyIds.length} compan${newCompanyIds.length === 1 ? 'y' : 'ies'} seeded.`,
     );
   } finally {
     await app.close();
+    await sessionCache.close();
   }
 }
 
