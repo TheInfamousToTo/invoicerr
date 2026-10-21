@@ -1,6 +1,8 @@
 import { vi } from 'vitest';
 import Redis from 'ioredis';
 
+import { logger } from '@/logger/logger.service';
+
 import { createSessionCache, SessionCache } from './session-cache';
 
 vi.mock('@/logger/logger.service', () => ({
@@ -54,6 +56,29 @@ describe('createSessionCache without Redis', () => {
     expect(load).toHaveBeenCalledTimes(2);
     await cache.close();
   });
+
+  it('returns from an invalidation at once, without piling up listeners, while Redis is unreachable', async () => {
+    const client = new Redis({ port: 1, lazyConnect: true, enableOfflineQueue: false });
+    const cache = createSessionCache({ ttlMs: 10_000, redis: () => client });
+
+    const startedAt = Date.now();
+    for (let i = 0; i < 20; i++) await cache.invalidateUsers([`user-${i}`]);
+
+    expect(Date.now() - startedAt).toBeLessThan(500);
+    expect(client.listenerCount('ready')).toBeLessThanOrEqual(1);
+    await cache.close();
+  });
+
+  it('does not touch Redis on an invalidation when the cache is off', async () => {
+    const redis = vi.fn(() => new Redis({ port: 1, lazyConnect: true, enableOfflineQueue: false }));
+    const cache = createSessionCache({ ttlMs: 0, redis });
+
+    await cache.invalidateUsers(['user-1']);
+    await cache.invalidateAll();
+
+    expect(redis).not.toHaveBeenCalled();
+    await cache.close();
+  });
 });
 
 describeWithRedis('createSessionCache with Redis', () => {
@@ -62,13 +87,14 @@ describeWithRedis('createSessionCache with Redis', () => {
   let keyPrefix: string;
   let now: number;
 
-  function replica(options: { ttlMs?: number; maxEntries?: number } = {}): SessionCache {
+  function replica(options: { ttlMs?: number; maxEntries?: number; redis?: () => Redis } = {}): SessionCache {
     const cache = createSessionCache({
       ttlMs: options.ttlMs ?? 10_000,
       maxEntries: options.maxEntries,
       keyPrefix,
       now: () => now,
-      redis: () => new Redis(process.env.REDIS_URL!),
+      redis: options.redis ?? (() => new Redis(process.env.REDIS_URL!)),
+      retry: { firstDelayMs: 20, maxDelayMs: 100, giveUpAfterMs: 60_000 },
     });
     caches.push(cache);
     return cache;
@@ -150,6 +176,57 @@ describeWithRedis('createSessionCache with Redis', () => {
     const after = await replicaA.read(cookieFor('token-1'), load);
 
     expect(after?.activeCompanyId).toBe('company-b');
+  });
+
+  it('retries an invalidation that could not reach Redis, and the other replica follows once it lands', async () => {
+    let failNextInvalidation = true;
+    const flakyRedis = () => {
+      const client = new Redis(process.env.REDIS_URL!);
+      const evaluate = client.eval.bind(client) as (...args: unknown[]) => Promise<unknown>;
+      client.eval = (async (...args: unknown[]) => {
+        if (failNextInvalidation && String(args[0]).includes('INCR')) {
+          failNextInvalidation = false;
+          throw new Error('connection lost');
+        }
+        return evaluate(...args);
+      }) as Redis['eval'];
+      return client;
+    };
+    const writer = await connected(replica({ redis: flakyRedis }));
+    const reader = await connected(replica());
+    const state = { activeCompanyId: 'company-a' };
+    const load = loaderFor('user-1', 'token-1', state);
+    await reader.read(cookieFor('token-1'), load);
+
+    state.activeCompanyId = 'company-b';
+    await writer.invalidateUsers(['user-1']);
+
+    await vi.waitFor(async () => {
+      expect((await reader.read(cookieFor('token-1'), load))?.activeCompanyId).toBe('company-b');
+    });
+    expect(failNextInvalidation).toBe(false);
+  });
+
+  it('turns itself off when Redis may evict its keys', async () => {
+    await admin.config('SET', 'maxmemory-policy', 'allkeys-lru');
+    try {
+      const cache = replica();
+      const load = loaderFor('user-1', 'token-1', { activeCompanyId: 'company-a' });
+      await cache.read(cookieFor('token-1'), load);
+      await vi.waitFor(() =>
+        expect(logger.error).toHaveBeenCalledWith(
+          'Session cache disabled: Redis maxmemory-policy must be noeviction',
+          expect.objectContaining({ details: { maxmemoryPolicy: 'allkeys-lru' } }),
+        ),
+      );
+
+      await cache.read(cookieFor('token-1'), load);
+      await cache.read(cookieFor('token-1'), load);
+
+      expect(load).toHaveBeenCalledTimes(3);
+    } finally {
+      await admin.config('SET', 'maxmemory-policy', 'noeviction');
+    }
   });
 
   it('keeps serving other users when one user is invalidated', async () => {

@@ -3,21 +3,10 @@ import { randomUUID } from 'node:crypto';
 import Redis from 'ioredis';
 
 import { logger } from '@/logger/logger.service';
-import prisma from '@/prisma/prisma.service';
 
 import { createLibRedisClient } from './redis-connection';
 
-/**
- * A short, per-process cache of the enriched session `AuthGuard` resolves on every request, kept
- * correct across API replicas through Redis.
- *
- * Every write that changes what a cached session holds records an invalidation for the users it
- * touches: `invalidateUsers` bumps a global sequence and stamps each user with it. A cache entry
- * remembers the sequence read BEFORE its session was loaded, and is served only while no stamp of
- * its user is newer. One `MGET` per cached request checks that; a miss costs one extra script call.
- *
- * Fails closed: without a working Redis the session is always loaded, never served from memory.
- */
+/** The enriched-session cache `AuthGuard` reads through; see developer-guide/authentication.md. */
 export interface SessionCache {
   read<T extends CacheableSession>(cookie: SessionCookie, load: () => Promise<T | null>): Promise<T | null>;
   invalidateUsers(userIds: readonly string[]): Promise<void>;
@@ -43,44 +32,48 @@ export interface SessionCacheOptions {
   redis: () => Redis;
   keyPrefix?: string;
   now?: () => number;
+  retry?: { firstDelayMs: number; maxDelayMs: number; giveUpAfterMs: number };
 }
 
 interface Entry {
   value: CacheableSession;
   userId: string;
+  snapshot: Snapshot;
+  expiresAt: number;
+}
+
+interface Snapshot {
   generation: string;
   sequence: number;
-  expiresAt: number;
 }
 
 const DEFAULT_MAX_ENTRIES = 10_000;
 // Invalidation stamps outlive any entry they could concern.
 const STAMP_MARGIN_MS = 60_000;
-const INVALIDATION_CONNECT_TIMEOUT_MS = 2_000;
+const DEFAULT_RETRY = { firstDelayMs: 100, maxDelayMs: 5_000, giveUpAfterMs: 10 * 60_000 };
+// Past this many users waiting for a retry, invalidating everyone is cheaper and just as correct.
+const MAX_PENDING_USERS = 10_000;
 
 // Losing either key (flush, restart) starts a new generation, which disowns every existing entry.
-const SNAPSHOT_SCRIPT = `
-local generation = redis.call('GET', KEYS[1])
-local sequence = redis.call('GET', KEYS[2])
-if not generation or not sequence then
-  redis.call('SET', KEYS[1], ARGV[1])
-  redis.call('SET', KEYS[2], 0)
-  return {ARGV[1], '0'}
-end
-return {generation, sequence}`;
-
-const INVALIDATE_SCRIPT = `
+const ENSURE_GENERATION = `
 if not redis.call('GET', KEYS[1]) or not redis.call('GET', KEYS[2]) then
   redis.call('SET', KEYS[1], ARGV[1])
   redis.call('SET', KEYS[2], 0)
-end
+end`;
+
+const SNAPSHOT_SCRIPT = `${ENSURE_GENERATION}
+return {redis.call('GET', KEYS[1]), redis.call('GET', KEYS[2])}`;
+
+const INVALIDATE_SCRIPT = `${ENSURE_GENERATION}
 local sequence = redis.call('INCR', KEYS[2])
 for i = 3, #KEYS do redis.call('SET', KEYS[i], sequence, 'PX', ARGV[2]) end
 return sequence`;
 
 export function createSessionCache(options: SessionCacheOptions): SessionCache {
   const { ttlMs } = options;
+  const enabled = ttlMs > 0;
   const maxEntries = options.maxEntries ?? DEFAULT_MAX_ENTRIES;
+  const retry = options.retry ?? DEFAULT_RETRY;
   const prefix = options.keyPrefix ?? '{session-cache}';
   const now = options.now ?? Date.now;
   const generationKey = `${prefix}:generation`;
@@ -88,30 +81,57 @@ export function createSessionCache(options: SessionCacheOptions): SessionCache {
   const userKey = (userId: string) => `${prefix}:user:${userId}`;
   const entries = new Map<string, Entry>();
   let client: Redis | null = null;
+  let evictionSafe = false;
 
-  function redis(): Redis | null {
-    client ??= options.redis();
-    return client.status === 'ready' ? client : null;
+  const pending = { users: new Set<string>(), all: false, since: 0, delayMs: 0 };
+  let retryTimer: NodeJS.Timeout | null = null;
+
+  function connection(): Redis {
+    if (!client) {
+      const created = options.redis();
+      client = created;
+      created.on('ready', () => void checkEvictionPolicy(created));
+      if (created.status === 'ready') void checkEvictionPolicy(created);
+    }
+    return client;
   }
 
-  // Invalidations wait for the connection: dropping one would leave other replicas serving it.
-  async function connectedRedis(): Promise<Redis> {
-    client ??= options.redis();
-    const connection = client;
-    if (connection.status === 'ready') return connection;
-    await new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error('Redis not ready')), INVALIDATION_CONNECT_TIMEOUT_MS);
-      connection.once('ready', () => {
-        clearTimeout(timer);
-        resolve();
-      });
-    });
-    return connection;
+  // A stamp evicted under memory pressure would silently undo an invalidation.
+  async function checkEvictionPolicy(connected: Redis): Promise<void> {
+    evictionSafe = false;
+    try {
+      const policy = /^maxmemory_policy:(\S+)/m.exec(await connected.info('memory'))?.[1];
+      evictionSafe = policy === 'noeviction';
+      if (!evictionSafe) {
+        logger.error('Session cache disabled: Redis maxmemory-policy must be noeviction', {
+          category: 'auth',
+          details: { maxmemoryPolicy: policy ?? 'unknown' },
+        });
+      }
+    } catch (error) {
+      logFailure('Session cache disabled: could not read the Redis eviction policy', error);
+    }
   }
 
-  async function isCurrent(entry: Entry, connection: Redis): Promise<boolean> {
-    const [generation, stamp] = await connection.mget(generationKey, userKey(entry.userId));
-    return generation === entry.generation && Number(stamp ?? 0) <= entry.sequence;
+  function readyConnection(): Redis | null {
+    const connected = connection();
+    return connected.status === 'ready' && evictionSafe ? connected : null;
+  }
+
+  async function takeSnapshot(connected: Redis): Promise<Snapshot> {
+    const [generation, sequence] = (await connected.eval(
+      SNAPSHOT_SCRIPT,
+      2,
+      generationKey,
+      sequenceKey,
+      randomUUID(),
+    )) as [string, string];
+    return { generation, sequence: Number(sequence) };
+  }
+
+  async function isCurrent(entry: Entry, connected: Redis): Promise<boolean> {
+    const [generation, stamp] = await connected.mget(generationKey, userKey(entry.userId));
+    return generation === entry.snapshot.generation && Number(stamp ?? 0) <= entry.snapshot.sequence;
   }
 
   function store(key: string, entry: Entry): void {
@@ -123,39 +143,94 @@ export function createSessionCache(options: SessionCacheOptions): SessionCache {
     entries.set(key, entry);
   }
 
+  async function publish(users: readonly string[], all: boolean): Promise<void> {
+    const connected = connection();
+    if (connected.status !== 'ready') throw new Error(`Redis connection is ${connected.status}`);
+    if (all) {
+      await connected.set(generationKey, randomUUID());
+      return;
+    }
+    await connected.eval(
+      INVALIDATE_SCRIPT,
+      2 + users.length,
+      generationKey,
+      sequenceKey,
+      ...users.map(userKey),
+      randomUUID(),
+      ttlMs + STAMP_MARGIN_MS,
+    );
+  }
+
+  async function publishOrRetry(users: readonly string[], all: boolean): Promise<void> {
+    try {
+      await publish(users, all);
+    } catch (error) {
+      logFailure('Session cache invalidation could not reach Redis, retrying', error);
+      queueRetry(users, all);
+    }
+  }
+
+  function queueRetry(users: readonly string[], all: boolean): void {
+    if (!pending.all && pending.users.size === 0) {
+      pending.since = now();
+      pending.delayMs = retry.firstDelayMs;
+    }
+    for (const user of users) pending.users.add(user);
+    if (all || pending.users.size > MAX_PENDING_USERS) {
+      pending.all = true;
+      pending.users.clear();
+    }
+    if (!retryTimer) scheduleRetry();
+  }
+
+  function scheduleRetry(): void {
+    retryTimer = setTimeout(() => void flushPending(), pending.delayMs);
+    retryTimer.unref();
+  }
+
+  async function flushPending(): Promise<void> {
+    retryTimer = null;
+    try {
+      await publish([...pending.users], pending.all);
+      pending.users.clear();
+      pending.all = false;
+    } catch (error) {
+      if (now() - pending.since >= retry.giveUpAfterMs) {
+        logFailure('Session cache invalidation abandoned after retrying', error);
+        pending.users.clear();
+        pending.all = false;
+        return;
+      }
+      pending.delayMs = Math.min(pending.delayMs * 2, retry.maxDelayMs);
+      scheduleRetry();
+    }
+  }
+
   return {
     async read(cookie, load) {
-      const value = ttlMs > 0 ? singleCookieValue(cookie) : undefined;
-      const connection = value === undefined ? null : redis();
-      if (value === undefined || !connection) return load();
+      const value = enabled ? singleCookieValue(cookie) : undefined;
+      const connected = value === undefined ? null : readyConnection();
+      if (value === undefined || !connected) return load();
 
-      let snapshot: [string, string];
+      let snapshot: Snapshot;
       try {
         const cached = entries.get(value);
-        if (cached && cached.expiresAt > now() && (await isCurrent(cached, connection))) {
+        if (cached && cached.expiresAt > now() && (await isCurrent(cached, connected))) {
           return structuredClone(cached.value) as Awaited<ReturnType<typeof load>>;
         }
         entries.delete(value);
-        snapshot = (await connection.eval(SNAPSHOT_SCRIPT, 2, generationKey, sequenceKey, randomUUID())) as [
-          string,
-          string,
-        ];
+        snapshot = await takeSnapshot(connected);
       } catch (error) {
-        logger.warn('Session cache unavailable, loading the session directly', {
-          category: 'auth',
-          details: { message: error instanceof Error ? error.message : String(error) },
-        });
+        logFailure('Session cache unavailable, loading the session directly', error);
         return load();
       }
 
       const session = await load();
       if (session && session.session.token === unsignedToken(value)) {
-        const [generation, sequence] = snapshot;
         store(value, {
           value: structuredClone(session),
           userId: session.user.id,
-          generation,
-          sequence: Number(sequence),
+          snapshot,
           expiresAt: Math.min(now() + ttlMs, new Date(session.session.expiresAt).getTime()),
         });
       }
@@ -163,48 +238,34 @@ export function createSessionCache(options: SessionCacheOptions): SessionCache {
     },
 
     async invalidateUsers(userIds) {
+      if (!enabled) return;
       const unique = [...new Set(userIds)];
-      for (const userId of unique) {
-        for (const [key, entry] of entries) if (entry.userId === userId) entries.delete(key);
-      }
       if (unique.length === 0) return;
-      try {
-        const connection = await connectedRedis();
-        await connection.eval(
-          INVALIDATE_SCRIPT,
-          2 + unique.length,
-          generationKey,
-          sequenceKey,
-          ...unique.map(userKey),
-          randomUUID(),
-          Math.max(ttlMs, 0) + STAMP_MARGIN_MS,
-        );
-      } catch (error) {
-        logger.error('Session cache invalidation could not reach Redis', {
-          category: 'auth',
-          details: { userIds: unique, message: error instanceof Error ? error.message : String(error) },
-        });
-      }
+      for (const [key, entry] of entries) if (unique.includes(entry.userId)) entries.delete(key);
+      await publishOrRetry(unique, false);
     },
 
     async invalidateAll() {
+      if (!enabled) return;
       entries.clear();
-      try {
-        await (await connectedRedis()).set(generationKey, randomUUID());
-      } catch (error) {
-        logger.error('Session cache invalidation could not reach Redis', {
-          category: 'auth',
-          details: { message: error instanceof Error ? error.message : String(error) },
-        });
-      }
+      await publishOrRetry([], true);
     },
 
     async close() {
+      if (retryTimer) clearTimeout(retryTimer);
+      retryTimer = null;
       entries.clear();
-      if (client) client.disconnect();
+      client?.disconnect();
       client = null;
     },
   };
+}
+
+function logFailure(message: string, error: unknown): void {
+  logger.error(message, {
+    category: 'auth',
+    details: { message: error instanceof Error ? error.message : String(error) },
+  });
 }
 
 /** The session cookie's value, or `undefined` unless the header carries it exactly once. */
@@ -252,8 +313,3 @@ export const sessionCache: SessionCache = createSessionCache({
   ttlMs: readSessionCacheTtlMs(),
   redis: createSessionCacheRedisClient,
 });
-
-export async function memberIdsOf(companyId: string): Promise<string[]> {
-  const members = await prisma.userCompany.findMany({ where: { companyId }, select: { userId: true } });
-  return members.map((member) => member.userId);
-}

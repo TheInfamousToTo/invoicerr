@@ -1,19 +1,32 @@
 import { vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 
+const sentChangeEmailLinks = vi.hoisted((): string[] => []);
+vi.mock('@/modules/auth-extended/account-lifecycle', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/modules/auth-extended/account-lifecycle')>()),
+  sendChangeEmailMail: async (_mailer: unknown, params: { url: string }) => {
+    sentChangeEmailLinks.push(params.url);
+  },
+}));
+
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { fromNodeHeaders } from 'better-auth/node';
 import Redis from 'ioredis';
 
 import { AuthGuard } from '@/guards/auth.guard';
-import { auth } from '@/lib/auth';
+import { auth, sessionCookieName } from '@/lib/auth';
 import { setUserLocale } from '@/modules/auth-extended/preferences';
-import { deleteCompanyPermanentlyNow } from '@/modules/billing/deletion';
+import { deleteCompanyPermanently, deleteCompanyPermanentlyNow } from '@/modules/billing/deletion';
 import { CompaniesService } from '@/modules/companies/companies.service';
 import { CompanyService } from '@/modules/company/company.service';
 import { EditCompanyDto } from '@/modules/company/dto/company.dto';
 import { TransferService } from '@/modules/company/transfer/transfer.service';
+import { retireDemoCompanies } from '@/modules/demo/seed-runtime/retire-companies';
+import {
+  InstanceResetService,
+  RESET_INSTANCE_CONFIRMATION_WORD,
+} from '@/modules/instance/instance-reset.service';
 import { InvitationsService } from '@/modules/invitations/invitations.service';
 import prisma from '@/prisma/prisma.service';
 
@@ -33,6 +46,7 @@ const PASSWORD = 'Session-cache-spec-1!';
 const quietMail = new Proxy({}, { get: () => async () => undefined });
 
 interface Seen {
+  email: string;
   userId: string;
   companyId: string | null;
   role: CompanyRole | null;
@@ -60,9 +74,10 @@ describeWithRedis('session cache invalidation', () => {
       if (error instanceof UnauthorizedException) return 'unauthorized';
       throw error;
     }
-    const user = request.user as { id: string; firstname: string; locale: string | null };
+    const user = request.user as { id: string; email: string; firstname: string; locale: string | null };
     return {
       userId: user.id,
+      email: user.email,
       companyId: request.companyId as string | null,
       role: request.role as CompanyRole | null,
       companies: request.companies as Seen['companies'],
@@ -77,13 +92,14 @@ describeWithRedis('session cache invalidation', () => {
     );
     if (!session) return 'unauthorized';
     const enriched = session as unknown as {
-      user: { id: string; firstname: string; locale: string | null };
+      user: { id: string; email: string; firstname: string; locale: string | null };
       activeCompanyId: string | null;
       activeRole: CompanyRole | null;
       companies: Seen['companies'];
     };
     return {
       userId: enriched.user.id,
+      email: enriched.user.email,
       companyId: enriched.activeCompanyId,
       role: enriched.activeRole,
       companies: enriched.companies,
@@ -177,7 +193,7 @@ describeWithRedis('session cache invalidation', () => {
   }
 
   beforeAll(async () => {
-    cookieName = (await auth.$context).authCookies.sessionToken.name;
+    cookieName = await sessionCookieName();
     otherReplica = createSessionCache({ ttlMs: 60_000, redis: () => new Redis(process.env.REDIS_URL!) });
     const probe = { header: `${cookieName}=probe.c2ln`, name: cookieName };
     const session = {
@@ -400,5 +416,89 @@ describeWithRedis('session cache invalidation', () => {
     await expectOnBothReplicas(member.cookie, (seen) =>
       expect((seen as Seen).companies.map((company) => company.id)).toContain(created.id),
     );
+  });
+
+  it('a deletion by the billing sweep is seen by the next request', async () => {
+    const { member, first } = await fixture();
+    const now = new Date();
+    await prisma.companySubscription.create({
+      data: {
+        companyId: first.id,
+        status: 'ZIPPED',
+        trialStartedAt: new Date(now.getTime() - 60 * 86_400_000),
+        trialEndsAt: new Date(now.getTime() - 46 * 86_400_000),
+        deletionDueAt: new Date(now.getTime() - 86_400_000),
+      },
+    });
+    await primed(member.cookie);
+
+    expect(
+      await deleteCompanyPermanently(first.id, now, { subscriptions: { revoke: async () => ({}) } }),
+    ).toBe(true);
+
+    await expectOnBothReplicas(member.cookie, (seen) =>
+      expect(seen).toMatchObject({ companyId: null, companies: [] }),
+    );
+  });
+
+  it('a demo reset replacing the demo companies is seen by the next request', async () => {
+    const { member, first } = await fixture();
+    await primed(member.cookie);
+
+    await retireDemoCompanies(member.id, [first.id]);
+
+    await expectOnBothReplicas(member.cookie, (seen) =>
+      expect(seen).toMatchObject({ companyId: null, companies: [] }),
+    );
+  });
+
+  it('a confirmed email change is seen by the next request', async () => {
+    const { member } = await fixture();
+    await primed(member.cookie);
+    const newEmail = `changed-${randomUUID()}@example.test`;
+    sentChangeEmailLinks.length = 0;
+
+    await auth.api.changeEmail({ headers: fromNodeHeaders({ cookie: member.cookie }), body: { newEmail } });
+    for (let step = 0; step < 2 && sentChangeEmailLinks.length > 0; step++) {
+      const token = new URL(sentChangeEmailLinks.shift()!).searchParams.get('token')!;
+      await auth.api.verifyEmail({ query: { token } });
+    }
+
+    await expectOnBothReplicas(member.cookie, (seen) => expect(seen).toMatchObject({ email: newEmail }));
+  });
+
+  it('a session expiry refresh leaves the cached sessions in place', async () => {
+    const { owner, second } = await fixture();
+    const before = await primed(owner.cookie);
+    const token = tokenOf(owner.cookie);
+    await prisma.session.update({
+      where: { token },
+      data: { activeCompanyId: second.id, expiresAt: new Date(Date.now() + 3_600_000) },
+    });
+
+    await auth.api.getSession({ headers: fromNodeHeaders({ cookie: owner.cookie }) });
+
+    const refreshed = await prisma.session.findUniqueOrThrow({ where: { token } });
+    expect(refreshed.expiresAt.getTime()).toBeGreaterThan(Date.now() + 86_400_000);
+    await expectOnBothReplicas(owner.cookie, (seen) => expect(seen).toEqual(before));
+  });
+
+  // Last: an instance reset empties every table this spec relies on.
+  it('an instance reset is seen by the next request', async () => {
+    const { owner } = await fixture();
+    await primed(owner.cookie);
+    const sent: string[] = [];
+    const reset = new InstanceResetService({
+      sendMail: async ({ text }: { text: string }) => {
+        sent.push(text);
+      },
+    } as never);
+    const operator = { id: owner.id, email: owner.email, locale: null } as never;
+
+    await reset.requestOtp(operator);
+    const otp = /(\d{4})-?(\d{4})/.exec(sent[0])!.slice(1).join('');
+    await reset.reset(operator, otp, RESET_INSTANCE_CONFIRMATION_WORD);
+
+    await expectOnBothReplicas(owner.cookie, (seen) => expect(seen).toBe('unauthorized'));
   });
 });

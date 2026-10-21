@@ -330,8 +330,7 @@ jobs:
           ALLOW_PRIVATE_WEBHOOK_URLS: '1'
         run: cd backend && ./node_modules/.bin/vitest run --no-file-parallelism modules/documents/queue/__tests__ modules/webhooks/queue/__tests__
 
-      # The session cache's cross-replica invalidation, against the real Redis and Postgres this job
-      # provides: one spec per write that changes what a cached session holds.
+      # Session cache invalidation, one test per write, against this job's real Redis and Postgres.
       - name: Run session cache invalidation specs
         env:
           SESSION_CACHE_REDIS_TESTS: '1'

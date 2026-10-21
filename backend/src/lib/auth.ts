@@ -359,6 +359,10 @@ const userAfterCreateHook = async (user, context) => {
   return user;
 };
 
+// An expiry refresh only lengthens the session; a cached copy keeps the earlier expiry, so it is safe.
+const SESSION_REFRESH_FIELDS = new Set(['expiresAt', 'updatedAt']);
+const sessionUpdatesToInvalidate = new WeakSet<object>();
+
 export const auth = betterAuth({
   baseURL: process.env.APP_URL || 'http://localhost:3000',
   // Fall back to JWT_SECRET so existing deployments that only set it keep working
@@ -600,8 +604,15 @@ export const auth = betterAuth({
     // Sign-out, revocations, password changes and expiry all reach the session row through these.
     session: {
       update: {
-        after: async (session) => {
-          if (session) await sessionCache.invalidateUsers([session.userId]);
+        before: async (data, context) => {
+          if (context && Object.keys(data).some((field) => !SESSION_REFRESH_FIELDS.has(field))) {
+            sessionUpdatesToInvalidate.add(context);
+          }
+        },
+        after: async (session, context) => {
+          if (session && (!context || sessionUpdatesToInvalidate.has(context))) {
+            await sessionCache.invalidateUsers([session.userId]);
+          }
         },
       },
       delete: {
@@ -677,3 +688,7 @@ export const auth = betterAuth({
     }),
   ],
 });
+
+export async function sessionCookieName(): Promise<string> {
+  return (await auth.$context).authCookies.sessionToken.name;
+}

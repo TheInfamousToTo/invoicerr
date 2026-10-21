@@ -179,8 +179,7 @@ export class CompaniesService {
     // regardless of who initiated its removal.
     await syncCompanyMemberOnMembershipChange(companyId, userId);
 
-    // No write to `Session.activeCompanyId`: `customSession` (lib/auth.ts) falls back to another
-    // membership on the next session load, which the invalidation above forces.
+    // No `activeCompanyId` write: `customSession` falls back to another membership on the next load.
     logger.info('Member left company', { category: 'companies', details: { companyId, userId } });
 
     return { success: true };

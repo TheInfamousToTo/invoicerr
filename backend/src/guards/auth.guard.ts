@@ -10,7 +10,7 @@ import { extractApiKey, hashApiKey } from '@/utils/api-key';
 
 import { CompanyRole } from '../../prisma/generated/prisma/client';
 import { Reflector } from '@nestjs/core';
-import { auth } from '@/lib/auth';
+import { auth, sessionCookieName } from '@/lib/auth';
 import { sessionCache } from '@/lib/session-cache';
 import { fromNodeHeaders } from 'better-auth/node';
 import prisma from '@/prisma/prisma.service';
@@ -86,9 +86,8 @@ export class AuthGuard implements CanActivate {
     const request = context.switchToHttp().getRequest();
     const headers = fromNodeHeaders(request.headers);
 
-    const { authCookies } = await auth.$context;
     const session = await sessionCache.read(
-      { header: request.headers.cookie, name: authCookies.sessionToken.name },
+      { header: request.headers.cookie, name: await sessionCookieName() },
       () => auth.api.getSession({ headers }),
     );
 

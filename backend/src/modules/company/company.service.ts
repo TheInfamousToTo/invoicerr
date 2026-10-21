@@ -51,7 +51,8 @@ import { withSeatReservation } from '@/modules/billing/seat-sync';
 import { syncCompanyMemberOnMembershipChange } from '@/modules/billing/member-sync';
 import { syncPolarCustomerOnCompanyChange } from '@/modules/billing/customer-sync';
 import prisma from '@/prisma/prisma.service';
-import { memberIdsOf, sessionCache } from '@/lib/session-cache';
+import { sessionCache } from '@/lib/session-cache';
+import { companyMemberIds } from '@/modules/companies/company-member-ids';
 import { loadPaymentTerms } from '@/modules/company/payment-terms/load-payment-terms';
 
 /**
@@ -341,7 +342,7 @@ export class CompanyService {
       data: pickCompanyInput(rest),
     });
     if (existingCompany.name !== updatedCompany.name) {
-      await sessionCache.invalidateUsers(await memberIdsOf(companyId));
+      await sessionCache.invalidateUsers(await companyMemberIds(prisma, companyId));
     }
 
     await this.upsertPartyIdentifiers(

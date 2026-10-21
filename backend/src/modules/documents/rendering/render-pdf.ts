@@ -46,7 +46,7 @@ async function takePage(browser: Browser): Promise<PooledPage> {
   return { page: await browser.newPage({ javaScriptEnabled: false }), renders: 0 };
 }
 
-function returnPage(browser: Browser, pooled: PooledPage): boolean {
+function tryReturnToPool(browser: Browser, pooled: PooledPage): boolean {
   if (idlePagesBrowser !== browser || pooled.renders >= MAX_RENDERS_PER_PAGE) return false;
   idlePages.push(pooled);
   return true;
@@ -351,7 +351,7 @@ export async function renderPdf(html: string, options: RenderPdfOptions = {}): P
 
   let browser: Browser | null = null;
   let pooled: PooledPage | null = null;
-  let reusable = false;
+  let succeeded = false;
 
   try {
     browser = await getBrowser();
@@ -396,7 +396,7 @@ export async function renderPdf(html: string, options: RenderPdfOptions = {}): P
     });
 
     pooled.renders++;
-    reusable = true;
+    succeeded = true;
     return Buffer.from(pdfBuffer);
   } catch (error) {
     logger.error('PDF rendering failed', {
@@ -409,7 +409,8 @@ export async function renderPdf(html: string, options: RenderPdfOptions = {}): P
     throw new Error(`PDF rendering failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   } finally {
     // A page that failed mid-render is never handed to another document; the browser stays shared.
-    if (pooled && !(reusable && browser && returnPage(browser, pooled))) {
+    const pooledAgain = succeeded && browser !== null && pooled !== null && tryReturnToPool(browser, pooled);
+    if (pooled && !pooledAgain) {
       try {
         await pooled.page.close();
       } catch (closeError) {
