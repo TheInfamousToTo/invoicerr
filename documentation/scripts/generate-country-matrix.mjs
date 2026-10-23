@@ -386,9 +386,7 @@ const STRINGS = {
       identifiersColLabel: 'Label',
       identifiersColRequired: 'Required',
       identifiersColProvenance: 'Provenance',
-      identifiersInvoiceIntro:
-        'On an invoice a seller established here issues, the law asks for these identifiers. A working ' +
-        'copy of the PDF flags each one that is still empty:',
+      identifiersInvoiceIntro: 'On an invoice a seller established here issues, the law asks for these identifiers. A working copy of the PDF flags each one that is still empty:',
       identifiersColParty: 'Party',
       identifiersColWhen: 'When',
       invoiceParties: { SELLER: 'seller', BUYER: 'buyer' },
@@ -396,10 +394,7 @@ const STRINGS = {
       invoiceConditions: {
         sellerVatRegime: { STANDARD: 'seller VAT-registered', FRANCHISE_BASE: 'seller under the small-business exemption' },
         buyerType: { COMPANY: 'buyer is a company', INDIVIDUAL: 'buyer is an individual' },
-        buyerEstablishment: {
-          DOMESTIC: 'buyer in the same country',
-          OTHER_UNION_MEMBER: 'buyer in another member state of the same tax union',
-        },
+        buyerEstablishment: { DOMESTIC: 'buyer in the same country', OTHER_UNION_MEMBER: 'buyer in another member state of the same tax union' },
       },
       mentionsColSubject: 'Subject',
       mentionsColText: 'Text (as issued)',
@@ -734,9 +729,7 @@ const STRINGS = {
       identifiersColLabel: 'Libellé',
       identifiersColRequired: 'Obligatoire',
       identifiersColProvenance: 'Provenance',
-      identifiersInvoiceIntro:
-        "Sur une facture émise par un vendeur établi ici, la loi exige ces identifiants. Une copie de " +
-        'travail du PDF signale chacun de ceux qui sont encore vides :',
+      identifiersInvoiceIntro: "Sur une facture émise par un vendeur établi ici, la loi exige ces identifiants. Une copie de travail du PDF signale chacun de ceux qui sont encore vides :",
       identifiersColParty: 'Partie',
       identifiersColWhen: 'Quand',
       invoiceParties: { SELLER: 'vendeur', BUYER: 'acheteur' },
@@ -744,10 +737,7 @@ const STRINGS = {
       invoiceConditions: {
         sellerVatRegime: { STANDARD: 'vendeur assujetti à la TVA', FRANCHISE_BASE: 'vendeur en franchise en base' },
         buyerType: { COMPANY: 'acheteur entreprise', INDIVIDUAL: 'acheteur particulier' },
-        buyerEstablishment: {
-          DOMESTIC: 'acheteur dans le même pays',
-          OTHER_UNION_MEMBER: "acheteur dans un autre État membre de la même union fiscale",
-        },
+        buyerEstablishment: { DOMESTIC: 'acheteur dans le même pays', OTHER_UNION_MEMBER: "acheteur dans un autre État membre de la même union fiscale" },
       },
       mentionsColSubject: 'Sujet',
       mentionsColText: 'Texte (tel qu\'émis)',
