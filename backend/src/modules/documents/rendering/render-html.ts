@@ -405,6 +405,31 @@ export interface PartyAddress {
   country?: string | null;
 }
 
+export interface PartyIdentifierLine {
+  scheme: string;
+  label?: string;
+  /** `null` prints the missing marker in its place. */
+  value: string | null;
+}
+
+function renderPartyIdentifiers(
+  identifiers: readonly PartyIdentifierLine[] | undefined,
+  strings: PdfChromeStrings,
+): string {
+  if (!identifiers?.length) return '';
+  const lines = identifiers
+    .map((identifier) => {
+      const label = identifier.label ?? strings.identifierLabels[identifier.scheme] ?? identifier.scheme;
+      const value =
+        identifier.value === null
+          ? `<span class="identifier-missing">${escapeHtmlSafe(strings.identifierMissing)}</span>`
+          : escapeHtmlSafe(identifier.value);
+      return `<div><strong>${escapeHtmlSafe(label)}:</strong> ${value}</div>`;
+    })
+    .join('');
+  return `\n        <div class="party-identifiers">${lines}</div>`;
+}
+
 function renderPartyAddress(party: PartyAddress): string {
   const locality = [party.postalCode, party.city].filter(Boolean).join(' ');
   return [party.address, party.addressLine2, locality, party.country]
@@ -444,13 +469,13 @@ export interface RenderDocumentHtmlInput {
    * so every caller that never asked (the branding preview, dozens of specs) keeps its exact bytes.
    */
   printStatus?: boolean;
-  company: PartyAddress & { name: string };
+  company: PartyAddress & { name: string; identifiers?: readonly PartyIdentifierLine[] };
   /**
    * The party the document is addressed to, printed next to the seller instead of as an ordinary
    * field. `fieldKey` names the descriptor field it stands for, which the field loop then skips. Absent
    * keeps that field in the ordinary field list.
    */
-  recipient?: PartyAddress & { fieldKey: string; name: string };
+  recipient?: PartyAddress & { fieldKey: string; name: string; identifiers?: readonly PartyIdentifierLine[] };
   referenceLabels: Record<string, string>;
   /**
    * Issue #507 - the invoice a LINKED credit note corrects, printed in the header next to the date
@@ -726,6 +751,15 @@ export function renderDocumentHtml(input: RenderDocumentHtmlInput): string {
     }
     .company-address {
       color: #555;
+    }
+    .party-identifiers {
+      margin-top: 4px;
+      font-size: 11px;
+      color: #555;
+    }
+    .identifier-missing {
+      color: #b42318;
+      font-style: italic;
     }
     .meta-grid {
       display: grid;
@@ -1012,14 +1046,14 @@ export function renderDocumentHtml(input: RenderDocumentHtmlInput): string {
       <div class="company-info">
         ${recipient ? '<div class="field-label party-label-spacer">&nbsp;</div>' : ''}
         <div class="company-name">${escapeHtmlSafe(company.name)}</div>
-        <div class="company-address">${renderPartyAddress(company)}</div>
+        <div class="company-address">${renderPartyAddress(company)}</div>${renderPartyIdentifiers(company.identifiers, strings)}
       </div>${
         recipient
           ? `
       <div class="recipient-info">
         <div class="field-label">${escapeHtmlSafe(recipientLabel)}</div>
         <div class="company-name">${escapeHtmlSafe(recipient.name)}</div>
-        <div class="company-address">${renderPartyAddress(recipient)}</div>
+        <div class="company-address">${renderPartyAddress(recipient)}</div>${renderPartyIdentifiers(recipient.identifiers, strings)}
       </div>`
           : ''
       }

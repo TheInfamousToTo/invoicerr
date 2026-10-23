@@ -57,8 +57,9 @@ enabled on your instance, picking one fills the whole block.
 - **Currency**: overrides your company's default currency for this client
 - **Country-specific identifiers**: the identifiers your client's country asks for (for example a
   SIREN or SIRET in France, a NIF in Portugal). The ones marked as required must be filled in to save
-  the client from this wizard. Where your instance supports it, **Look up** fills the client's name,
-  address and founded date from the official business registry
+  the client from this wizard. Every identifier you fill in is printed on the client's documents. Where
+  your instance supports it, **Look up** fills the client's name, address and founded date from the
+  official business registry
 - **Peppol**: an optional electronic routing address
 
 ### Contact & portal
@@ -97,9 +98,11 @@ form. Nothing is lost: complete the client, come back to the invoice, and run th
 can always be saved, and a quote can always be sent, whatever the state of the client.
 
 :::info[Why the identifiers]
-Which identifiers an invoice must carry depends on the buyer's country, and the list is the same one
-the wizard marks as required. A client from a country with no required identifier only needs an
-address and a city.
+The identifiers checked here are the ones the client's own country marks as required, the same list
+the wizard asks for. A client from a country with no required identifier only needs an address and a
+city. Your own country's invoicing law can ask for more on a given sale, for example the VAT number of
+a business client in another EU country: the draft's PDF marks those as missing, see
+[Identifiers on the PDF](billing/invoices.md#identifiers-on-the-pdf).
 :::
 
 Picking a country fills in **Currency** with that country's usual currency, and, for a new client,

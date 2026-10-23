@@ -489,6 +489,46 @@ and for FA(3)'s seller tax prefix. They read it from the one country whose `b2gR
 names them (`formats/national/format-country.ts`), never from a literal.
 :::
 
+### Maintainer note: which identifiers an invoice must print
+
+A scheme's `required` flag answers one question: must a party of this country fill the field in
+before it can be saved, and before an invoice to that client is validated. It cannot say what the
+invoice itself must show, because that depends on the transaction: a French seller states its VAT
+number unless it is under the franchise en base, and its client's VAT number only for an
+intra-Community B2B sale. Those rules live in the same `identifiers` section, under
+`invoiceRequirements`, and are always read from the SELLER's country:
+
+```json
+"invoiceRequirements": [
+  {
+    "party": "BUYER",
+    "scheme": "VAT",
+    "when": { "buyerType": ["COMPANY"], "buyerEstablishment": ["OTHER_UNION_MEMBER"] },
+    "provenance": { "kind": "legal", "sourceText": "...", "sourceCheckedAt": "2026-10-23" },
+    "notes": "CGI ann. II art. 242 nonies A, I, 3° and 4°. ..."
+  }
+]
+```
+
+| Field | Meaning |
+| --- | --- |
+| `party` | `SELLER` or `BUYER`. |
+| `scheme` | The cross-country scheme key (`LEGAL_ID`, `VAT`, or a national one such as `RC`). The value printed is the party's own, under the label its own country gives that scheme. |
+| `when` | Optional. Every axis listed must match; an absent axis matches anything; no `when` means always. `sellerVatRegime`: `STANDARD` or `FRANCHISE_BASE` (the company's small-business exemption setting). `buyerType`: `COMPANY` or `INDIVIDUAL` (the client's type). `buyerEstablishment`: `DOMESTIC` (same country as the seller) or `OTHER_UNION_MEMBER` (another member of the seller's tax union, from `tax/tax-unions/data/tax-unions.json`). |
+| `provenance`, `notes` | Same discipline as every other fact. Start `notes` with the short citation: the country pages show it. |
+
+Several rules for the same party and scheme are alternatives: France has two seller `VAT` rules, one
+for a VAT-registered seller and one for an intra-Community B2B sale, which applies even under the
+franchise. `countries/data/all.ts` refuses an unknown party, axis or value at load time
+(`assertValidInvoiceRequirement`), since a condition no code evaluates would silently never match.
+
+What the PDF does with them (`country-identifiers/printed-identifiers.ts`): each party block prints
+every identifier the party has filled in, required or not. On a working copy of an invoice (a draft,
+or any copy that still prints its status), every identifier these rules require that is still empty
+is printed too, with a "missing" marker. The copy a client keeps never prints the marker. Client type
+stands in for "acts as a business": the app does not record whether a client is VAT-registered, and
+each rule's `notes` says where that approximation matters.
+
 ### Maintainer note: frontend country reference data
 
 Two suggestions in the interface need a fact about every country in the world, not only the six

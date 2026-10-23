@@ -4,6 +4,7 @@ import prisma from '@/prisma/prisma.service';
 import { guessCountryCode } from '@/utils/country-name-to-iso';
 
 import { DocumentInstanceResult } from '../actions/action-registry';
+import { PrintedIdentifier, printedPartyIdentifiers } from '../country-identifiers/printed-identifiers';
 import { findClientReferenceField } from '../actions/email-template';
 import { resolveDocumentCustomFieldDescriptors } from '../company-custom-fields/persistence';
 import { DocumentFieldDescriptor, DocumentTypeDescriptor } from '../descriptors/types';
@@ -230,6 +231,9 @@ async function recipientClientFor(
       postalCode: true,
       city: true,
       country: true,
+      countryCode: true,
+      type: true,
+      partyIdentifiers: { select: { scheme: true, value: true } },
     },
   });
 }
@@ -239,6 +243,7 @@ function recipientPartyFor(
   descriptor: DocumentTypeDescriptor,
   referenceLabels: Record<string, string>,
   client: Awaited<ReturnType<typeof recipientClientFor>>,
+  identifiers: PrintedIdentifier[],
 ): RenderDocumentHtmlInput['recipient'] {
   const clientField = findClientReferenceField(descriptor);
   const name = clientField ? referenceLabels[clientField.key] : undefined;
@@ -252,6 +257,7 @@ function recipientPartyFor(
     postalCode: client.postalCode,
     city: client.city,
     country: client.country,
+    identifiers,
   };
 }
 
@@ -383,9 +389,11 @@ export async function renderDocumentInstance(
       city: true,
       postalCode: true,
       country: true,
+      countryCode: true,
       iban: true,
       language: true,
       exemptVat: true,
+      partyIdentifiers: { select: { scheme: true, value: true } },
       brandingAccentColor: true,
       brandingFont: true,
       brandingLogoId: true,
@@ -502,6 +510,24 @@ export async function renderDocumentInstance(
     throw error;
   }
 
+  const printStatus = printsStatusLine(descriptor, instance.status, purpose);
+  const partyIdentifiers = printedPartyIdentifiers({
+    seller: {
+      countryCode: company.countryCode || guessCountryCode(company.country),
+      vatRegime: company.exemptVat ? 'FRANCHISE_BASE' : 'STANDARD',
+      identifiers: company.partyIdentifiers ?? [],
+    },
+    buyer: recipientClient
+      ? {
+          countryCode: recipientClient.countryCode || guessCountryCode(recipientClient.country),
+          type: recipientClient.type,
+          identifiers: recipientClient.partyIdentifiers ?? [],
+        }
+      : undefined,
+    // Only a working copy names a missing identifier: the copy a client keeps never prints a gap.
+    includeMissingRequired: !!descriptor.usesLegalMentions && printStatus,
+  });
+
   const html = renderDocumentHtml({
     descriptor,
     instance: {
@@ -512,9 +538,9 @@ export async function renderDocumentInstance(
       displayNumber: instance.displayNumber,
       atcud: instance.atcud,
     },
-    printStatus: printsStatusLine(descriptor, instance.status, purpose),
-    company,
-    recipient: recipientPartyFor(descriptor, referenceLabels, recipientClient),
+    printStatus,
+    company: { ...company, identifiers: partyIdentifiers.seller },
+    recipient: recipientPartyFor(descriptor, referenceLabels, recipientClient, partyIdentifiers.buyer),
     referenceLabels,
     ...(linkedCreditNote ? linkedCreditNoteRenderInput(descriptor, linkedCreditNote) : {}),
     totals,

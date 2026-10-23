@@ -80,6 +80,15 @@ exports[`renderDocumentHtml > branding (chantier B, 2026-09-15) > pins the full 
     .company-address {
       color: #555;
     }
+    .party-identifiers {
+      margin-top: 4px;
+      font-size: 11px;
+      color: #555;
+    }
+    .identifier-missing {
+      color: #b42318;
+      font-style: italic;
+    }
     .meta-grid {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));

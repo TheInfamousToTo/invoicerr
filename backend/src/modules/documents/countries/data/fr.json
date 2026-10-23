@@ -572,6 +572,73 @@
         },
         "notes": "CGI ann. II art. 242 nonies A, I, 2° and II. Read directly on 2026-09-01 at codes.droit.org (Légifrance mirror), https://codes.droit.org/PDF/Code%20g%C3%A9n%C3%A9ral%20des%20imp%C3%B4ts%2C%20annexe%20II.pdf — Légifrance itself continued to refuse any automated request. This text settles exactly the question left open on 2026-08-30: the VAT number (2°) is in principle a mandatory mention of the invoice (I), BUT II expressly exempts invoices issued by a taxable person under the small-business exemption scheme (art. 293 B and 293 B ter CGI, itself now sourced — see vat-rates/data/fr.json's own 'fr-exempt-293b' entry) as well as invoices ≤ €150 excl. tax. This is exactly why this field stays `required: false` at COUNTRY level rather than `true`: the obligation depends on the issuing company's own VAT regime, a datum this catalog does not carry per company — see this same reasoning already held, without the text at the time, in the resolutionNote removed by this promotion."
       }
+    ],
+    "invoiceRequirements": [
+      {
+        "party": "SELLER",
+        "scheme": "LEGAL_ID",
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "CGI annexe II, art. 242 nonies A : « I. – Les mentions obligatoires qui doivent figurer sur les factures en application du II de l'article 289 du code général des impôts sont les suivantes : 1° Le nom complet, le numéro d'identification mentionné au premier alinéa de l'article R. 123-221 du code de commerce et l'adresse de l'assujetti et de son client ; »",
+          "sourceCheckedAt": "2026-10-23"
+        },
+        "notes": "CGI ann. II art. 242 nonies A, I, 1°. Read at codes.droit.org (Légifrance mirror, edition of 2026-10-15), https://codes.droit.org/PDF/Code%20g%C3%A9n%C3%A9ral%20des%20imp%C3%B4ts%2C%20annexe%20II.pdf, article in the wording of décret n° 2024-1195."
+      },
+      {
+        "party": "BUYER",
+        "scheme": "LEGAL_ID",
+        "when": {
+          "buyerType": ["COMPANY"],
+          "buyerEstablishment": ["DOMESTIC"]
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "CGI annexe II, art. 242 nonies A : « I. – Les mentions obligatoires qui doivent figurer sur les factures en application du II de l'article 289 du code général des impôts sont les suivantes : 1° Le nom complet, le numéro d'identification mentionné au premier alinéa de l'article R. 123-221 du code de commerce et l'adresse de l'assujetti et de son client ; »",
+          "sourceCheckedAt": "2026-10-23"
+        },
+        "notes": "CGI ann. II art. 242 nonies A, I, 1°. Read at codes.droit.org (Légifrance mirror, edition of 2026-10-15), https://codes.droit.org/PDF/Code%20g%C3%A9n%C3%A9ral%20des%20imp%C3%B4ts%2C%20annexe%20II.pdf, article in the wording of décret n° 2024-1195. The R. 123-221 number is the SIREN, which only a business registered in France holds: a foreign client has none, and a private individual is not registered. A COMPANY-type client stands in for a business client; an INDIVIDUAL-type client who trades as a sole trader also holds one but cannot be told apart here."
+      },
+      {
+        "party": "SELLER",
+        "scheme": "VAT",
+        "when": {
+          "sellerVatRegime": ["STANDARD"]
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "CGI annexe II, art. 242 nonies A : « I. – [...] 2° Le numéro individuel d'identification attribué à l'assujetti en application de l'article 286 ter du code précité et sous lequel il a effectué la livraison de biens ou la prestation de services ; [...] II. – Les factures dont le montant est inférieur ou égal à 150 € hors taxe ainsi que celles établies par les assujettis bénéficiant du régime de franchise en base prévu aux articles 293 B et 293 B ter du code général des impôts et celles mentionnées au 5 du I de l'article 289 du même code peuvent ne pas comporter les mentions énoncées aux 2° et 12° du I du présent article. »",
+          "sourceCheckedAt": "2026-10-23"
+        },
+        "notes": "CGI ann. II art. 242 nonies A, I, 2° and II. Read at codes.droit.org (Légifrance mirror, edition of 2026-10-15), https://codes.droit.org/PDF/Code%20g%C3%A9n%C3%A9ral%20des%20imp%C3%B4ts%2C%20annexe%20II.pdf, article in the wording of décret n° 2024-1195. The franchise en base exemption is the seller's own `exemptVat` setting. The invoice of 150 EUR or less that II also exempts is not modelled: it only allows leaving the number out, so printing one is never wrong."
+      },
+      {
+        "party": "SELLER",
+        "scheme": "VAT",
+        "when": {
+          "buyerType": ["COMPANY"],
+          "buyerEstablishment": ["OTHER_UNION_MEMBER"]
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "CGI annexe II, art. 242 nonies A : « I. – [...] 3° Les numéros d'identification à la taxe sur la valeur ajoutée du vendeur et de l'acquéreur pour les livraisons désignées au I de l'article 262 ter du code précité ; 4° Le numéro d'identification à la taxe sur la valeur ajoutée du prestataire ainsi que celui fourni par le preneur pour les prestations pour lesquelles le preneur est redevable de la taxe ; »",
+          "sourceCheckedAt": "2026-10-23"
+        },
+        "notes": "CGI ann. II art. 242 nonies A, I, 3° and 4°. Read at codes.droit.org (Légifrance mirror, edition of 2026-10-15), https://codes.droit.org/PDF/Code%20g%C3%A9n%C3%A9ral%20des%20imp%C3%B4ts%2C%20annexe%20II.pdf, article in the wording of décret n° 2024-1195. 3° (intra-Community supply of goods, exempt under 262 ter I) and 4° (services for which the buyer owes the tax, the general B2B rule for a business client in another member state) are not relaxed by II for a franchise seller: II only lifts 2° and 12°, and its b) excludes 262 ter I supplies outright."
+      },
+      {
+        "party": "BUYER",
+        "scheme": "VAT",
+        "when": {
+          "buyerType": ["COMPANY"],
+          "buyerEstablishment": ["OTHER_UNION_MEMBER"]
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "CGI annexe II, art. 242 nonies A : « I. – [...] 3° Les numéros d'identification à la taxe sur la valeur ajoutée du vendeur et de l'acquéreur pour les livraisons désignées au I de l'article 262 ter du code précité ; 4° Le numéro d'identification à la taxe sur la valeur ajoutée du prestataire ainsi que celui fourni par le preneur pour les prestations pour lesquelles le preneur est redevable de la taxe ; »",
+          "sourceCheckedAt": "2026-10-23"
+        },
+        "notes": "CGI ann. II art. 242 nonies A, I, 3° and 4°. Read at codes.droit.org (Légifrance mirror, edition of 2026-10-15), https://codes.droit.org/PDF/Code%20g%C3%A9n%C3%A9ral%20des%20imp%C3%B4ts%2C%20annexe%20II.pdf, article in the wording of décret n° 2024-1195. A domestic business client's VAT number is not among the mandatory mentions: 1° asks for its SIREN instead."
+      }
     ]
   },
   "correctionRoutes": {

@@ -386,6 +386,21 @@ const STRINGS = {
       identifiersColLabel: 'Label',
       identifiersColRequired: 'Required',
       identifiersColProvenance: 'Provenance',
+      identifiersInvoiceIntro:
+        'On an invoice a seller established here issues, the law asks for these identifiers. A working ' +
+        'copy of the PDF flags each one that is still empty:',
+      identifiersColParty: 'Party',
+      identifiersColWhen: 'When',
+      invoiceParties: { SELLER: 'seller', BUYER: 'buyer' },
+      invoiceConditionAlways: 'always',
+      invoiceConditions: {
+        sellerVatRegime: { STANDARD: 'seller VAT-registered', FRANCHISE_BASE: 'seller under the small-business exemption' },
+        buyerType: { COMPANY: 'buyer is a company', INDIVIDUAL: 'buyer is an individual' },
+        buyerEstablishment: {
+          DOMESTIC: 'buyer in the same country',
+          OTHER_UNION_MEMBER: 'buyer in another member state of the same tax union',
+        },
+      },
       mentionsColSubject: 'Subject',
       mentionsColText: 'Text (as issued)',
       mentionsColLegalRef: 'Legal ref',
@@ -719,6 +734,21 @@ const STRINGS = {
       identifiersColLabel: 'Libellé',
       identifiersColRequired: 'Obligatoire',
       identifiersColProvenance: 'Provenance',
+      identifiersInvoiceIntro:
+        "Sur une facture émise par un vendeur établi ici, la loi exige ces identifiants. Une copie de " +
+        'travail du PDF signale chacun de ceux qui sont encore vides :',
+      identifiersColParty: 'Partie',
+      identifiersColWhen: 'Quand',
+      invoiceParties: { SELLER: 'vendeur', BUYER: 'acheteur' },
+      invoiceConditionAlways: 'toujours',
+      invoiceConditions: {
+        sellerVatRegime: { STANDARD: 'vendeur assujetti à la TVA', FRANCHISE_BASE: 'vendeur en franchise en base' },
+        buyerType: { COMPANY: 'acheteur entreprise', INDIVIDUAL: 'acheteur particulier' },
+        buyerEstablishment: {
+          DOMESTIC: 'acheteur dans le même pays',
+          OTHER_UNION_MEMBER: "acheteur dans un autre État membre de la même union fiscale",
+        },
+      },
       mentionsColSubject: 'Sujet',
       mentionsColText: 'Texte (tel qu\'émis)',
       mentionsColLegalRef: 'Référence légale',
@@ -1877,7 +1907,29 @@ function renderIdentifiersSection(cc, locale) {
   }
   out.push(renderQuotesBlock(quotes, locale));
   out.push('');
+  if (file.invoiceRequirements?.length) {
+    out.push(S.identifiersInvoiceIntro, '');
+    out.push(`| ${S.identifiersColParty} | ${S.identifiersColScheme} | ${S.identifiersColWhen} | ${S.identifiersColProvenance} |`);
+    out.push('|---|---|---|---|');
+    const ruleQuotes = [];
+    for (const rule of file.invoiceRequirements) {
+      out.push(
+        `| ${S.invoiceParties[rule.party] ?? rule.party} | ${rule.scheme} | ${cell(invoiceConditionText(rule.when, S))} | ` +
+          `${provenanceCell(rule.provenance, locale, rule.notes)} |`,
+      );
+      ruleQuotes.push(provenanceQuoteEntry(`${rule.party} ${rule.scheme}`, rule.provenance));
+    }
+    out.push(renderQuotesBlock(ruleQuotes, locale));
+    out.push('');
+  }
   return out.join('\n');
+}
+
+function invoiceConditionText(when, S) {
+  const parts = Object.entries(when ?? {}).map(([axis, values]) =>
+    values.map((value) => S.invoiceConditions[axis]?.[value] ?? value).join(' / '),
+  );
+  return parts.length ? parts.join(', ') : S.invoiceConditionAlways;
 }
 
 function renderMentionsSection(cc, locale) {

@@ -148,6 +148,25 @@ Choosing a local cancellation asks you to confirm first: it is irreversible, and
 | **Peppol BIS Billing 3.0** | Pan-European Peppol network format |
 | **XRechnung** | German public-sector e-invoicing (KoSIT) |
 
+## Identifiers on the PDF
+
+The PDF prints, under each party's address, every identifier filled in on your company and on the
+client (SIREN, VAT number, NIF, Partita IVA, ...), each under the name its own country gives it.
+
+Some of them are mandatory on an invoice, depending on your country's law and on the sale. For
+example, in France: your SIREN always, your VAT number unless you use the small-business VAT
+exemption, the SIREN of a French business client, and both VAT numbers when you invoice a business in
+another EU country. While the invoice is a draft, its PDF marks each mandatory identifier that is
+still empty as missing, in red and in the language of the PDF, so you can complete your company settings or the client before
+issuing it. The PDF the client receives never shows that marker.
+
+:::info[Where the list comes from]
+The rules for each country are sourced to its invoicing law and listed on its
+[country support page](../../developer-guide/country-support/index.md), under "Required identifiers".
+The app reads a client of type **Company** as a business and a client of type **Individual** as a
+private person: it does not know whether a client is registered for VAT.
+:::
+
 ## VAT in your own country's currency
 
 If your company is established in France, Poland or Italy and you invoice a client in a foreign currency, the law requires the VAT amount (and, in Italy, the taxable amount too) to also be stated in your own country's currency. When this applies, the invoice's PDF and detail page print that converted figure next to the invoice's own currency, together with the exchange rate and its date.
