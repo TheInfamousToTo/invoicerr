@@ -121,14 +121,10 @@ export function printedPartyIdentifiers(input: PrintedPartyIdentifiersInput): Pr
     buyerEstablishment: establishmentOf(sellerCountry, buyerCountry),
   };
   const requiredFor = (party: InvoiceParty) =>
-    input.includeMissingRequired
-      ? requiredSchemes(sellerCountry, party, context)
-      : new Set<string>();
+    input.includeMissingRequired ? requiredSchemes(sellerCountry, party, context) : new Set<string>();
 
   return {
     seller: printedFor(sellerCountry, input.seller.identifiers, requiredFor('SELLER')),
-    buyer: input.buyer
-      ? printedFor(buyerCountry, input.buyer.identifiers, requiredFor('BUYER'))
-      : [],
+    buyer: input.buyer ? printedFor(buyerCountry, input.buyer.identifiers, requiredFor('BUYER')) : [],
   };
 }
