@@ -1,5 +1,6 @@
 export {}; // makes this spec a module, not a global script -- see tsconfig.json
-import { FRENCH_BUYER_IDENTIFIERS } from "../fixtures/identifiers";
+import { giveBaselineClientItsVat } from "../support/baseline-client";
+import { POLISH_BUYER_IDENTIFIERS } from "../fixtures/identifiers";
 
 /**
  * NATIONAL transports — wave 1: the credentials groundwork + the PDP channel,
@@ -155,29 +156,35 @@ function expectRejectedByFake(invoiceId: string, rejection: RegExp, fakeRequests
 	cy.task<string[]>(fakeRequestsTask).should("include", fakeRequest);
 }
 
-/** A foreign seller's invoice to the baseline French business client names that client's VAT number. */
-function giveBaselineClientItsVat() {
-	cy.request({ url: `${api}/api/documents/references/client/search` })
-		.its("body")
-		.then((clients: { id: string; label: string }[]) => {
-			cy.request({
-				method: "PATCH",
-				url: `${api}/api/clients/${clients[0].id}`,
-				body: {
-					name: clients[0].label,
-					identifiers: [...FRENCH_BUYER_IDENTIFIERS, { scheme: "VAT", value: "FR44732829320" }],
-				},
-			})
-				.its("status")
-				.should("be.oneOf", [200, 201]);
-		});
+/** A Polish business buyer with the NIP Polish law requires on the invoice. */
+function createPolishBuyer() {
+	return cy
+		.request({
+			method: "POST",
+			url: `${api}/api/clients`,
+			body: {
+				name: "Klient KSeF Sp. z o.o.",
+				contactEmail: "klient.ksef@example.com",
+				address: "ul. Testowa 1",
+				postalCode: "00-001",
+				city: "Warszawa",
+				country: "Poland",
+				countryCode: "PL",
+				currency: "EUR",
+				isActive: true,
+				type: "COMPANY",
+				identifiers: POLISH_BUYER_IDENTIFIERS,
+			},
+		})
+		.then((res) => res.body.id as string);
 }
 
-function createInvoiceDraft(vatRate = "20") {
+function createInvoiceDraft(vatRate = "20", clientId?: string) {
 	return cy
 		.request({ url: `${api}/api/documents/references/client/search` })
 		.its("body")
-		.then((clients: { id: string }[]) => {
+		.then((found: { id: string }[]) => {
+			const clients = clientId ? [{ id: clientId }] : found;
 			expect(
 				clients,
 				"le jeu d'essai contient un client",
@@ -493,11 +500,12 @@ describe("National transports — the PDP channel, connected/disconnected via th
 
 	it('sends an invoice via KSeF → the queue really fails (fake token rejected by the local fake KSeF API) and "send_failed" names the channel', () => {
 		cy.task("startFakeKsefServer");
-		giveBaselineClientItsVat();
-		createInvoiceDraft("23").then((invoiceId) => {
-			sendFromListUntilFailed(invoiceId, "KSeF");
-			expectRejectedByFake(invoiceId, /code 450/, "getFakeKsefRequests", "POST /v2/auth/ksef-token");
-		});
+		createPolishBuyer()
+			.then((clientId) => createInvoiceDraft("23", clientId))
+			.then((invoiceId) => {
+				sendFromListUntilFailed(invoiceId, "KSeF");
+				expectRejectedByFake(invoiceId, /code 450/, "getFakeKsefRequests", "POST /v2/auth/ksef-token");
+			});
 	});
 
 	it("disconnects the KSeF channel via the screen", () => {

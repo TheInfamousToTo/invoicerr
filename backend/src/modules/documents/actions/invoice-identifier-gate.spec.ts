@@ -2,22 +2,18 @@ import { vi, type Mock } from 'vitest';
 
 import prisma from '@/prisma/prisma.service';
 
+import {
+  draftInvoiceContext,
+  invoiceActionRegistry,
+  issuanceDocument,
+  rejection,
+  stubIssuanceCollaborators,
+} from '../__tests__/invoice-action-harness';
 import { createTestCompany } from '../__tests__/issuable-client';
-import * as b2gRouting from '../b2g-routing/b2g-routing';
 import { seedCountryIdentifierRequirements } from '../country-identifiers/seed';
-import * as countryPolicy from '../country-policy/country-policy';
 import * as takeNumber from '../numbering/take-number';
 import * as persistence from '../persistence';
-import * as taxLoadAndResolve from '../tax/load-and-resolve';
-import * as mandate from '../transports/channel-policy/mandate';
-import * as companyTransport from '../transports/company-transport';
-import { TransportRegistry } from '../transports/transport-registry';
-import * as atcudIssuance from './atcud-issuance';
-import { ActionRegistry } from './action-registry';
 import { INVOICE_IDENTIFIERS_MISSING_CODE } from './invoice-identifier-readiness';
-import { registerInvoiceActions } from './invoice-actions';
-import * as vatCurrencyIssuance from '../vat-currency/vat-currency-issuance';
-import * as applyStockOnIssuance from '../stock/apply-stock-on-issuance';
 
 vi.mock('../tax/load-and-resolve');
 vi.mock('../numbering/take-number');
@@ -79,61 +75,13 @@ async function buyer(
   });
 }
 
-function documentFor(clientId: string, status: string) {
-  return {
-    id: 'doc-1',
-    typeId: 'invoice',
-    status,
-    data: documentData(clientId),
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    number: status === 'draft' ? undefined : 1,
-    displayNumber: status === 'draft' ? undefined : 'INV-2026-0001',
-  };
-}
-
-function documentData(clientId: string) {
-  return {
-    client: clientId,
-    issueDate: '2026-10-23',
-    dueDate: '2026-11-22',
-    currency: 'EUR',
-    lines: [{ description: 'Consulting', quantity: 1, unit: 'unit', unitPrice: 100, vatRate: '20' }],
-  };
-}
-
-function invoiceRegistry() {
-  const transportRegistry = new TransportRegistry();
-  transportRegistry.register('email', 'Email', { send: vi.fn().mockResolvedValue({ message: 'queued' }) });
-  const registry = new ActionRegistry();
-  registerInvoiceActions(registry, { transportRegistry, queueDispatcher: { enqueueAction: vi.fn() } });
-  return registry;
-}
-
 async function run(action: 'validate' | 'send', companyId: string, clientId: string) {
-  (persistence.findOwnedDocument as Mock).mockResolvedValue(documentFor(clientId, 'draft'));
+  (persistence.findOwnedDocument as Mock).mockResolvedValue(issuanceDocument(clientId, 'invoice', 'draft'));
   (takeNumber.takeDocumentNumberForTransitionWithStatus as Mock).mockResolvedValue({
-    document: documentFor(clientId, action === 'validate' ? 'validated' : 'sending'),
+    document: issuanceDocument(clientId, 'invoice', action === 'validate' ? 'validated' : 'sending'),
     numbered: { number: 1, displayNumber: 'INV-2026-0001' },
   });
-  const handler = invoiceRegistry().resolve('invoice', action);
-  return handler!({
-    companyId,
-    typeId: 'invoice',
-    documentId: 'doc-1',
-    data: documentData(clientId),
-    params: {},
-    currentStatus: 'draft',
-  });
-}
-
-async function rejection(promise: Promise<unknown>): Promise<{ message: string; response: any }> {
-  try {
-    await promise;
-  } catch (error) {
-    return error as { message: string; response: any };
-  }
-  throw new Error('expected the action to be refused');
+  return invoiceActionRegistry().resolve('invoice', action)!(draftInvoiceContext(companyId, clientId));
 }
 
 describe("Validate refuses an invoice missing an identifier its seller's country requires", () => {
@@ -147,20 +95,7 @@ describe("Validate refuses an invoice missing an identifier its seller's country
 
   afterEach(() => vi.resetAllMocks());
 
-  beforeEach(() => {
-    vi.mocked(countryPolicy.resolveCompanyCountryCode).mockResolvedValue('DE');
-    vi.mocked(mandate.activeChannelMandateForOperation).mockReturnValue(undefined);
-    vi.mocked(companyTransport.getCompanyInvoiceTransportId).mockResolvedValue('email');
-    vi.mocked(taxLoadAndResolve.resolveInvoiceCrossBorderTaxForCompany).mockImplementation(
-      async (_companyId, data) => ({ data, crossBorder: false, warnings: [] }) as never,
-    );
-    vi.mocked(b2gRouting.resolveClientB2gRouting).mockResolvedValue({ applies: false } as never);
-    vi.spyOn(atcudIssuance, 'attachAtcudToNumberedDocument').mockResolvedValue(undefined as never);
-    vi.spyOn(vatCurrencyIssuance, 'attachVatNationalCurrencyToNumberedDocument').mockResolvedValue(
-      undefined as never,
-    );
-    vi.spyOn(applyStockOnIssuance, 'applyStockOnIssuance').mockResolvedValue(undefined as never);
-  });
+  beforeEach(() => stubIssuanceCollaborators());
 
   it('a French seller under the franchise en base validates without a VAT number', async () => {
     const company = await seller(FRANCE, { LEGAL_ID: '732829320' }, true);
