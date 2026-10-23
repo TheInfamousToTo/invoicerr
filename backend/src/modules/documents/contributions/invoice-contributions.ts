@@ -390,7 +390,7 @@ export const buildInvoiceDashboardWidgets: ContributionHandler = async ({ compan
     const issuedByCurrency = new Map<string, { thisMonth: number; lastMonth: number }>();
     // Only a currency invoiced THIS month gets a tile, as in expense-contributions.ts: last month's
     // total is the `previousValue` next to a current figure, never a tile of its own. A currency
-    // invoiced last month only would otherwise read "0" next to a "-100%" badge (issue #598).
+    // invoiced last month only would otherwise read "0" next to a "-100%" badge.
     const invoicedThisMonth = new Set<string>();
     for (const invoice of invoices) {
       if (invoice.status !== 'sent' && invoice.status !== 'imported') continue;

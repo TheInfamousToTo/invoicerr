@@ -34,8 +34,8 @@ export {}; // makes this spec a module, not a global script -- see tsconfig.json
  *    SQL window `invoice:collected-this-month` reads from, but this payment is bucketed as
  *    PREVIOUS month there (`previousValue`, never asserted on), not folded into "this month"'s own
  *    600 total.
- *  - `invoiceGbp` (GBP, a UK client): issued AND paid in M-1, nothing in GBP this month. Issue #598:
- *    last month's GBP total is inside the [last month, this month] window the "this month" tiles
+ *  - `invoiceGbp` (GBP, a UK client): issued AND paid in M-1, nothing in GBP this month.
+ *    Last month's GBP total is inside the [last month, this month] window the "this month" tiles
  *    read from, but a currency with nothing this month gets no tile there at all - never a "0"
  *    next to a "-100%" chip. The same invoice DOES show up in a custom range covering M-1, which
  *    proves the fixture exists and the absence is the rule, not a missing invoice.
@@ -185,7 +185,7 @@ describe("Dashboard Collections tile (#417) - cash actually received, by payment
 	const monthM2First = monthM2Bounds.dateFrom; // M-2, day 1
 	const monthM2Mid = utcDate(now, -2, 15); // M-2, day 15 - invoiceA's own payment date
 	const monthM1Mid = utcDate(now, -1, 10); // M-1, day 10 - invoiceB's own payment date
-	const monthM1Bounds = utcMonthBounds(now, -1); // invoiceGbp's own month (issue #598)
+	const monthM1Bounds = utcMonthBounds(now, -1); // invoiceGbp's own month
 	const monthM1First = monthM1Bounds.dateFrom; // M-1, day 1 - invoiceGbp's own issue date
 
 	before(() => {
@@ -227,7 +227,7 @@ describe("Dashboard Collections tile (#417) - cash actually received, by payment
 			);
 		});
 
-		// invoiceGbp: issued and paid in M-1, nothing in GBP this month (issue #598).
+		// invoiceGbp: issued and paid in M-1, nothing in GBP this month.
 		createClient("Thames Trading Ltd", "United Kingdom", "GB", "GBP").then((clientId) => {
 			const gbpData = invoiceData(clientId, monthM1First, "GBP", 200);
 			saveDraft(gbpData).then((id) =>
@@ -281,7 +281,7 @@ describe("Dashboard Collections tile (#417) - cash actually received, by payment
 		cy.get('[data-cy="widget-invoice:collected-this-month:USD-link"]').should("not.exist");
 	});
 
-	it("a currency invoiced and collected only LAST month gets no \"this month\" tile (#598)", () => {
+	it("a currency invoiced and collected only LAST month gets no \"this month\" tile", () => {
 		// The GBP invoice exists: a custom range over M-1 shows both of its tiles.
 		cy.request<Array<{ id: string }>>({
 			url: `${api}/api/documents/dashboard`,

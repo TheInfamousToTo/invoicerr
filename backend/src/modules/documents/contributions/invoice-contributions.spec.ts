@@ -322,7 +322,7 @@ describe('buildInvoiceDashboardWidgets', () => {
     expect(zero).not.toHaveProperty('previousValue');
   });
 
-  it('invoiced last month only: no "0 EUR, -100%" tile, the currency-less zero instead (issue #598)', async () => {
+  it('invoiced last month only: no "0 EUR, -100%" tile, the currency-less zero instead', async () => {
     // System time is 2026-08-30: this month = 2026-08, last month = 2026-07.
     seedDocuments([
       invoice({
@@ -341,7 +341,7 @@ describe('buildInvoiceDashboardWidgets', () => {
     expect(zero).not.toHaveProperty('previousValue');
   });
 
-  it('a currency invoiced last month only gets no tile next to one invoiced this month (issue #598)', async () => {
+  it('a currency invoiced last month only gets no tile next to one invoiced this month', async () => {
     seedDocuments([
       invoice({
         id: 'aug-eur',
@@ -794,7 +794,7 @@ describe('Collections - cash actually received (issue #417)', () => {
     expect(widgets.find((w) => w.id === 'invoice:collected-this-month')).toBeUndefined();
   });
 
-  it('collected last month only: no "0, -100%" tile for that currency (issue #598)', async () => {
+  it('collected last month only: no "0, -100%" tile for that currency', async () => {
     // EUR is collected in both months, USD in July only.
     seedPaidInvoices([
       {
@@ -818,7 +818,7 @@ describe('Collections - cash actually received (issue #417)', () => {
     expect(widgets.find((w) => w.id === 'invoice:collected-this-month')).toBeUndefined();
   });
 
-  it('collected last month only, in every currency: ONE currency-less zero (issue #598)', async () => {
+  it('collected last month only, in every currency: ONE currency-less zero', async () => {
     seedPaidInvoices([
       { id: 'eur-invoice', currency: 'EUR', payments: [{ amountMinor: 10000, paidAt: '2026-07-20' }] },
     ]);

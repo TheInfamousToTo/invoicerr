@@ -16,7 +16,7 @@ function metric(overrides: Partial<MetricWidget> = {}): MetricWidget {
   } as MetricWidget
 }
 
-describe("MetricWidgetRenderer variation chip (issue #598)", () => {
+describe("MetricWidgetRenderer variation chip", () => {
   it("shows the variation against the previous period", () => {
     render(<MetricWidgetRenderer widget={metric({ previousValue: 100 })} />)
 

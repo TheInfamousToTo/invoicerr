@@ -150,8 +150,8 @@ export function MetricWidgetRenderer({ widget }: WidgetRendererProps) {
               <span className="ms-1 text-sm font-normal text-muted-foreground">{metric.unit}</span>
             ) : null}
           </p>
-          {/* The chip's row is always reserved, so a tile without a chip is as tall as one with it
-              (issue #598). A current value of 0 never gets a chip: "0" next to "-100%" reads as a
+          {/* The chip's row is always reserved, so a tile without a chip is as tall as one with it.
+              A current value of 0 never gets a chip: "0" next to "-100%" reads as a
               contradiction, whatever the contribution sends. */}
           <div className="mt-1.5 min-h-4" data-cy={`widget-${metric.id}-trend`}>
             {metric.previousValue !== undefined && metric.value !== 0 && (
