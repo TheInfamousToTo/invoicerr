@@ -85,7 +85,10 @@ function switchCompanyToPoland() {
 			countryCode: "PL",
 			currency: "PLN",
 			invoiceTransportId: "email",
-			identifiers: [{ scheme: "VAT", value: "PL5260001246" }],
+			identifiers: [
+				{ scheme: "LEGAL_ID", value: "5260001246" },
+				{ scheme: "VAT", value: "PL5260001246" },
+			],
 		},
 	})
 		.its("status")

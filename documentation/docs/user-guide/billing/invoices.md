@@ -27,7 +27,9 @@ before any payment or credit note. What is still owed on it is in its settlement
   [France](../../developer-guide/countries/france.md#validate-and-the-pdp-mandate) and
   [Italy](../../developer-guide/countries/italy.md#validate-and-the-sdi-mandate). For every other
   invoice, **Send** stays a separate, later step. Validating is refused while the client has no
-  address, no city, or lacks an identifier required for its country; the message names what is missing
+  address, no city, or lacks an identifier required for its country, and while your company or the
+  client lacks an identifier your country's law requires on this invoice (see
+  [Identifiers on the PDF](#identifiers-on-the-pdf)); the message names what is missing
   and links to the client
 - **Send**: deliver the invoice through email or, once connected, a country's e-invoicing channel (KSeF, SdI, PDP…). Available both before and after validating; sending an already-validated invoice never re-assigns its number, it only delivers it
 - **Mark as paid** — record payment manually, or use [Bank Reconciliation](bank-reconciliation.md)
@@ -157,8 +159,13 @@ Some of them are mandatory on an invoice, depending on your country's law and on
 example, in France: your SIREN always, your VAT number unless you use the small-business VAT
 exemption, the SIREN of a French business client, and both VAT numbers when you invoice a business in
 another EU country. While the invoice is a draft, its PDF marks each mandatory identifier that is
-still empty as missing, in red and in the language of the PDF, so you can complete your company settings or the client before
-issuing it. The PDF the client receives never shows that marker.
+still empty as missing, in red and in the language of the PDF. The PDF the client receives never
+shows that marker.
+
+**Validate** and **Send** refuse an invoice while one of those mandatory identifiers is empty. The
+message names each one, under its country's name and with whose it is (your company or the client),
+and offers a button to the place to fill it in: **Edit company** when your company lacks one, **Edit
+client** otherwise. A draft can always be saved.
 
 :::info[Where the list comes from]
 The rules for each country are sourced to its invoicing law and listed on its

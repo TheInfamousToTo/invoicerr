@@ -17,6 +17,17 @@ export const ISSUABLE_CLIENT_FIELDS = {
   partyIdentifiers: { create: { scheme: 'LEGAL_ID', value: '732829320' } },
 };
 
+/** The identifiers French law requires of a VAT-registered seller on every invoice. Spread into
+ *  `prisma.company.create`'s `data`. */
+export const ISSUABLE_FRENCH_SELLER_FIELDS = {
+  partyIdentifiers: {
+    create: [
+      { scheme: 'LEGAL_ID', value: '732829320' },
+      { scheme: 'VAT', value: 'FR44732829320' },
+    ],
+  },
+};
+
 /** A client that names only its country, as the quick-create form produces. */
 export const NAME_ONLY_CLIENT_FIELDS = { country: 'France', countryCode: 'FR' };
 

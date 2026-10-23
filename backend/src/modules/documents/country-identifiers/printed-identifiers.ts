@@ -1,4 +1,5 @@
 import { byCodeUnit } from '@/lib/compare';
+import { guessCountryCode } from '@/utils/country-name-to-iso';
 
 import { defaultTaxUnionRegistry } from '../tax/tax-unions/registry';
 import { defaultCountryIdentifierRequirementsCatalog as catalog } from './registry';
@@ -127,4 +128,57 @@ export function printedPartyIdentifiers(input: PrintedPartyIdentifiersInput): Pr
     seller: printedFor(sellerCountry, input.seller.identifiers, requiredFor('SELLER')),
     buyer: input.buyer ? printedFor(buyerCountry, input.buyer.identifiers, requiredFor('BUYER')) : [],
   };
+}
+
+interface PartyRow {
+  countryCode: string | null;
+  country: string | null;
+  partyIdentifiers?: readonly IdentifierValue[] | null;
+}
+
+const countryOf = (row: PartyRow) => row.countryCode || guessCountryCode(row.country);
+
+/** The issuing company as an invoice's seller. */
+export function invoiceSeller(
+  company: PartyRow & { exemptVat: boolean },
+): PrintedPartyIdentifiersInput['seller'] {
+  return {
+    countryCode: countryOf(company),
+    vatRegime: company.exemptVat ? 'FRANCHISE_BASE' : 'STANDARD',
+    identifiers: company.partyIdentifiers ?? [],
+  };
+}
+
+/** A client as an invoice's buyer. */
+export function invoiceBuyer(
+  client: PartyRow & { type: PartyType },
+): NonNullable<PrintedPartyIdentifiersInput['buyer']> {
+  return {
+    countryCode: countryOf(client),
+    type: client.type,
+    identifiers: client.partyIdentifiers ?? [],
+  };
+}
+
+export interface MissingInvoiceIdentifier {
+  party: InvoiceParty;
+  scheme: string;
+  label: string;
+}
+
+/** Every identifier the seller's country requires on this invoice that is still empty, in print order. */
+export function missingInvoiceIdentifiers(
+  seller: PrintedPartyIdentifiersInput['seller'],
+  buyer: PrintedPartyIdentifiersInput['buyer'],
+): MissingInvoiceIdentifier[] {
+  const printed = printedPartyIdentifiers({ seller, buyer, includeMissingRequired: true });
+  const missing = (party: InvoiceParty, identifiers: PrintedIdentifier[]) =>
+    identifiers
+      .filter((identifier) => identifier.value === null)
+      .map((identifier) => ({
+        party,
+        scheme: identifier.scheme,
+        label: identifier.label ?? identifier.scheme,
+      }));
+  return [...missing('SELLER', printed.seller), ...missing('BUYER', printed.buyer)];
 }

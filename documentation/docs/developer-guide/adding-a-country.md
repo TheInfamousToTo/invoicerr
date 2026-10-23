@@ -525,7 +525,13 @@ franchise. `countries/data/all.ts` refuses an unknown party, axis or value at lo
 What the PDF does with them (`country-identifiers/printed-identifiers.ts`): each party block prints
 every identifier the party has filled in, required or not. On a working copy of an invoice (a draft,
 or any copy that still prints its status), every identifier these rules require that is still empty
-is printed too, with a "missing" marker. The copy a client keeps never prints the marker. Client type
+is printed too, with a "missing" marker. The copy a client keeps never prints the marker.
+
+What Validate and Send do with them (`actions/invoice-identifier-readiness.ts`): the invoice issuance
+preflight refuses, before any number is taken, an invoice for which `missingInvoiceIdentifiers`
+(same file as the PDF, same conditions) returns anything. The 400 carries the code
+`INVOICE_IDENTIFIERS_MISSING` and, in `params.missing`, each identifier's party, scheme and label.
+The frontend renders it from those params in the reader's language. Client type
 stands in for "acts as a business": the app does not record whether a client is VAT-registered, and
 each rule's `notes` says where that approximation matters.
 

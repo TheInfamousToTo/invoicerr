@@ -101,7 +101,8 @@ can always be saved, and a quote can always be sent, whatever the state of the c
 The identifiers checked here are the ones the client's own country marks as required, the same list
 the wizard asks for. A client from a country with no required identifier only needs an address and a
 city. Your own country's invoicing law can ask for more on a given sale, for example the VAT number of
-a business client in another EU country: the draft's PDF marks those as missing, see
+a business client in another EU country: the draft's PDF marks those as missing and Validate and
+Send refuse the invoice until they are filled in, see
 [Identifiers on the PDF](billing/invoices.md#identifiers-on-the-pdf).
 :::
 

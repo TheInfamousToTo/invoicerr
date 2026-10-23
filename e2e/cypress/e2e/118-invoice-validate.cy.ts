@@ -1,4 +1,5 @@
 export {}; // makes this spec a module, not a global script -- see tsconfig.json
+import { FRENCH_BUYER_IDENTIFIERS } from "../fixtures/identifiers";
 
 /**
  * Issue #581: a "Validate" action that assigns an invoice's legal number and locks it, WITHOUT
@@ -72,6 +73,24 @@ function invoiceData(clientId: string, issueDate: string) {
  *  Same helper/shape as 31-national-channels.cy.ts's own `setCompanyCountry` (not shared across spec
  *  files, so copied narrowly rather than reached for across a file boundary). Only test 6 below uses
  *  it, and only after every FR-dependent test above has already run. */
+/** A foreign seller's invoice to the baseline French business client names that client's VAT number. */
+function giveBaselineClientItsVat() {
+	cy.request({ url: `${api}/api/documents/references/client/search` })
+		.its("body")
+		.then((clients: { id: string; label: string }[]) => {
+			cy.request({
+				method: "PATCH",
+				url: `${api}/api/clients/${clients[0].id}`,
+				body: {
+					name: clients[0].label,
+					identifiers: [...FRENCH_BUYER_IDENTIFIERS, { scheme: "VAT", value: "FR44732829320" }],
+				},
+			})
+				.its("status")
+				.should("be.oneOf", [200, 201]);
+		});
+}
+
 function setCompanyCountry(
 	country: string,
 	countryCode: string,
@@ -384,7 +403,11 @@ describe("Invoice Validate (issue #581) - numbers and locks without sending, exc
 	});
 
 	it("Poland never shows that alert and never attempts a transmission - Validate stays numbering and locking, nothing else", () => {
-		setCompanyCountry("Poland", "PL", [{ scheme: "VAT", value: "PL5260001246" }]);
+		setCompanyCountry("Poland", "PL", [
+			{ scheme: "LEGAL_ID", value: "5260001246" },
+			{ scheme: "VAT", value: "PL5260001246" },
+		]);
+		giveBaselineClientItsVat();
 
 		cy.request({ url: `${api}/api/documents/references/client/search` })
 			.its("body")

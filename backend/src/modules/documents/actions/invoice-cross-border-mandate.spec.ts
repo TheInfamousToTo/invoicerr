@@ -38,6 +38,7 @@ import * as taxLoadAndResolve from '../tax/load-and-resolve';
 
 vi.mock('../persistence');
 vi.mock('./client-issuance-readiness');
+vi.mock('./invoice-identifier-readiness');
 vi.mock('../transports/company-transport');
 vi.mock('../b2g-routing/b2g-routing');
 vi.mock('../numbering/take-number');

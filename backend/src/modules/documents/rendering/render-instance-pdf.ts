@@ -4,7 +4,12 @@ import prisma from '@/prisma/prisma.service';
 import { guessCountryCode } from '@/utils/country-name-to-iso';
 
 import { DocumentInstanceResult } from '../actions/action-registry';
-import { PrintedIdentifier, printedPartyIdentifiers } from '../country-identifiers/printed-identifiers';
+import {
+  PrintedIdentifier,
+  invoiceBuyer,
+  invoiceSeller,
+  printedPartyIdentifiers,
+} from '../country-identifiers/printed-identifiers';
 import { findClientReferenceField } from '../actions/email-template';
 import { resolveDocumentCustomFieldDescriptors } from '../company-custom-fields/persistence';
 import { DocumentFieldDescriptor, DocumentTypeDescriptor } from '../descriptors/types';
@@ -512,18 +517,8 @@ export async function renderDocumentInstance(
 
   const printStatus = printsStatusLine(descriptor, instance.status, purpose);
   const partyIdentifiers = printedPartyIdentifiers({
-    seller: {
-      countryCode: company.countryCode || guessCountryCode(company.country),
-      vatRegime: company.exemptVat ? 'FRANCHISE_BASE' : 'STANDARD',
-      identifiers: company.partyIdentifiers ?? [],
-    },
-    buyer: recipientClient
-      ? {
-          countryCode: recipientClient.countryCode || guessCountryCode(recipientClient.country),
-          type: recipientClient.type,
-          identifiers: recipientClient.partyIdentifiers ?? [],
-        }
-      : undefined,
+    seller: invoiceSeller(company),
+    buyer: recipientClient ? invoiceBuyer(recipientClient) : undefined,
     // Only a working copy names a missing identifier: the copy a client keeps never prints a gap.
     includeMissingRequired: !!descriptor.usesLegalMentions && printStatus,
   });

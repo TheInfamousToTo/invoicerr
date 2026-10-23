@@ -1,4 +1,5 @@
 export {}; // makes this spec a module, not a global script -- see tsconfig.json
+import { FRENCH_BUYER_IDENTIFIERS } from "../fixtures/identifiers";
 
 /**
  * NATIONAL transports — wave 1: the credentials groundwork + the PDP channel,
@@ -152,6 +153,24 @@ function expectRejectedByFake(invoiceId: string, rejection: RegExp, fakeRequests
 			expect(doc.transportRef, "aucune référence de transport sans dépôt accepté").to.not.be.a("string");
 		});
 	cy.task<string[]>(fakeRequestsTask).should("include", fakeRequest);
+}
+
+/** A foreign seller's invoice to the baseline French business client names that client's VAT number. */
+function giveBaselineClientItsVat() {
+	cy.request({ url: `${api}/api/documents/references/client/search` })
+		.its("body")
+		.then((clients: { id: string; label: string }[]) => {
+			cy.request({
+				method: "PATCH",
+				url: `${api}/api/clients/${clients[0].id}`,
+				body: {
+					name: clients[0].label,
+					identifiers: [...FRENCH_BUYER_IDENTIFIERS, { scheme: "VAT", value: "FR44732829320" }],
+				},
+			})
+				.its("status")
+				.should("be.oneOf", [200, 201]);
+		});
 }
 
 function createInvoiceDraft(vatRate = "20") {
@@ -389,7 +408,10 @@ describe("National transports — the PDP channel, connected/disconnected via th
 		// `scenarios/full-lifecycle.cy.ts` already uses as a buyer identifier) — needed for the FA(3)
 		// send further down, not for this suggestion check itself; set once, here, since the company
 		// STAYS Poland for the rest of this wave (see this file's own header, point 1).
-		setCompanyCountry("Poland", "PL", [{ scheme: "VAT", value: "PL5260001246" }]);
+		setCompanyCountry("Poland", "PL", [
+			{ scheme: "LEGAL_ID", value: "5260001246" },
+			{ scheme: "VAT", value: "PL5260001246" },
+		]);
 		cy.visit("/settings/channels");
 
 		cy.get('[data-cy="channel-nav-ksef"]', { timeout: 15000 }).should("exist").click();
@@ -471,6 +493,7 @@ describe("National transports — the PDP channel, connected/disconnected via th
 
 	it('sends an invoice via KSeF → the queue really fails (fake token rejected by the local fake KSeF API) and "send_failed" names the channel', () => {
 		cy.task("startFakeKsefServer");
+		giveBaselineClientItsVat();
 		createInvoiceDraft("23").then((invoiceId) => {
 			sendFromListUntilFailed(invoiceId, "KSeF");
 			expectRejectedByFake(invoiceId, /code 450/, "getFakeKsefRequests", "POST /v2/auth/ksef-token");
@@ -618,6 +641,7 @@ describe("National transports — the PDP channel, connected/disconnected via th
 	});
 
 	it('sends an invoice via SdI → the queue really fails (fake server, closed port) and "send_failed" names the channel', () => {
+		giveBaselineClientItsVat();
 		createInvoiceDraft("22").then((invoiceId) => {
 			sendFromListUntilFailed(invoiceId, "SdI");
 

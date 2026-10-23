@@ -4,6 +4,7 @@ import prisma from '@/prisma/prisma.service';
 
 import {
   ISSUABLE_CLIENT_FIELDS,
+  ISSUABLE_FRENCH_SELLER_FIELDS,
   NAME_ONLY_CLIENT_FIELDS,
   createTestCompany,
 } from '../__tests__/issuable-client';
@@ -97,6 +98,7 @@ describe('issuing an invoice requires a complete client; a quote does not', () =
     await seedCountryIdentifierRequirements(prisma);
     const company = await createTestCompany('Issuance Gate Co');
     seededCompanyId = company.id;
+    await prisma.company.update({ where: { id: company.id }, data: ISSUABLE_FRENCH_SELLER_FIELDS });
     const incomplete = await prisma.client.create({
       data: { companyId: company.id, name: 'Name Only SARL', ...NAME_ONLY_CLIENT_FIELDS },
     });

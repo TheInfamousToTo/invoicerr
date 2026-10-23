@@ -5321,7 +5321,11 @@
         "clientIncomplete": "{{client}} is missing {{fields}}. Complete the client before validating or sending this invoice.",
         "clientIncompleteAction": "Edit client",
         "clientIncompleteField_address": "the address",
-        "clientIncompleteField_city": "the city"
+        "clientIncompleteField_city": "the city",
+        "invoiceIdentifiersMissing": "Add {{fields}} before validating or sending this invoice.",
+        "invoiceIdentifierMissingSeller": "{{label}} (your company)",
+        "invoiceIdentifierMissingBuyer": "{{label}} (client)",
+        "invoiceIdentifiersEditCompany": "Edit company"
       },
       "newTitle": "New: {{label}}",
       "transitionOr": "or",

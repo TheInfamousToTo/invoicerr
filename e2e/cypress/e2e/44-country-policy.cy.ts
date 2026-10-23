@@ -1,3 +1,4 @@
+import { POLISH_BUYER_IDENTIFIERS } from "../fixtures/identifiers";
 export {}; // makes this spec a module, not a global script -- see tsconfig.json
 
 /**
@@ -47,6 +48,7 @@ function createClient(name: string, country: string, countryCode: string) {
 				countryCode,
 				currency: "EUR",
 				isActive: true,
+				identifiers: POLISH_BUYER_IDENTIFIERS,
 			},
 		})
 		.then((res) => {

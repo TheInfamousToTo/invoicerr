@@ -48,6 +48,7 @@ import { withDerivedContactFields } from '../../../clients/primary-contact';
 import { removeQueueJobsForCompany } from './queue-test-cleanup';
 import { warmUpPdfRenderer } from './queue-test-pdf-warmup';
 import { ISSUABLE_CLIENT_FIELDS } from '../../__tests__/issuable-client';
+import { ISSUABLE_FRENCH_SELLER_FIELDS } from '../../__tests__/issuable-client';
 
 // Gated EXPLICITLY (DOCUMENTS_QUEUE_REDIS_TESTS=1), not merely on REDIS_URL being set: a bare local
 // `npx jest` loads `.env` (so REDIS_URL is always set on a dev machine) and runs spec files in
@@ -192,6 +193,7 @@ describeWithRedis('document-schedule sweep — real Redis, real Postgres, real M
         phone: '+33000000000',
         email: 'schedule-integration-company@example.com',
         invoiceTransportId: 'email',
+        ...ISSUABLE_FRENCH_SELLER_FIELDS,
       },
     });
     companyId = company.id;
