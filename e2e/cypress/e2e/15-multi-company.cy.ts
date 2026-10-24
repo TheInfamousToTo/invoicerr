@@ -18,6 +18,7 @@ describe('Multi-Company Switcher E2E', () => {
     });
 
     it('creates a second company from the switcher and switches to it', () => {
+        cy.stubCompanyLookup();
         cy.visit('/dashboard');
         cy.get('[data-cy="sidebar-company-button"]', { timeout: 15000 }).click();
         cy.get('[data-cy="sidebar-create-company-item"]').click();
@@ -31,14 +32,13 @@ describe('Multi-Company Switcher E2E', () => {
 
         // Step 2 — the national identifier. France requires a LEGAL_ID (SIRET) —
         // the wizard refuses to advance without it (same required-fields check as
-        // the first company). "Next" also fires the backend company-lookup search
-        // before moving on; it always advances regardless of what that finds.
+        // the first company). "Next" awaits the company-lookup search, stubbed above.
         cy.get('[data-cy="onboarding-legalid-input"]', { timeout: 10000 })
             .clear({ force: true })
             .type('73282932000074', { force: true });
         cy.get('[data-cy="onboarding-identifier-next-btn"]').click();
 
-        // Step 3 — the company form, pre-filled by whatever the search found.
+        // Step 3: the company form.
         cy.get('[data-cy="onboarding-company-name-input"]', { timeout: 10000 }).clear().type('Globex Corporation');
         cy.get('[data-cy="onboarding-submit-btn"]').click();
         // Company creation now advances the wizard to the channels step instead of

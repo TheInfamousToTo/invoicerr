@@ -129,6 +129,15 @@ Cypress.Commands.add('waitForDocumentStatus', (url: string, targetStatuses: stri
     return poll(20);
 });
 
+// The onboarding wizard awaits this search before advancing, so a slow live register would stall it.
+Cypress.Commands.add('stubCompanyLookup', () => {
+    // `pathname` is exact: a glob would also catch `/api/company-lookup/capabilities/:cc`.
+    cy.intercept(
+        { method: 'GET', pathname: '/api/company-lookup' },
+        { statusCode: 200, body: { found: false, company: null } },
+    ).as('companyLookupStub');
+});
+
 Cypress.Commands.add('selectCountry', (dataCy: string, countryName: string) => {
     cy.get(`[data-cy="${dataCy}"] button`).first().click({ force: true });
     cy.wait(500);

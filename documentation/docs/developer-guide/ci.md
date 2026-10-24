@@ -83,7 +83,13 @@ started from `e2e/cypress.config.ts` instead:
 - a URL the backend reads from its environment at boot uses a fixed port and a variable set for the
   e2e stack: `ADDRESS_AUTOCOMPLETE_URL` (Photon, port 19876, set in `cypress.yml`),
   `KSEF_TEST_API_URL` (KSeF test API, port 19877, set in `backend/.env.test`) and
-  `CHORUS_PRO_SANDBOX_URL` (both PISTE sandbox hosts, port 19878, set in `backend/.env.test`).
+  `CHORUS_PRO_SANDBOX_URL` (both PISTE sandbox hosts, port 19878, set in `backend/.env.test`);
+- the company register search (`GET /api/company-lookup`), which the onboarding wizard awaits
+  before its company step, is answered in the browser: a spec that drives the wizard with a country
+  that has a register calls `cy.stubCompanyLookup()` before it. Without it, a register that hangs
+  holds the wizard for up to eight seconds per provider in the chain, longer than the spec waits.
+  `18-onboarding-wizard.cy.ts` is the one exception: its France case tests the lookup itself and
+  reaches the real chain on purpose.
 
 The KSeF and Chorus Pro variables only repoint the test or sandbox environment: a channel connected
 in production always talks to the real authority, and a unit test next to each client guards that.
