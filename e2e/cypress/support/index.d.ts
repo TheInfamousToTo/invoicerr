@@ -59,6 +59,13 @@ declare namespace Cypress {
         waitForDocumentStatus(url: string, targetStatuses: string[]): Chainable<any>
 
         /**
+         * Answers the company register search (`GET /api/company-lookup`) with "not found", so a
+         * spec driving the onboarding wizard never depends on a live register.
+         * @example cy.stubCompanyLookup()
+         */
+        stubCompanyLookup(): Chainable<void>
+
+        /**
          * Custom command to pick a country from a CountrySelect component
          * @example cy.selectCountry('client-country-select', 'France')
          */

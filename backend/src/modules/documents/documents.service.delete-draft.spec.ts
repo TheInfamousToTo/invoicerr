@@ -194,13 +194,15 @@ describe('DocumentsService: deleting a draft', () => {
       await writing.opened;
 
       const deleting = runDelete('invoice', invoice.id);
+      // Observed before awaiting anything else: it may reject before `writer` settles.
+      const refused = expect(deleting).rejects.toMatchObject({
+        response: { code: 'DOCUMENT_HAS_DEPENDENTS', params: { typeId: 'credit-note' } },
+      });
       await settle();
       commit.open();
       await writer;
 
-      await expect(deleting).rejects.toMatchObject({
-        response: { code: 'DOCUMENT_HAS_DEPENDENTS', params: { typeId: 'credit-note' } },
-      });
+      await refused;
       expect(await stillExists(invoice.id)).toBe(true);
     });
 
@@ -230,11 +232,13 @@ describe('DocumentsService: deleting a draft', () => {
       await deleted.opened;
 
       const saving = service.runAction(companyId, 'invoice', 'save-draft', { data: invoiceData(quote.id) });
+      // Observed before awaiting anything else: it may reject before `deleter` settles.
+      const refused = expect(saving).rejects.toMatchObject({ response: { code: 'DOCUMENT_LINK_GONE' } });
       await settle();
       commit.open();
       await deleter;
 
-      await expect(saving).rejects.toMatchObject({ response: { code: 'DOCUMENT_LINK_GONE' } });
+      await refused;
       // Only the control invoice, saved before the race, exists.
       expect(await prisma.documentInstance.count({ where: { companyId, typeId: 'invoice' } })).toBe(1);
     });

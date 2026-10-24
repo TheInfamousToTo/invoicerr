@@ -563,13 +563,8 @@ describe(`Full lifecycle — ${scenarioId}`, () => {
 		// wl-api.mf.gov.pl was slow enough, on those two runs, to still be in flight when Cypress gave
 		// up. Stubbed here, unconditionally, for every leg: `fr-pl`'s seller reaches the identical
 		// live-network code path through France's own register and could fail the exact same way, just
-		// not yet observed. `pathname` matches the exact path only: a bare `/api/company-lookup` glob
-		// also caught `/api/company-lookup/capabilities/:cc`, whose body has no `found` key at all,
-		// the same trap `18-onboarding-wizard.cy.ts`'s own comment documents.
-		cy.intercept(
-			{ method: "GET", pathname: "/api/company-lookup" },
-			{ statusCode: 200, body: { found: false, company: null } },
-		).as("companyLookupStub");
+		// not yet observed.
+		cy.stubCompanyLookup();
 
 		const seller = SELLER_IDENTIFIERS[scenarioId];
 		cy.visit("/");
