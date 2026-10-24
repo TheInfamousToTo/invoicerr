@@ -3022,7 +3022,7 @@ model DocumentCountryActionRule {
 // country allows; this one says which national identifier SCHEMES (SIRET, EIN, VAT…) a party of a
 // given type must supply — neither reads the other.
 model CountryIdentifierRequirement {
-  id          String  @id @default(cuid())
+  id          String   @id @default(cuid())
   countryCode String // ISO 3166-1 alpha-2, uppercase — matches the source file's own countryCode
   scheme      String // a stable, cross-country key the FRONTEND switches on — e.g. "LEGAL_ID", "VAT"
   // (see client-upsert.tsx's `data-cy={`client-identifier-${req.scheme}`}` and
@@ -3031,6 +3031,7 @@ model CountryIdentifierRequirement {
   appliesTo   String // 'COMPANY' | 'INDIVIDUAL' | 'BOTH'
   label       String // country-specific display text for this scheme, e.g. "SIRET" (FR), "EIN" (US)
   required    Boolean
+  requiredFor String[] @default([]) // the party types `required` binds, resolved from the file at seed time
   pattern     String? // optional validation regex — a legal CLAIM like `required`, covered by the
   // same provenance below, never a UI-invented default
   helpText    String?

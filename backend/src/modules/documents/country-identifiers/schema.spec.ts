@@ -2,10 +2,12 @@ import {
   assertPatternIsExplainable,
   assertValidEinvoiceFacts,
   assertValidProvenance,
+  assertValidRequiredFor,
   IdentifierSchemeFact,
   InvalidEinvoiceIdentifierFactError,
   InvalidIdentifierPatternError,
   InvalidIdentifierProvenanceError,
+  InvalidRequiredForError,
 } from './schema';
 
 const base: Omit<IdentifierSchemeFact, 'provenance'> = {
@@ -162,5 +164,24 @@ describe('assertValidEinvoiceFacts', () => {
     ['a reduction that keeps nothing', { einvoiceReduction: { whenDigits: 14, keepDigits: 0 } }],
   ])('rejects %s', (_label, facts) => {
     expect(check(facts as Partial<IdentifierSchemeFact>)).toThrow(InvalidEinvoiceIdentifierFactError);
+  });
+});
+
+describe('assertValidRequiredFor', () => {
+  const legal = { kind: 'legal', sourceText: 'Text.', sourceCheckedAt: '2026-08-30' } as const;
+  const check = (facts: Partial<IdentifierSchemeFact>) => () =>
+    assertValidRequiredFor({ ...base, ...facts, provenance: legal }, 'test');
+
+  it('accepts a required scheme narrowed to one of the party types it applies to', () => {
+    expect(check({ requiredFor: ['COMPANY'] })).not.toThrow();
+  });
+
+  it.each([
+    ['an optional scheme', { required: false, requiredFor: ['COMPANY'] }],
+    ['an empty list', { requiredFor: [] }],
+    ['an unknown party type', { requiredFor: ['GOVERNMENT'] }],
+    ['a party type the scheme does not apply to', { appliesTo: 'COMPANY', requiredFor: ['INDIVIDUAL'] }],
+  ])('rejects requiredFor on %s', (_label, facts) => {
+    expect(check(facts as Partial<IdentifierSchemeFact>)).toThrow(InvalidRequiredForError);
   });
 });

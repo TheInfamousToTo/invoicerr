@@ -83,7 +83,7 @@ export async function resolveRequiredIdentifiers(
       scheme: row.scheme,
       label: row.label,
       appliesTo: row.appliesTo as PartyType | 'BOTH',
-      required: row.required,
+      required: row.requiredFor.includes(partyType),
       pattern: row.pattern ?? undefined,
       helpText: row.helpText ?? undefined,
       helpTextKey: row.helpTextKey ?? undefined,

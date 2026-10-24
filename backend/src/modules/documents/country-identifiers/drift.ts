@@ -34,6 +34,7 @@ function rowContentKey(row: CountryIdentifierRequirementRow): string {
     appliesTo: row.appliesTo,
     label: row.label,
     required: row.required,
+    requiredFor: row.requiredFor,
     pattern: row.pattern,
     helpText: row.helpText,
     helpTextKey: row.helpTextKey,

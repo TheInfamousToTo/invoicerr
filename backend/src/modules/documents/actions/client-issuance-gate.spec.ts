@@ -22,7 +22,7 @@ import * as takeNumber from '../numbering/take-number';
 import * as persistence from '../persistence';
 import { EntityReferenceRegistry } from '../references/reference-registry';
 import { ActionRegistry } from './action-registry';
-import { CLIENT_INCOMPLETE_CODE, findMissingClientFields } from './client-issuance-readiness';
+import { CLIENT_INCOMPLETE_CODE, findMissingClientAddress } from './client-issuance-readiness';
 import { registerQuoteActions } from './quote-actions';
 
 vi.mock('../tax/load-and-resolve');
@@ -83,6 +83,21 @@ describe('issuing an invoice requires a complete client; a quote does not', () =
       },
     });
     expect(takeNumber.takeDocumentNumberForTransitionWithStatus).not.toHaveBeenCalled();
+  });
+
+  it('a private client missing its address is asked for the address only, never a SIREN', async () => {
+    const individual = await prisma.client.create({
+      data: { companyId: companyId(), type: 'INDIVIDUAL', name: 'Jeanne Martin', ...NAME_ONLY_CLIENT_FIELDS },
+    });
+    (persistence.findOwnedDocument as Mock).mockResolvedValue(documentFor(individual.id, 'invoice', 'draft'));
+    const handler = invoiceActionRegistry().resolve('invoice', 'validate');
+
+    const error = await rejection(handler!(ctxFor(individual.id)));
+
+    expect(error.response).toMatchObject({
+      code: CLIENT_INCOMPLETE_CODE,
+      params: { address: ['address', 'city'], identifiers: [] },
+    });
   });
 
   it('Send is refused the same way, before any number is taken', async () => {
@@ -152,22 +167,12 @@ describe('issuing an invoice requires a complete client; a quote does not', () =
   });
 });
 
-describe('findMissingClientFields', () => {
-  const required = [{ scheme: 'LEGAL_ID', label: 'SIREN / SIRET' }];
-
+describe('findMissingClientAddress', () => {
   it('treats blank strings as missing', () => {
-    const missing = findMissingClientFields(
-      { address: '  ', city: '', partyIdentifiers: [{ scheme: 'LEGAL_ID', value: ' ' }] },
-      required,
-    );
-    expect(missing).toEqual({ address: ['address', 'city'], identifiers: required });
+    expect(findMissingClientAddress({ address: '  ', city: '' })).toEqual(['address', 'city']);
   });
 
-  it('reports nothing for a complete client', () => {
-    const missing = findMissingClientFields(
-      { address: '1 Rue', city: 'Paris', partyIdentifiers: [{ scheme: 'LEGAL_ID', value: '123456789' }] },
-      required,
-    );
-    expect(missing).toEqual({ address: [], identifiers: [] });
+  it('reports nothing for a complete address', () => {
+    expect(findMissingClientAddress({ address: '1 Rue', city: 'Paris' })).toEqual([]);
   });
 });

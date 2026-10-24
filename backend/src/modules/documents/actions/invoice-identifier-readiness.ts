@@ -24,20 +24,25 @@ const partyIdentifierSelect = {
   partyIdentifiers: { select: { scheme: true, value: true } },
 } as const;
 
+export interface InvoiceIdentifierGaps {
+  missing: MissingInvoiceIdentifier[];
+  clientFound: boolean;
+}
+
 /**
- * Refuses to number an invoice that lacks an identifier the seller's country requires on it, read
- * from that country's `identifiers.invoiceRequirements` with the same conditions the working-copy
- * PDF uses to flag a missing one.
+ * Every identifier the seller's country requires on an invoice from this company to this client that
+ * is still empty, read from that country's `identifiers.invoiceRequirements` with the same conditions
+ * the working-copy PDF uses to flag a missing one.
  */
-export async function assertInvoiceIdentifiersPresent(
+export async function findMissingInvoiceIdentifiers(
   companyId: string,
   clientId: string | undefined,
-): Promise<void> {
+): Promise<InvoiceIdentifierGaps> {
   const company = await prisma.company.findUnique({
     where: { id: companyId },
     select: { ...partyIdentifierSelect, exemptVat: true },
   });
-  if (!company) return;
+  if (!company) return { missing: [], clientFound: false };
   const client = clientId
     ? await prisma.client.findFirst({
         where: { id: clientId, companyId },
@@ -49,10 +54,19 @@ export async function assertInvoiceIdentifiersPresent(
     invoiceSeller(company),
     client ? invoiceBuyer(client) : undefined,
   );
+  return { missing, clientFound: !!client };
+}
+
+/** Refuses to number an invoice that lacks an identifier the seller's country requires on it. */
+export async function assertInvoiceIdentifiersPresent(
+  companyId: string,
+  clientId: string | undefined,
+): Promise<void> {
+  const { missing, clientFound } = await findMissingInvoiceIdentifiers(companyId, clientId);
   if (missing.length === 0) return;
 
   const names = missing.map((identifier) => `${identifier.label} (${PARTY_NAMES[identifier.party]})`);
-  const params: InvoiceIdentifiersMissingParams = { clientId: client ? clientId : undefined, missing };
+  const params: InvoiceIdentifiersMissingParams = { clientId: clientFound ? clientId : undefined, missing };
   throw new BadRequestException({
     message: `This invoice is missing identifiers its seller's country requires: ${names.join(', ')}. Complete them before issuing it.`,
     code: INVOICE_IDENTIFIERS_MISSING_CODE,
