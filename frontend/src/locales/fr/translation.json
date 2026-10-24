@@ -3238,7 +3238,11 @@
                 "clientIncomplete": "Il manque {{fields}} pour {{client}}. Complétez le client avant de valider ou d'envoyer cette facture.",
                 "clientIncompleteAction": "Modifier le client",
                 "clientIncompleteField_address": "l'adresse",
-                "clientIncompleteField_city": "la ville"
+                "clientIncompleteField_city": "la ville",
+                "invoiceIdentifiersMissing": "Ajoutez {{fields}} avant de valider ou d'envoyer cette facture.",
+                "invoiceIdentifierMissingSeller": "{{label}} (votre entreprise)",
+                "invoiceIdentifierMissingBuyer": "{{label}} (client)",
+                "invoiceIdentifiersEditCompany": "Modifier l'entreprise"
             }
         }
     }

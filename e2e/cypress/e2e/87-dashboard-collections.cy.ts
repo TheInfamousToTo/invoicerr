@@ -60,7 +60,13 @@ function setInvoiceTransport(transportId: string) {
 		});
 }
 
-function createClient(name: string, country: string, countryCode: string, currency: string) {
+function createClient(
+	name: string,
+	country: string,
+	countryCode: string,
+	currency: string,
+	identifiers: { scheme: string; value: string }[] = [],
+) {
 	return cy
 		.request({
 			method: "POST",
@@ -75,6 +81,7 @@ function createClient(name: string, country: string, countryCode: string, curren
 				countryCode,
 				currency,
 				isActive: true,
+				identifiers,
 			},
 		})
 		.then((res) => {
@@ -185,7 +192,9 @@ describe("Dashboard Collections tile (#417) - cash actually received, by payment
 		cy.resetAndSeed();
 		setInvoiceTransport("email");
 
-		createClient("Deutsche Handel GmbH", "Germany", "DE", "EUR").then((clientId) => {
+		// A business in another member state: a French invoice names its VAT number.
+		const germanVat = [{ scheme: "VAT", value: "DE136695976" }];
+		createClient("Deutsche Handel GmbH", "Germany", "DE", "EUR", germanVat).then((clientId) => {
 			// invoiceOld: issued M-3, PAID TODAY - counts in "Collected this month", not in
 			// "Invoiced this month" (issued too long ago).
 			const oldData = invoiceData(clientId, monthM3, "EUR", 500);

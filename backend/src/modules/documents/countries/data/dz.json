@@ -529,6 +529,72 @@
         "notes": "The tax-office article number a business is registered under. No legal text was found naming this requirement: it rests only on a native contributor's description of current practice, not on a primary legal text."
       }
     ],
+    "invoiceRequirements": [
+      {
+        "party": "SELLER",
+        "scheme": "RC",
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "Décret exécutif n° 05-468 du 10 décembre 2005, art. 3 : « La facture doit comporter les mentions, ci-après, se rapportant à l'agent économique : 1°) Mentions relatives au vendeur : [...] numéro du registre du commerce ; [...] 2°) Mentions relatives à l'acheteur : [...] numéro du registre du commerce ; numéro d'identification statistique. Si l'acheteur est un consommateur, la facture doit mentionner ses nom, prénom(s) et adresse. »",
+          "sourceCheckedAt": "2026-09-30"
+        },
+        "notes": "Décret exécutif 05-468 art. 3. The same reading as this file's RC and NIS schemes. The buyer's numbers are owed when it is an economic agent, not a consumer; a COMPANY-type client established in Algeria stands in for one, a foreign client holds no Algerian register number."
+      },
+      {
+        "party": "SELLER",
+        "scheme": "NIS",
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "Décret exécutif n° 05-468 du 10 décembre 2005, art. 3 : « La facture doit comporter les mentions, ci-après, se rapportant à l'agent économique : 1°) Mentions relatives au vendeur : [...] numéro d'identification statistique ; [...] 2°) Mentions relatives à l'acheteur : [...] numéro du registre du commerce ; numéro d'identification statistique. »",
+          "sourceCheckedAt": "2026-09-30"
+        },
+        "notes": "Décret exécutif 05-468 art. 3. The same reading as this file's RC and NIS schemes. The buyer's numbers are owed when it is an economic agent, not a consumer; a COMPANY-type client established in Algeria stands in for one, a foreign client holds no Algerian register number."
+      },
+      {
+        "party": "SELLER",
+        "scheme": "NIF",
+        "provenance": {
+          "kind": "unverified",
+          "resolutionNote": "Required by this file's NIF scheme on a native contributor's description of practice only: decree 05-468 art. 3, read in full, does not name it. Settled by the DGI text that requires it on an invoice."
+        }
+      },
+      {
+        "party": "SELLER",
+        "scheme": "AI",
+        "provenance": {
+          "kind": "unverified",
+          "resolutionNote": "Required by this file's AI scheme on a native contributor's description of practice only: decree 05-468 art. 3, read in full, does not name it. Settled by the DGI text that requires it on an invoice."
+        }
+      },
+      {
+        "party": "BUYER",
+        "scheme": "RC",
+        "when": {
+          "buyerType": ["COMPANY"],
+          "buyerEstablishment": ["DOMESTIC"]
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "Décret exécutif n° 05-468 du 10 décembre 2005, art. 3 : « La facture doit comporter les mentions, ci-après, se rapportant à l'agent économique : 1°) Mentions relatives au vendeur : [...] numéro du registre du commerce ; [...] 2°) Mentions relatives à l'acheteur : [...] numéro du registre du commerce ; numéro d'identification statistique. Si l'acheteur est un consommateur, la facture doit mentionner ses nom, prénom(s) et adresse. »",
+          "sourceCheckedAt": "2026-09-30"
+        },
+        "notes": "Décret exécutif 05-468 art. 3. The same reading as this file's RC and NIS schemes. The buyer's numbers are owed when it is an economic agent, not a consumer; a COMPANY-type client established in Algeria stands in for one, a foreign client holds no Algerian register number."
+      },
+      {
+        "party": "BUYER",
+        "scheme": "NIS",
+        "when": {
+          "buyerType": ["COMPANY"],
+          "buyerEstablishment": ["DOMESTIC"]
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "Décret exécutif n° 05-468 du 10 décembre 2005, art. 3 : « La facture doit comporter les mentions, ci-après, se rapportant à l'agent économique : 1°) Mentions relatives au vendeur : [...] numéro d'identification statistique ; [...] 2°) Mentions relatives à l'acheteur : [...] numéro du registre du commerce ; numéro d'identification statistique. »",
+          "sourceCheckedAt": "2026-09-30"
+        },
+        "notes": "Décret exécutif 05-468 art. 3. The same reading as this file's RC and NIS schemes. The buyer's numbers are owed when it is an economic agent, not a consumer; a COMPANY-type client established in Algeria stands in for one, a foreign client holds no Algerian register number."
+      }
+    ],
     "notes": "Algeria (DZ), issue #558, transcribed 2026-09-30 from RECHERCHE_558_ALGERIE.md. Two schemes sourced to a full, direct reading of decree 05-468 art. 3 (RC, NIS): the decree's own text makes both conditional on the buyer being an economic agent rather than a private consumer, modeled here through `appliesTo: 'COMPANY'`. Two further schemes (NIF, AI) rest only on the native contributor's practice answer on issue #558 (2026-09-30) after a full reading of the decree found neither mentioned there; both marked unverified per this PR's own provenance rule for a fact sourced only to contributor practice. No VAT scheme is declared: this product's settings/onboarding screens already offer a VAT identifier field unconditionally for every country (company.settings.tsx's own withVatIdentifier, a format requirement, not a per-country one), and no Algerian text read by this research names a VAT-specific number distinct from the NIF."
   },
   "correctionRoutes": {

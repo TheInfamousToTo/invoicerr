@@ -584,6 +584,46 @@
         "notes": "Specifiche tecniche operative del formato della fattura del Sistema di Interscambio v1.3.2 (Allegato A del DM 55/2013), Agenzia delle Entrate, par. 1.1. Same document, fetch and date as the IT_PA_CODE fact above. Primary text: https://www.fatturapa.gov.it/export/documenti/Specifiche_tecniche_del_formato_FatturaPA_V1.3.2.pdf fetched 2026-09-13 (curl with a browser User-Agent, HTTP 200, application/pdf, 1 190 498 bytes) and read with `pdftotext -layout`, never a fetch-summary. Line wraps closed and typographic quotes normalised in the quotation above; wording unchanged. appliesTo BOTH and required false for the same reasons as IT_SDI: the text gates on a non-PA recipient without restricting to businesses, and this is the SECOND fallback, reached only when no SdI code exists. NO pattern on purpose: the specification's length table at par. 3.2 states only \"formato alfanumerico; lunghezza che va da 7 a 256 caratteri\" -- a length range, not an email grammar. Declaring a generic address regex would be a formal claim no primary source here supports, which this catalog's provenance discipline forbids."
       }
     ],
+    "invoiceRequirements": [
+      {
+        "party": "SELLER",
+        "scheme": "VAT",
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "DPR 26 ottobre 1972, n. 633, art. 21, comma 2: «2. La fattura contiene le seguenti indicazioni: [...] d) numero di partita IVA del soggetto cedente o prestatore»",
+          "sourceCheckedAt": "2026-09-13"
+        },
+        "notes": "DPR n. 633 del 1972 art. 21, comma 2, lettera d). Read at normattiva.it (https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:decreto.del.presidente.della.repubblica:1972-10-26;633~art21!vig=), the same reading this file's VAT and LEGAL_ID schemes quote; normattiva.it refused the connection when these rules were written, so the check date is that reading's. No carve-out: a forfettario seller still states its Partita IVA."
+      },
+      {
+        "party": "BUYER",
+        "scheme": "VAT",
+        "when": {
+          "buyerType": ["COMPANY"],
+          "buyerEstablishment": ["DOMESTIC", "OTHER_UNION_MEMBER"]
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "DPR 26 ottobre 1972, n. 633, art. 21, comma 2: «2. La fattura contiene le seguenti indicazioni: [...] f) numero di partita IVA del soggetto cessionario o committente ovvero, in caso di soggetto passivo stabilito in un altro Stato membro dell'Unione europea, numero di identificazione IVA attribuito dallo Stato membro di stabilimento; nel caso in cui il cessionario o committente residente o domiciliato nel territorio dello Stato non agisce nell'esercizio d'impresa, arte o professione, codice fiscale;»",
+          "sourceCheckedAt": "2026-09-13"
+        },
+        "notes": "DPR n. 633 del 1972 art. 21, comma 2, lettera f). Read at normattiva.it (https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:decreto.del.presidente.della.repubblica:1972-10-26;633~art21!vig=), the same reading this file's VAT and LEGAL_ID schemes quote; normattiva.it refused the connection when these rules were written, so the check date is that reading's. A business client gives its Partita IVA, or its own member state's VAT number when established elsewhere in the Union. The text turns on whether the client acts as a business, which this app does not record: a COMPANY-type client stands in for one."
+      },
+      {
+        "party": "BUYER",
+        "scheme": "LEGAL_ID",
+        "when": {
+          "buyerType": ["INDIVIDUAL"],
+          "buyerEstablishment": ["DOMESTIC"]
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "DPR 26 ottobre 1972, n. 633, art. 21, comma 2: «2. La fattura contiene le seguenti indicazioni: [...] f) numero di partita IVA del soggetto cessionario o committente ovvero, in caso di soggetto passivo stabilito in un altro Stato membro dell'Unione europea, numero di identificazione IVA attribuito dallo Stato membro di stabilimento; nel caso in cui il cessionario o committente residente o domiciliato nel territorio dello Stato non agisce nell'esercizio d'impresa, arte o professione, codice fiscale;»",
+          "sourceCheckedAt": "2026-09-13"
+        },
+        "notes": "DPR n. 633 del 1972 art. 21, comma 2, lettera f). Read at normattiva.it (https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:decreto.del.presidente.della.repubblica:1972-10-26;633~art21!vig=), the same reading this file's VAT and LEGAL_ID schemes quote; normattiva.it refused the connection when these rules were written, so the check date is that reading's. A client resident in Italy who does not act as a business gives its codice fiscale. An INDIVIDUAL-type client stands in for one; a sole trader filed as INDIVIDUAL may instead owe a Partita IVA, which this app cannot tell apart."
+      }
+    ],
     "notes": "Italy, five schemes. VAT and LEGAL_ID are both `required: false` because this catalog's `appliesTo` axis is party TYPE, while Italy's buyer-side rule (DPR 633/1972 art. 21 comma 2 lettera f) turns on whether the buyer is a taxable person -- a distinction the schema does not carry, and which the DB's one-row-per-(country, scheme) shape cannot express as two role-scoped facts. Requiring either would hard-block a lawful client record. Each fact's own notes state the asymmetry in full.\n\nIT_PA_CODE, IT_SDI and PEC are declared here because `formats/national/fatturapa-provider.ts` reads all three off the client to route FormatoTrasmissione and CodiceDestinatario, and this catalog is the only thing that makes a field for them exist: `client-upsert.tsx` renders one input per scheme declared for the party's country, keying its data-cy off `req.scheme` with no allowlist. While they were undeclared, a domestic Italian B2B client could not have its SdI code entered anywhere and fell through to CodiceDestinatario 'XXXXXXX' -- the value this same specification reserves for a recipient \"non residente, non stabilito, non identificato in Italia\". A domestic invoice announced to SdI as a foreign one.\n\n`b2g-routing/data/it.json` separately declares IT_PA_CODE as mandatory for GOVERNMENT clients. The two are not duplicates: this catalog makes the field EXIST on any Italian record, that one makes it REQUIRED for that subset at send time."
   },
   "correctionRoutes": {

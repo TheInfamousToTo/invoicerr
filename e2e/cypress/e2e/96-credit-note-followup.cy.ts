@@ -29,6 +29,7 @@ export {}; // makes this spec a module, not a global script -- see tsconfig.json
  * text on the detail page AND in the rendered PDF.
  */
 import { issueCreditNote } from "../support/credit-notes";
+import { POLISH_BUYER_IDENTIFIERS } from "../fixtures/identifiers";
 
 const api = Cypress.env("apiUrl");
 const appOrigin = Cypress.config("baseUrl");
@@ -159,6 +160,7 @@ describe("PR #473 review point 2 - a Polish seller has no NEW credit-note instru
 				countryCode: "PL",
 				currency: "EUR",
 				isActive: true,
+				identifiers: POLISH_BUYER_IDENTIFIERS,
 			},
 		}).then((clientRes) => {
 			const clientId = clientRes.body?.id as string;

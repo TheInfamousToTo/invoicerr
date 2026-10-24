@@ -1,3 +1,4 @@
+import { POLISH_BUYER_IDENTIFIERS } from "../fixtures/identifiers";
 export {}; // makes this spec a module, not a global script -- see tsconfig.json
 
 /**
@@ -77,6 +78,7 @@ function createPolishClient() {
 				postalCode: "00-001",
 				isActive: true,
 				type: "COMPANY",
+				identifiers: POLISH_BUYER_IDENTIFIERS,
 			},
 		})
 		.then((res) => {

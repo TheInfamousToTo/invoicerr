@@ -33,7 +33,10 @@ function switchSellerToPortugal() {
 			countryCode: "PT",
 			currency: "EUR",
 			invoiceTransportId: "email",
-			identifiers: [{ scheme: "VAT", value: "PT980405319" }],
+			identifiers: [
+				{ scheme: "LEGAL_ID", value: "980405319" },
+				{ scheme: "VAT", value: "PT980405319" },
+			],
 		},
 	})
 		.its("status")

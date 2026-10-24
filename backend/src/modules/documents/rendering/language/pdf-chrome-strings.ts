@@ -101,6 +101,10 @@ export interface PdfChromeStrings {
    *  the two can differ (a weekend/holiday issue date resolves to the last published business day
    *  before/on it). */
   exchangeRate(rate: string, date: string): string;
+  /** Label of a party identifier whose own country's catalog does not name it. */
+  identifierLabels: Readonly<Record<string, string>>;
+  /** Printed in place of a value the seller's country requires on this invoice. */
+  identifierMissing: string;
 }
 
 type StringTuple<N extends number, R extends string[] = []> = R['length'] extends N
@@ -137,6 +141,8 @@ const EN: PdfChromeStrings = {
   vatInNationalCurrency: (currency) => `VAT in ${currency}`,
   taxableInNationalCurrency: (currency) => `Taxable amount in ${currency}`,
   exchangeRate: (rate, date) => `Exchange rate: ${rate} (${date})`,
+  identifierLabels: { VAT: 'VAT number', LEGAL_ID: 'Registration number' },
+  identifierMissing: 'missing',
 };
 
 const FR: PdfChromeStrings = {
@@ -176,6 +182,8 @@ const FR: PdfChromeStrings = {
   vatInNationalCurrency: (currency) => `TVA en ${currency}`,
   taxableInNationalCurrency: (currency) => `Base imposable en ${currency}`,
   exchangeRate: (rate, date) => `Taux de change : ${rate} (${date})`,
+  identifierLabels: { VAT: 'N° de TVA', LEGAL_ID: "N° d'immatriculation" },
+  identifierMissing: 'manquant',
 };
 
 const IT: PdfChromeStrings = {
@@ -215,6 +223,8 @@ const IT: PdfChromeStrings = {
   vatInNationalCurrency: (currency) => `IVA in ${currency}`,
   taxableInNationalCurrency: (currency) => `Imponibile in ${currency}`,
   exchangeRate: (rate, date) => `Tasso di cambio: ${rate} (${date})`,
+  identifierLabels: { VAT: 'Numero di partita IVA', LEGAL_ID: 'Numero di registrazione' },
+  identifierMissing: 'mancante',
 };
 
 const PL: PdfChromeStrings = {
@@ -254,6 +264,8 @@ const PL: PdfChromeStrings = {
   vatInNationalCurrency: (currency) => `VAT w ${currency}`,
   taxableInNationalCurrency: (currency) => `Podstawa opodatkowania w ${currency}`,
   exchangeRate: (rate, date) => `Kurs wymiany: ${rate} (${date})`,
+  identifierLabels: { VAT: 'Numer VAT', LEGAL_ID: 'Numer rejestrowy' },
+  identifierMissing: 'brak',
 };
 
 const DE: PdfChromeStrings = {
@@ -293,6 +305,8 @@ const DE: PdfChromeStrings = {
   vatInNationalCurrency: (currency) => `USt. in ${currency}`,
   taxableInNationalCurrency: (currency) => `Bemessungsgrundlage in ${currency}`,
   exchangeRate: (rate, date) => `Wechselkurs: ${rate} (${date})`,
+  identifierLabels: { VAT: 'USt-IdNr.', LEGAL_ID: 'Registernummer' },
+  identifierMissing: 'fehlt',
 };
 
 const PT: PdfChromeStrings = {
@@ -332,6 +346,8 @@ const PT: PdfChromeStrings = {
   vatInNationalCurrency: (currency) => `IVA em ${currency}`,
   taxableInNationalCurrency: (currency) => `Valor tributável em ${currency}`,
   exchangeRate: (rate, date) => `Taxa de câmbio: ${rate} (${date})`,
+  identifierLabels: { VAT: 'Número de IVA', LEGAL_ID: 'Número de registo' },
+  identifierMissing: 'em falta',
 };
 
 const CHROME_STRINGS: Record<RenderLanguage, PdfChromeStrings> = {

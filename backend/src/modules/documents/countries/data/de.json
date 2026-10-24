@@ -500,6 +500,36 @@
           "resolutionNote": "This scheme did not exist in the shipped file before (only inherited as a candidate from the removed compliance engine's own DE profile, git tag avant-refonte-documents, backend/src/compliance/profiles/data/de.ts's requiredIdentifiers: scheme LEGAL_ID, label Handelsregisternummer, appliesTo COMPANY, no pattern — that profile carried NO provenance field at all, so its choice was never sourced there either). This task read § 37a HGB directly at gesetze-im-internet.de (https://www.gesetze-im-internet.de/hgb/__37a.html, fetched 2026-09-01): 'Auf allen Geschäftsbriefen des Kaufmanns gleichviel welcher Form, die an einen bestimmten Empfänger gerichtet werden, müssen seine Firma, die Bezeichnung nach § 19 Abs. 1 Nr. 1, der Ort seiner Handelsniederlassung, das Registergericht und die Nummer, unter der die Firma in das Handelsregister eingetragen ist, angegeben werden.' (§ 37a Abs. 1 HGB). Two things this text does NOT settle: (1) it governs 'Geschäftsbriefe' (business letters/correspondence) addressed to a specific recipient — the word 'Rechnung' (invoice) never appears in § 37a HGB at all, so whether an invoice counts as a Geschäftsbrief for this purpose is an interpretive question this task did not chase down to a further primary source (case law or an official commentary would settle it — none was read); (2) § 37a HGB binds a 'Kaufmann' (a merchant registered in the Handelsregister — GmbH, AG, OHG, KG, eingetragener Kaufmann/e.K.), not every company: a company that never registered as a Kaufmann (e.g. a small GbR) has no Handelsregisternummer to give at all, which is the reasoning behind `required: false`. Corroborating evidence the number is NOT a tax-invoice-law requirement: § 14 Abs. 4 UStG's own exhaustive list of the ten mandatory invoice particulars (read in this same research pass, see this file's VAT entry above) does not mention a Handelsregisternummer anywhere. `appliesTo` stays 'COMPANY' as in the removed profile — an individual German Kaufmann (e.K.) could in principle also hold a Handelsregisternummer, but that nuance was not chased further here. What would settle this: case law or an official commentary establishing whether a Rechnung is a Geschäftsbrief under § 37a HGB, and whether an individually-registered Kaufmann (as opposed to a corporate form) should also carry this requirement in this catalog's `appliesTo`."
         }
       }
+    ],
+    "invoiceRequirements": [
+      {
+        "party": "SELLER",
+        "scheme": "VAT",
+        "when": {
+          "buyerType": ["COMPANY"],
+          "buyerEstablishment": ["OTHER_UNION_MEMBER"]
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "UStG § 14a: « (1) [...] 2 Führt der Unternehmer eine sonstige Leistung im Sinne des § 3a Absatz 2 in einem anderen Mitgliedstaat aus, so ist die Rechnung bis zum fünfzehnten Tag des Monats, der auf den Monat folgt, in dem der Umsatz ausgeführt worden ist, auszustellen. 3 In dieser Rechnung sind die Umsatzsteuer-Identifikationsnummer des Unternehmers und die des Leistungsempfängers anzugeben. [...] (3) 1 Führt der Unternehmer eine innergemeinschaftliche Lieferung aus, ist er zur Ausstellung einer Rechnung bis zum fünfzehnten Tag des Monats, der auf den Monat folgt, in dem der Umsatz ausgeführt worden ist, verpflichtet. 2 In der Rechnung sind auch die Umsatzsteuer-Identifikationsnummer des Unternehmers und die des Leistungsempfängers anzugeben. »",
+          "sourceCheckedAt": "2026-10-23"
+        },
+        "notes": "UStG § 14a Abs. 1 Satz 3 and Abs. 3 Satz 2. Text in the wording of Art. 23 Wachstumschancengesetz (BGBl. 2024 I Nr. 108), in force since 2025-01-01, read at https://www.buzer.de/14a_UStG.htm and cross-checked word for word at https://dejure.org/gesetze/UStG/14a.html; gesetze-im-internet.de refused the connection from the environment that read it. A business client in another member state is the case of both paragraphs: a B2B service whose place of supply is the client's state (§ 3a Abs. 2) and an intra-Community supply of goods. No domestic rule is modelled: § 14 Abs. 4 Satz 1 Nr. 2 lets the seller state either its Steuernummer or its USt-IdNr, and this catalog has no Steuernummer scheme to offer the alternative."
+      },
+      {
+        "party": "BUYER",
+        "scheme": "VAT",
+        "when": {
+          "buyerType": ["COMPANY"],
+          "buyerEstablishment": ["OTHER_UNION_MEMBER"]
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "UStG § 14a: « (1) [...] 2 Führt der Unternehmer eine sonstige Leistung im Sinne des § 3a Absatz 2 in einem anderen Mitgliedstaat aus, so ist die Rechnung bis zum fünfzehnten Tag des Monats, der auf den Monat folgt, in dem der Umsatz ausgeführt worden ist, auszustellen. 3 In dieser Rechnung sind die Umsatzsteuer-Identifikationsnummer des Unternehmers und die des Leistungsempfängers anzugeben. [...] (3) 1 Führt der Unternehmer eine innergemeinschaftliche Lieferung aus, ist er zur Ausstellung einer Rechnung bis zum fünfzehnten Tag des Monats, der auf den Monat folgt, in dem der Umsatz ausgeführt worden ist, verpflichtet. 2 In der Rechnung sind auch die Umsatzsteuer-Identifikationsnummer des Unternehmers und die des Leistungsempfängers anzugeben. »",
+          "sourceCheckedAt": "2026-10-23"
+        },
+        "notes": "UStG § 14a Abs. 1 Satz 3 and Abs. 3 Satz 2. Text in the wording of Art. 23 Wachstumschancengesetz (BGBl. 2024 I Nr. 108), in force since 2025-01-01, read at https://www.buzer.de/14a_UStG.htm and cross-checked word for word at https://dejure.org/gesetze/UStG/14a.html; gesetze-im-internet.de refused the connection from the environment that read it. A business client in another member state is the case of both paragraphs: a B2B service whose place of supply is the client's state (§ 3a Abs. 2) and an intra-Community supply of goods. No domestic rule is modelled: § 14 Abs. 4 Satz 1 Nr. 2 lets the seller state either its Steuernummer or its USt-IdNr, and this catalog has no Steuernummer scheme to offer the alternative."
+      }
     ]
   },
   "correctionRoutes": {

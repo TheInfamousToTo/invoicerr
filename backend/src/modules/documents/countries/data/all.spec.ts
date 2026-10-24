@@ -142,6 +142,68 @@ describe('countries/data: a country file dropped in at runtime needs no code cha
   });
 });
 
+describe('countries/data: invoice identifier requirements are checked at load time', () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), 'countries-data-invoice-requirements-'));
+  });
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  function writeRule(rule: Record<string, unknown>): void {
+    writeFileSync(
+      join(tmpDir, 'zz.json'),
+      JSON.stringify({
+        countryCode: 'ZZ',
+        identifiers: { countryCode: 'ZZ', schemes: [], invoiceRequirements: [rule] },
+      }),
+      'utf-8',
+    );
+  }
+
+  const provenance = { kind: 'legal', sourceText: 'Fixture statutory text.', sourceCheckedAt: '2026-10-23' };
+
+  it('loads a rule with a party, a scheme, a known condition and a provenance', () => {
+    writeRule({
+      party: 'BUYER',
+      scheme: 'VAT',
+      when: { buyerEstablishment: ['OTHER_UNION_MEMBER'] },
+      provenance,
+    });
+
+    const [zz] = loadComposedCountryFilesFrom(tmpDir);
+
+    expect(zz.identifiers?.invoiceRequirements).toHaveLength(1);
+  });
+
+  it('refuses a rule with no provenance', () => {
+    writeRule({ party: 'SELLER', scheme: 'VAT' });
+
+    expect(() => loadComposedCountryFilesFrom(tmpDir)).toThrow(/no valid provenance/);
+  });
+
+  it('refuses a rule for a party that is neither the seller nor the buyer', () => {
+    writeRule({ party: 'CARRIER', scheme: 'VAT', provenance });
+
+    expect(() => loadComposedCountryFilesFrom(tmpDir)).toThrow(/party "CARRIER"/);
+  });
+
+  it('refuses a condition value no code knows how to evaluate, instead of never matching it', () => {
+    writeRule({ party: 'BUYER', scheme: 'VAT', when: { buyerEstablishment: ['ANYWHERE'] }, provenance });
+
+    expect(() => loadComposedCountryFilesFrom(tmpDir)).toThrow(/buyerEstablishment.*"ANYWHERE"/);
+  });
+
+  it('refuses a condition on an axis no code knows how to evaluate', () => {
+    writeRule({ party: 'BUYER', scheme: 'VAT', when: { invoiceTotalAbove: [150] }, provenance });
+
+    expect(() => loadComposedCountryFilesFrom(tmpDir)).toThrow(/invoiceTotalAbove/);
+  });
+});
+
 describe('countries/data: an empty catalogue directory is refused', () => {
   let tmpDir: string;
 

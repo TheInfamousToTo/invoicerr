@@ -145,7 +145,8 @@ document reads, from top to bottom:
 
 1. **Header**: your logo on the left; the document type, its number and its date on the right.
 2. **Parties**: your company and its address on the left, the client (or the supplier, on a purchase
-   order or a received invoice) and its address on the right.
+   order or a received invoice) and its address on the right, each followed by the identifiers filled
+   in for it (see [Identifiers on the PDF](../billing/invoices.md#identifiers-on-the-pdf)).
 3. **Details**: the short fields of the document (issue date, due date, currency, client reference,
    and so on) in one compact grid. An optional field left empty, such as the origin document of an
    invoice, is not printed.

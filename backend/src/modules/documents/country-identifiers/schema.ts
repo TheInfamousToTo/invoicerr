@@ -108,10 +108,38 @@ export interface DemoIdentifierVariable {
   padTo?: number;
 }
 
+export type InvoiceParty = 'SELLER' | 'BUYER';
+
+/** Where the buyer is established, seen from the seller's country. */
+export type BuyerEstablishment = 'DOMESTIC' | 'OTHER_UNION_MEMBER';
+
+export type SellerVatRegime = 'STANDARD' | 'FRANCHISE_BASE';
+
+/** Every listed axis must match; an absent axis matches anything. */
+export interface InvoiceIdentifierCondition {
+  sellerVatRegime?: SellerVatRegime[];
+  buyerType?: PartyType[];
+  buyerEstablishment?: BuyerEstablishment[];
+}
+
+/**
+ * An identifier the law of the seller's country requires on an invoice, for one party. Unlike a
+ * scheme's `required` (which gates saving a party of this country), this one reads the transaction:
+ * several rules for the same party and scheme are alternatives.
+ */
+export interface InvoiceIdentifierRequirement {
+  party: InvoiceParty;
+  scheme: string;
+  when?: InvoiceIdentifierCondition;
+  provenance: IdentifierProvenance;
+  notes?: string;
+}
+
 export interface CountryIdentifierRequirementsFile {
   /** ISO 3166-1 alpha-2, uppercase — must match the file's own name (data/all.ts checks this). */
   countryCode: string;
   schemes: IdentifierSchemeFact[];
+  invoiceRequirements?: InvoiceIdentifierRequirement[];
   /** Free-form, file-level caveats. */
   notes?: string;
   demoVariables?: DemoIdentifierVariable[];
@@ -149,7 +177,10 @@ export function assertPatternIsExplainable(fact: IdentifierSchemeFact, context: 
  * The one gate a fact cannot get past without a real provenance — see this file's header for why
  * it is called from two independent places rather than trusted to only ever run once.
  */
-export function assertValidProvenance(fact: IdentifierSchemeFact, context: string): void {
+export function assertValidProvenance(
+  fact: Pick<IdentifierSchemeFact, 'scheme' | 'provenance'>,
+  context: string,
+): void {
   const provenance = fact.provenance as { kind?: unknown } | null | undefined;
   if (!provenance || (provenance.kind !== 'legal' && provenance.kind !== 'unverified')) {
     throw new InvalidIdentifierProvenanceError(
@@ -208,4 +239,32 @@ export function assertValidEinvoiceFacts(fact: IdentifierSchemeFact, context: st
         'a positive number of digits smaller than the number it applies to.',
     );
   }
+}
+
+export class InvalidInvoiceIdentifierRequirementError extends Error {}
+
+const INVOICE_PARTIES: readonly InvoiceParty[] = ['SELLER', 'BUYER'];
+const CONDITION_VALUES: Record<keyof InvoiceIdentifierCondition, readonly string[]> = {
+  sellerVatRegime: ['STANDARD', 'FRANCHISE_BASE'],
+  buyerType: ['COMPANY', 'INDIVIDUAL'],
+  buyerEstablishment: ['DOMESTIC', 'OTHER_UNION_MEMBER'],
+};
+
+/** A condition the resolver cannot evaluate would silently never match, so it is refused at load time. */
+export function assertValidInvoiceRequirement(rule: InvoiceIdentifierRequirement, context: string): void {
+  const fail = (reason: string) => {
+    throw new InvalidInvoiceIdentifierRequirementError(`${context}: invoice requirement ${reason}`);
+  };
+  if (!INVOICE_PARTIES.includes(rule.party)) fail(`names party "${rule.party}", not SELLER or BUYER.`);
+  if (!rule.scheme?.trim()) fail('names no scheme.');
+  for (const [axis, values] of Object.entries(rule.when ?? {})) {
+    const known = CONDITION_VALUES[axis as keyof InvoiceIdentifierCondition];
+    if (!known) fail(`for "${rule.scheme}" conditions on unknown axis "${axis}".`);
+    if (!Array.isArray(values) || values.length === 0) fail(`for "${rule.scheme}" lists no ${axis} value.`);
+    for (const value of values as unknown[]) {
+      if (!known.includes(value as string))
+        fail(`for "${rule.scheme}" lists unknown ${axis} value "${value}".`);
+    }
+  }
+  assertValidProvenance(rule, context);
 }

@@ -1226,6 +1226,8 @@ describe("Italian recipient identifiers (IT_SDI) — FatturaPA routing", () => {
 			.clear()
 			.type("ABC123X");
 		cy.get('[data-cy="client-identifier-PEC"]', { timeout: 10000 }).should("exist");
+		// A French invoice to a business in another member state names its VAT number.
+		cy.get('[data-cy="client-identifier-VAT"]').clear().type("IT01057861005");
 		cy.openSearchSelect("client-currency-select");
 		cy.get('[data-cy="client-currency-select"] input').type("Euro");
 		cy.get('[data-cy="client-currency-select-option-euro-(€)"]').click();

@@ -1,4 +1,6 @@
 export {}; // makes this spec a module, not a global script -- see tsconfig.json
+import { baselineClient, giveBaselineClientItsVat } from "../support/baseline-client";
+import { POLISH_BUYER_IDENTIFIERS } from "../fixtures/identifiers";
 
 /**
  * NATIONAL transports — wave 1: the credentials groundwork + the PDP channel,
@@ -154,22 +156,37 @@ function expectRejectedByFake(invoiceId: string, rejection: RegExp, fakeRequests
 	cy.task<string[]>(fakeRequestsTask).should("include", fakeRequest);
 }
 
-function createInvoiceDraft(vatRate = "20") {
+/** A Polish business buyer with the NIP Polish law requires on the invoice. */
+function createPolishBuyer() {
 	return cy
-		.request({ url: `${api}/api/documents/references/client/search` })
-		.its("body")
-		.then((clients: { id: string }[]) => {
-			expect(
-				clients,
-				"le jeu d'essai contient un client",
-			).to.have.length.greaterThan(0);
-			return cy
+		.request({
+			method: "POST",
+			url: `${api}/api/clients`,
+			body: {
+				name: "Klient KSeF Sp. z o.o.",
+				contactEmail: "klient.ksef@example.com",
+				address: "ul. Testowa 1",
+				postalCode: "00-001",
+				city: "Warszawa",
+				country: "Poland",
+				countryCode: "PL",
+				currency: "EUR",
+				isActive: true,
+				type: "COMPANY",
+				identifiers: POLISH_BUYER_IDENTIFIERS,
+			},
+		})
+		.then((res) => res.body.id as string);
+}
+
+function saveInvoiceDraft(vatRate: string, clientId: string) {
+	return cy
 				.request({
 					method: "POST",
 					url: `${api}/api/documents/types/invoice/actions/save-draft`,
 					body: {
 						data: {
-							client: clients[0].id,
+							client: clientId,
 							issueDate: "2026-08-31",
 							dueDate: "2026-09-30",
 							currency: "EUR",
@@ -195,7 +212,12 @@ function createInvoiceDraft(vatRate = "20") {
 					expect(invoiceId, "le brouillon a un identifiant").to.be.a("string");
 					return invoiceId;
 				});
-		});
+}
+
+/** A draft invoice to `clientId`, or to the baseline French client when none is given. */
+function createInvoiceDraft(vatRate = "20", clientId?: string): Cypress.Chainable<string> {
+	if (clientId) return saveInvoiceDraft(vatRate, clientId);
+	return baselineClient().then((client) => saveInvoiceDraft(vatRate, client.id));
 }
 
 describe("National transports — the PDP channel, connected/disconnected via the screen", () => {
@@ -389,7 +411,10 @@ describe("National transports — the PDP channel, connected/disconnected via th
 		// `scenarios/full-lifecycle.cy.ts` already uses as a buyer identifier) — needed for the FA(3)
 		// send further down, not for this suggestion check itself; set once, here, since the company
 		// STAYS Poland for the rest of this wave (see this file's own header, point 1).
-		setCompanyCountry("Poland", "PL", [{ scheme: "VAT", value: "PL5260001246" }]);
+		setCompanyCountry("Poland", "PL", [
+			{ scheme: "LEGAL_ID", value: "5260001246" },
+			{ scheme: "VAT", value: "PL5260001246" },
+		]);
 		cy.visit("/settings/channels");
 
 		cy.get('[data-cy="channel-nav-ksef"]', { timeout: 15000 }).should("exist").click();
@@ -471,10 +496,12 @@ describe("National transports — the PDP channel, connected/disconnected via th
 
 	it('sends an invoice via KSeF → the queue really fails (fake token rejected by the local fake KSeF API) and "send_failed" names the channel', () => {
 		cy.task("startFakeKsefServer");
-		createInvoiceDraft("23").then((invoiceId) => {
-			sendFromListUntilFailed(invoiceId, "KSeF");
-			expectRejectedByFake(invoiceId, /code 450/, "getFakeKsefRequests", "POST /v2/auth/ksef-token");
-		});
+		createPolishBuyer()
+			.then((clientId) => createInvoiceDraft("23", clientId))
+			.then((invoiceId) => {
+				sendFromListUntilFailed(invoiceId, "KSeF");
+				expectRejectedByFake(invoiceId, /code 450/, "getFakeKsefRequests", "POST /v2/auth/ksef-token");
+			});
 	});
 
 	it("disconnects the KSeF channel via the screen", () => {
@@ -618,6 +645,7 @@ describe("National transports — the PDP channel, connected/disconnected via th
 	});
 
 	it('sends an invoice via SdI → the queue really fails (fake server, closed port) and "send_failed" names the channel', () => {
+		giveBaselineClientItsVat();
 		createInvoiceDraft("22").then((invoiceId) => {
 			sendFromListUntilFailed(invoiceId, "SdI");
 
@@ -780,17 +808,15 @@ describe("National transports — the PDP channel, connected/disconnected via th
 		// this test actually reach the PISTE rejection it claims to prove, rather than stopping one
 		// gate earlier at a DIFFERENT, generic-sounding 400 that the OLD, loose `/Chorus Pro/` match
 		// would have hidden.
-		cy.request({ url: `${api}/api/documents/references/client/search` })
-			.its("body")
-			.then((clients: { id: string; label: string }[]) => {
-				cy.request({
-					method: "PATCH",
-					url: `${api}/api/clients/${clients[0].id}`,
-					// `EditClientsDto` validates a company client's "name" even on a partial PATCH — the
-					// seeded client's own name, unchanged, plus the one field this test actually adds.
-					body: { name: clients[0].label, identifiers: [{ scheme: "LEGAL_ID", value: "73282932000074" }] },
-				}).then((res) => expect(res.status, "SIRET client enregistré").to.be.oneOf([200, 201]));
-			});
+		baselineClient().then((client) => {
+			cy.request({
+				method: "PATCH",
+				url: `${api}/api/clients/${client.id}`,
+				// `EditClientsDto` validates a company client's "name" even on a partial PATCH — the
+				// seeded client's own name, unchanged, plus the one field this test actually adds.
+				body: { name: client.label, identifiers: [{ scheme: "LEGAL_ID", value: "73282932000074" }] },
+			}).then((res) => expect(res.status, "SIRET client enregistré").to.be.oneOf([200, 201]));
+		});
 
 		// A SECOND, SEPARATE preflight gate — verified against a real run — refuses just as early when
 		// the SELLER has no active payment method: "a public-sector invoice is always paid by bank

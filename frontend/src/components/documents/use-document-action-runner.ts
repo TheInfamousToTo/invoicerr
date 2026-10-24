@@ -7,6 +7,11 @@ import { toast } from "sonner"
 import { actionLocksDocument } from "@/components/documents/action-presentation"
 import type { DocumentActionDescriptor, DocumentInstance } from "@/components/documents/types"
 import { countryName } from "@/components/channel-banner"
+import {
+  INVOICE_IDENTIFIERS_MISSING_CODE,
+  type InvoiceIdentifiersMissingParams,
+  invoiceIdentifiersMissingNotice,
+} from "@/components/documents/invoice-identifiers-missing"
 import { useResolveActionParamsDefaults, useRunDocumentAction } from "@/hooks/queries"
 import { ApiError } from "@/hooks/use-api-query"
 
@@ -232,6 +237,19 @@ export function useDocumentActionRunner({
               : undefined,
           },
         )
+        return
+      }
+      if (apiErrorCode(error) === INVOICE_IDENTIFIERS_MISSING_CODE) {
+        const notice = invoiceIdentifiersMissingNotice(
+          t,
+          i18n.language,
+          apiErrorParams<InvoiceIdentifiersMissingParams>(error) ?? {},
+        )
+        toast.error(notice.message, {
+          action: notice.action
+            ? { label: notice.action.label, onClick: () => navigate(notice.action!.path) }
+            : undefined,
+        })
         return
       }
       const deleteRefusal = deleteRefusalMessage(t, error)
