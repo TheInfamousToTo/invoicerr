@@ -26,6 +26,12 @@ is called, who runs it, which format family it uses, and which of the files belo
 would need. Around a hundred of those countries have no file here at all; their page says so on
 the first line.
 
+If you know a rule is missing or wrong but are not going to write the file yourself, open the
+[country rule form](https://github.com/invoicerr-app/invoicerr/issues/new?template=country_rule.yml)
+instead. It asks for the country, the section of its file, the rule in plain words, and the source
+in the shape `provenance` expects (legal reference, quoted text in the original language, URL, date
+read, date in force), so the request can become a JSON entry without a second round of research.
+
 For adding a new *kind of document* (an invoice, a quote, something else entirely) rather than a
 new country, see [Adding a document type](./adding-a-document-type.md) instead — the two are
 deliberately independent axes; see the [overview](./extending-invoicerr.md) for how they fit

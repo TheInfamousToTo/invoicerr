@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/invoicerr-app/invoicerr/security/advisories/new
+    about: Report it privately through a GitHub security advisory, never in a public issue.
+  - name: Ask a question
+    url: https://discord.gg/6sDwqXFqnK
+    about: Questions about installing or using Invoicerr go to Discord.
+  - name: Email contact@invoicerr.app
+    url: https://docs.invoicerr.app/docs/legal/legal-notice
+    about: For anything that should not be public, write to contact@invoicerr.app.
