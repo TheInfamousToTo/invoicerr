@@ -187,6 +187,8 @@ function resolveStandardRate(cc, fact) {
 // (`assertSameShape` below) — the same discipline `frontend/`'s own `npm run i18n:check` applies
 // to `t()` keys, applied here to this script's OWN string table instead of a JSON locale file.
 // ---------------------------------------------------------------------------------------------
+const article = (noun) => `${/^[aeiou]/i.test(noun) ? 'an' : 'a'} ${noun}`;
+
 const STRINGS = {
   en: {
     common: {
@@ -509,8 +511,8 @@ const STRINGS = {
       plainIdentifiersIntro: (name) =>
         `When you invoice someone in ${name}, or when someone in ${name} invoices through this app, these ` +
         'ID numbers matter:',
-      plainIdentifierRequired: (label, partyType) => `**${label}** — required, for a ${partyType}.`,
-      plainIdentifierOptional: (label, partyType) => `${label} — optional, for a ${partyType}.`,
+      plainIdentifierRequired: (label, partyType) => `**${label}** — required, for ${article(partyType)}.`,
+      plainIdentifierOptional: (label, partyType) => `${label} — optional, for ${article(partyType)}.`,
       plainMentionsIntro: (name, count) =>
         `Every invoice issued in ${name} must legally carry ${count} standard sentence${count === 1 ? '' : 's'} ` +
         'printed on it (about late-payment penalties, for example). This app adds them for you automatically — ' +
@@ -1879,6 +1881,15 @@ function renderTaxSection(cc, locale, mark) {
   return out.join('\n');
 }
 
+/** The party types a scheme's `required` binds, read the way `country-identifiers/schema.ts` reads it. */
+function requiredPartyTypes(s) {
+  if (!s.required) return [];
+  if (s.requiredFor) return s.requiredFor;
+  return s.appliesTo === 'BOTH' ? ['COMPANY', 'INDIVIDUAL'] : [s.appliesTo];
+}
+
+const partyTypeKey = (types) => (types.length > 1 ? 'BOTH' : types[0]);
+
 function renderIdentifiersSection(cc, locale) {
   const S = STRINGS[locale].country;
   const CS = STRINGS[locale];
@@ -1889,9 +1900,16 @@ function renderIdentifiersSection(cc, locale) {
   out.push('|---|---|---|---|---|');
   const quotes = [];
   for (const s of file.schemes) {
+    const required = requiredPartyTypes(s);
+    const requiredCell =
+      required.length === 0
+        ? CS.common.no
+        : partyTypeKey(required) === s.appliesTo
+          ? CS.common.yes
+          : `${CS.common.yes} (${CS.partyTypes[partyTypeKey(required)]})`;
     out.push(
       `| ${s.scheme} | ${CS.partyTypes[s.appliesTo] ?? s.appliesTo} | ${cell(s.label)} | ` +
-        `${s.required ? CS.common.yes : CS.common.no} | ${provenanceCell(s.provenance, locale, s.notes)} |`,
+        `${requiredCell} | ${provenanceCell(s.provenance, locale, s.notes)} |`,
     );
     quotes.push(provenanceQuoteEntry(s.scheme, s.provenance));
   }
@@ -2174,8 +2192,11 @@ function renderPlainIdentifiers(cc, locale, name) {
   const CS = STRINGS[locale];
   const out = [S.plainIdentifiersIntro(name), ''];
   for (const s of file.schemes) {
-    const partyType = CS.partyTypes[s.appliesTo] ?? s.appliesTo;
-    out.push(`- ${s.required ? S.plainIdentifierRequired(s.label, partyType) : S.plainIdentifierOptional(s.label, partyType)}`);
+    const offered = s.appliesTo === 'BOTH' ? ['COMPANY', 'INDIVIDUAL'] : [s.appliesTo];
+    const required = requiredPartyTypes(s);
+    const optional = offered.filter((type) => !required.includes(type));
+    if (required.length) out.push(`- ${S.plainIdentifierRequired(s.label, CS.partyTypes[partyTypeKey(required)])}`);
+    if (optional.length) out.push(`- ${S.plainIdentifierOptional(s.label, CS.partyTypes[partyTypeKey(optional)])}`);
   }
   return out.join('\n');
 }

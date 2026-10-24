@@ -125,7 +125,7 @@ separate directory or file to open any more; the "Section" column names the exac
 | Local cancel | `correctionRoutes` (`locallyImplementable` / `restrictedToStatuses` on the `CANCEL_AND_REPLACE` route) | Whether *this app* can actually realize `CANCEL_AND_REPLACE` locally for this country, and from which invoice statuses. Read by `correction-routes/cancel-policy.ts`. | No - read live from the file. |
 | Channel policy | `channelPolicy` | For a company **established** in this country: is a given transmission channel merely usual (`suggested`) or legally required from a date (`mandated`)? A `mandated` fact may narrow itself with `scope: { "parties": "domestic" }`, meaning it binds only an invoice whose buyer is established in the same country - which is what both national mandates shipped today actually say. | No - read live from the file. |
 | Tax system | `taxSystem` | What the cross-border tax engine assumes about this country's rate structure (VAT/GST/SALES_TAX/NONE, standard rate). Does **not** cover EU/GCC union membership or a Peppol EAS code - see the maintainer note below, "EU/GCC membership and Peppol EAS live in a reference table, not a country file". | No - read live from the file. |
-| Country identifiers | `identifiers` | Which national identifier schemes (SIRET, EIN, VAT number, …) a party of this country must supply, and how a legal identifier is written into an e-invoice (see the maintainer note below, "how a legal identifier is written into an e-invoice"). A scheme with `required: true` also gates invoice **Validate** and **Send** for a client of this country: the action is refused until the client carries a value for it. | Yes - auto-corrected on **every boot**, same mechanism as document-action policy (see below), plus `prisma/seed.ts`. |
+| Country identifiers | `identifiers` | Which national identifier schemes (SIRET, EIN, VAT number, …) a party of this country must supply, and how a legal identifier is written into an e-invoice (see the maintainer note below, "how a legal identifier is written into an e-invoice"). A scheme with `required: true` must be filled in to save a party of this country, for the party types `requiredFor` names (every type in `appliesTo` when absent). What an issued invoice must carry is `invoiceRequirements`, read from the seller's country. | Yes - auto-corrected on **every boot**, same mechanism as document-action policy (see below), plus `prisma/seed.ts`. |
 | Country field overlay | `countryFields` | Adds/modifies/removes a **field** on an existing document type's shape for this country. | No - read live from the file. |
 | Localized tax mentions | `localizedMentions` | The exact wording this country's statute prescribes for the invoice mention of a tax situation (`franchise`, `reverseCharge`, `exportGoods`, `intraComm`), each with its `code`, `text` and the quoted `source`. A situation with no entry prints the generic Directive-citing mention. | No - read live from the file by `tax/tax-engine.ts`. |
 | Mandatory mentions | `mentions` | Free-text legal mentions (BG-1) this country requires on every invoice, temporal. | No - read live from the file. |
@@ -492,8 +492,21 @@ names them (`formats/national/format-country.ts`), never from a literal.
 ### Maintainer note: which identifiers an invoice must print
 
 A scheme's `required` flag answers one question: must a party of this country fill the field in
-before it can be saved, and before an invoice to that client is validated. It cannot say what the
-invoice itself must show, because that depends on the transaction: a French seller states its VAT
+before it can be saved (the company settings, onboarding, the client wizard and the client CSV
+import). `appliesTo` says which party types are offered the field; `requiredFor`, optional, narrows
+`required` to some of them, so the others see the field but may leave it empty:
+
+```json
+{ "scheme": "LEGAL_ID", "appliesTo": "BOTH", "label": "SIREN / SIRET", "required": true, "requiredFor": ["COMPANY"] }
+```
+
+A French or Portuguese private client is offered the SIREN or NIF field and is never required to fill
+it in. `countries/data/all.ts` refuses, at load time, a `requiredFor` on a scheme that is not required,
+an empty one, or one that names a party type outside `appliesTo` (`assertValidRequiredFor`). The
+resolved list is stored in the `requiredFor` column of `CountryIdentifierRequirement`.
+
+The flag cannot say what the invoice itself must show, because that depends on the transaction: a
+French seller states its VAT
 number unless it is under the franchise en base, and its client's VAT number only for an
 intra-Community B2B sale. Those rules live in the same `identifiers` section, under
 `invoiceRequirements`, and are always read from the SELLER's country:
@@ -531,6 +544,10 @@ What Validate and Send do with them (`actions/invoice-identifier-readiness.ts`):
 preflight refuses, before any number is taken, an invoice for which `missingInvoiceIdentifiers`
 (same file as the PDF, same conditions) returns anything. The 400 carries the code
 `INVOICE_IDENTIFIERS_MISSING` and, in `params.missing`, each identifier's party, scheme and label.
+These rules are the only identifier check at issuance: the client gate that runs first
+(`actions/client-issuance-readiness.ts`, code `CLIENT_INCOMPLETE`) refuses a client with no address
+or city, and names the client identifiers these same rules require in the same message, so one edit
+completes the client. A scheme's `required` flag is never read at issuance.
 The frontend renders it from those params in the reader's language. Client type
 stands in for "acts as a business": the app does not record whether a client is VAT-registered, and
 each rule's `notes` says where that approximation matters.
