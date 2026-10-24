@@ -7,6 +7,16 @@ import { useCountryReadiness } from "@/hooks/use-country-readiness"
 import { cn } from "@/lib/utils"
 
 const GITHUB_ISSUES_URL = "https://github.com/invoicerr-app/invoicerr/issues/new"
+// Must match the options of the country dropdown in .github/ISSUE_TEMPLATE/country_rule.yml.
+const OTHER_COUNTRY_OPTION = "Other (say which in the rule below)"
+const ENGLISH_REGION_NAMES = new Intl.DisplayNames(["en"], { type: "region" })
+
+function countryRuleIssueUrl(fields: Record<string, string>): string {
+  const query = Object.entries({ template: "country_rule.yml", ...fields })
+    .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+    .join("&")
+  return `${GITHUB_ISSUES_URL}?${query}`
+}
 
 // Keys into component.country-readiness-alert.mechanisms — one per CŒUR mechanism id the backend's
 // `CountryReadinessService` can name (see that file's own header). A mechanism id this component
@@ -36,8 +46,8 @@ interface CountryReadinessAlertProps {
  * the chosen country is missing one or more of the 5 CŒUR compliance mechanisms — see
  * `country-readiness.service.ts`'s own header for the exact definition of "complete". The user can
  * always continue; this only offers a pre-filled GitHub issue so the gap gets reported instead of
- * discovered later as a support ticket. The frontend never opens a network request to GitHub itself
- * — the link only pre-fills the title/body via query params, the user still has to click and submit.
+ * discovered later as a support ticket. The frontend never opens a network request to GitHub itself:
+ * the link only pre-fills the country rule form via query params, the user still has to submit.
  */
 export default function CountryReadinessAlert({ countryCode, countryName }: CountryReadinessAlertProps) {
   const { t } = useTranslation()
@@ -56,7 +66,7 @@ export default function CountryReadinessAlert({ countryCode, countryName }: Coun
     "Support request for {{country}} ({{code}})",
     { country: displayName, code: readiness.countryCode },
   )
-  const issueBody = [
+  const issueRule = [
     t("component.country-readiness-alert.issue.bodyCountry", "Country: {{country}} ({{code}})", {
       country: displayName,
       code: readiness.countryCode,
@@ -68,7 +78,14 @@ export default function CountryReadinessAlert({ countryCode, countryName }: Coun
       list: missingLabels.join(", "),
     }),
   ].join("\n")
-  const issueUrl = `${GITHUB_ISSUES_URL}?title=${encodeURIComponent(issueTitle)}&body=${encodeURIComponent(issueBody)}`
+  const hasDataFile = readiness.present.length > 0
+  const issueUrl = countryRuleIssueUrl({
+    title: issueTitle,
+    country: hasDataFile
+      ? `${ENGLISH_REGION_NAMES.of(readiness.countryCode)} (${readiness.countryCode})`
+      : OTHER_COUNTRY_OPTION,
+    rule: issueRule,
+  })
 
   return (
     <Alert data-cy="company-country-incomplete-alert">
