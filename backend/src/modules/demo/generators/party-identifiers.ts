@@ -11,6 +11,7 @@ import {
   CountryIdentifierRequirementsFile,
   DemoIdentifierGeneratorSpec,
   DemoIdentifierVariable,
+  requiredPartyTypes,
 } from '@/modules/documents/country-identifiers/schema';
 
 import { SUPPORTED_COUNTRY_CODES, SupportedCountryCode } from './data-pools';
@@ -112,7 +113,7 @@ export function buildDemoIdentifierPlan(file: CountryIdentifierRequirementsFile)
       ready.add(fact.scheme);
     }
     const missing = file.schemes.find(
-      (f) => f.required && f.appliesTo !== 'INDIVIDUAL' && !ready.has(f.scheme),
+      (f) => requiredPartyTypes(f).includes('COMPANY') && !ready.has(f.scheme),
     );
     if (missing) throw new Error(`required scheme "${missing.scheme}" has no demo generator`);
     const plan = { variables, schemes };

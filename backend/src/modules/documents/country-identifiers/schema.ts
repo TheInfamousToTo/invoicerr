@@ -64,6 +64,9 @@ export interface IdentifierSchemeFact {
   /** Whether this country makes the identifier mandatory for this party type — a legal CLAIM
    *  exactly like `pattern` below, covered by this fact's own `provenance`, never a UI default. */
   required: boolean;
+  /** The party types `required` binds, when narrower than `appliesTo`; the others are offered the
+   *  field but may leave it empty. */
+  requiredFor?: PartyType[];
   /** Optional validation regex. Declared here for a future consumer; no frontend code enforces it
    *  today (checked 2026-08-30 — see the country-identifiers.spec.ts assertion on this). */
   pattern?: string;
@@ -207,6 +210,36 @@ export function assertValidProvenance(
       `${context}: identifier scheme "${fact.scheme}" is "unverified" but has no resolutionNote — ` +
         'an unverified fact must say what would settle it.',
     );
+  }
+}
+
+export class InvalidRequiredForError extends Error {}
+
+const PARTY_TYPES: readonly PartyType[] = ['COMPANY', 'INDIVIDUAL'];
+
+/** The party types a scheme's `required` binds. */
+export function requiredPartyTypes(
+  fact: Pick<IdentifierSchemeFact, 'appliesTo' | 'required' | 'requiredFor'>,
+): PartyType[] {
+  if (!fact.required) return [];
+  if (fact.requiredFor) return fact.requiredFor;
+  return fact.appliesTo === 'BOTH' ? [...PARTY_TYPES] : [fact.appliesTo];
+}
+
+/** A `requiredFor` that names a party the scheme is never offered to could never be satisfied. */
+export function assertValidRequiredFor(fact: IdentifierSchemeFact, context: string): void {
+  if (fact.requiredFor === undefined) return;
+  const fail = (reason: string) => {
+    throw new InvalidRequiredForError(`${context}: identifier scheme "${fact.scheme}" ${reason}`);
+  };
+  if (!fact.required) fail('declares requiredFor but is not required.');
+  if (!Array.isArray(fact.requiredFor) || fact.requiredFor.length === 0)
+    fail('lists no requiredFor party type.');
+  for (const partyType of fact.requiredFor) {
+    if (!PARTY_TYPES.includes(partyType)) fail(`lists unknown requiredFor party type "${partyType}".`);
+    if (fact.appliesTo !== 'BOTH' && fact.appliesTo !== partyType) {
+      fail(`is required for ${partyType} but only applies to ${fact.appliesTo}.`);
+    }
   }
 }
 

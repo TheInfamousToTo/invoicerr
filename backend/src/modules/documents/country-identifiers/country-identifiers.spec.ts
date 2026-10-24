@@ -46,6 +46,7 @@ describe('resolveRequiredIdentifiers', () => {
         label: 'VAT number',
         appliesTo: 'COMPANY',
         required: false,
+        requiredFor: [],
         pattern: null,
         helpText: null,
       },
@@ -64,6 +65,7 @@ describe('resolveRequiredIdentifiers', () => {
         label: 'SIRET',
         appliesTo: 'BOTH',
         required: true,
+        requiredFor: ['COMPANY', 'INDIVIDUAL'],
         pattern: '^\\d{14}$',
         helpText: '14 digits',
         helpTextKey: 'settings.identifiers.help.FR.LEGAL_ID',
@@ -73,6 +75,7 @@ describe('resolveRequiredIdentifiers', () => {
         label: 'VAT number',
         appliesTo: 'COMPANY',
         required: false,
+        requiredFor: [],
         pattern: null,
         helpText: null,
       },
@@ -101,6 +104,7 @@ describe('resolveRequiredIdentifiers', () => {
         label: 'VAT number',
         appliesTo: 'COMPANY',
         required: false,
+        requiredFor: [],
         pattern: null,
         helpText: null,
       },
@@ -111,6 +115,26 @@ describe('resolveRequiredIdentifiers', () => {
 
     const forIndividual = await resolveRequiredIdentifiers('FR', 'INDIVIDUAL');
     expect(forIndividual.requirements).toHaveLength(0);
+  });
+
+  it('a scheme required of companies only is offered to an individual, optional', async () => {
+    findRequirements.mockResolvedValue([
+      {
+        scheme: 'LEGAL_ID',
+        label: 'Registration number',
+        appliesTo: 'BOTH',
+        required: true,
+        requiredFor: ['COMPANY'],
+        pattern: null,
+        helpText: null,
+      },
+    ]);
+
+    const forCompany = await resolveRequiredIdentifiers('ZZ', 'COMPANY');
+    const forIndividual = await resolveRequiredIdentifiers('ZZ', 'INDIVIDUAL');
+
+    expect(forCompany.requirements).toMatchObject([{ scheme: 'LEGAL_ID', required: true }]);
+    expect(forIndividual.requirements).toMatchObject([{ scheme: 'LEGAL_ID', required: false }]);
   });
 
   it('normalizes the country code (trims, upper-cases) before querying', async () => {

@@ -1310,3 +1310,33 @@ describe("Italian recipient identifiers (IT_SDI) — FatturaPA routing", () => {
 			});
 	});
 });
+
+// Last on purpose: earlier tests expect the client they create on the list's first page.
+describe("A French private client", () => {
+	it("creates a French individual client without a SIREN, which stays optional", () => {
+		cy.intercept("POST", `${Cypress.env("apiUrl")}/api/clients`).as("createPrivateClient");
+		cy.visit("/clients");
+		cy.contains("button", /add|new|créer|ajouter/i, { timeout: 10000 }).click();
+		cy.get('[data-cy="client-dialog"]', { timeout: 5000 }).should("be.visible");
+
+		cy.get('[data-cy="client-type-select"]').click();
+		cy.get('[data-cy="client-type-individual"]').click();
+		cy.get('[name="contactFirstname"]').clear().type("Jeanne");
+		cy.get('[name="contactLastname"]').clear().type("Martin");
+		cy.continueSteppedDialog("client-dialog");
+
+		cy.selectCountry("client-country-select", "France");
+		cy.get('[name="address"]').clear().type("8 Rue des Tilleuls");
+		cy.get('[name="postalCode"]').clear().type("69003");
+		cy.get('[name="city"]').clear().type("Lyon");
+		cy.continueSteppedDialog("client-dialog");
+
+		cy.get('[data-cy="client-identifier-LEGAL_ID"]', { timeout: 10000 }).should("have.value", "");
+		cy.continueSteppedDialog("client-dialog");
+		cy.continueSteppedDialog("client-dialog");
+		cy.get('[data-cy="client-submit"]').click();
+
+		cy.wait("@createPrivateClient").its("response.statusCode").should("eq", 201);
+		cy.get('[data-cy="client-dialog"]').should("not.exist");
+	});
+});

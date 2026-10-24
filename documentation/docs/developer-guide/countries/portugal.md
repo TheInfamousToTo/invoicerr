@@ -39,3 +39,12 @@ terms](../../user-guide/settings/payment-terms.md)). Decreto-Lei n.º 62/2013, a
 alínea a) makes late-payment interest due 30 days after the debtor receives the invoice when the
 contract sets no date (`basis: "latePaymentThreshold"`). It sets no payment term. The application
 counts the 30 days from the invoice date, not from receipt of the invoice.
+
+## Private clients and the NIF
+
+The NIF/NIPC scheme (`LEGAL_ID` in the `identifiers` section of `countries/data/pt.json`) is
+required of a company and optional for an individual (`requiredFor: ["COMPANY"]`). Código do IVA
+art. 36.º, n.º 5, alínea a) asks for the identification number of the acquirer only when it is a
+taxable person (« adquirente sujeito passivo do imposto »), and n.º 16 makes a private buyer's NIF
+mandatory on the invoice only when that buyer asks for it. A private client can therefore be saved,
+and invoiced, without a NIF; one entered is printed on the invoice.

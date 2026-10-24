@@ -36,6 +36,7 @@ import {
 import {
   assertPatternIsExplainable,
   assertValidEinvoiceFacts,
+  assertValidRequiredFor,
   assertValidInvoiceRequirement,
   assertValidProvenance as assertValidIdentifierProvenance,
 } from '../../country-identifiers/schema';
@@ -145,6 +146,7 @@ function validateIdentifiersSection(
     assertValidIdentifierProvenance(fact, `${filePath}#identifiers`);
     assertPatternIsExplainable(fact, `${filePath}#identifiers`);
     assertValidEinvoiceFacts(fact, `${filePath}#identifiers`);
+    assertValidRequiredFor(fact, `${filePath}#identifiers`);
   }
   for (const rule of identifiers.invoiceRequirements ?? []) {
     assertValidInvoiceRequirement(rule, `${filePath}#identifiers`);

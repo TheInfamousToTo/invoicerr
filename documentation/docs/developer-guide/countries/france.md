@@ -37,6 +37,17 @@ days after receipt of the goods or performance of the service (`basis: "maximumW
 application counts the 30 days from the invoice date, not from receipt of the goods or performance
 of the service.
 
+## Private clients and the SIREN
+
+The SIREN / SIRET scheme (`LEGAL_ID` in the `identifiers` section of `countries/data/fr.json`) is
+required of a company and optional for an individual (`requiredFor: ["COMPANY"]`). Code de commerce
+art. R.123-237 binds a registered person, and art. R.123-220 lists a natural person in the SIRENE
+register only when it trades, employs staff or is otherwise named there: a private person has no
+number to give. On the invoice, CGI annexe II art. 242 nonies A, I, 1° asks for the client's number,
+which `invoiceRequirements` requires of a domestic business client only. A private client can
+therefore be saved, and invoiced, without a SIREN. A sole trader entered as an individual may still
+enter one, and it is printed.
+
 ## Validate and the PDP mandate
 
 Invoicerr's **Validate** action normally only assigns an invoice's legal number and locks it, with

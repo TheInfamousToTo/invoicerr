@@ -16,6 +16,7 @@ import {
   assertValidProvenance,
   IdentifierSchemeFact,
   LegalProvenance,
+  requiredPartyTypes,
   UnverifiedProvenance,
 } from './schema';
 import {
@@ -29,6 +30,7 @@ export interface CountryIdentifierRequirementRow {
   appliesTo: string;
   label: string;
   required: boolean;
+  requiredFor: string[];
   pattern: string | null;
   helpText: string | null;
   helpTextKey: string | null;
@@ -50,6 +52,7 @@ export const COUNTRY_IDENTIFIER_REQUIREMENT_ROW_SELECT = {
   appliesTo: true,
   label: true,
   required: true,
+  requiredFor: true,
   pattern: true,
   helpText: true,
   helpTextKey: true,
@@ -98,6 +101,7 @@ export function rowFor(countryCode: string, fact: IdentifierSchemeFact): Country
     appliesTo: fact.appliesTo,
     label: fact.label,
     required: fact.required,
+    requiredFor: requiredPartyTypes(fact),
     pattern: fact.pattern ?? null,
     helpText: fact.helpText ?? null,
     helpTextKey: fact.helpTextKey ?? null,
@@ -157,6 +161,7 @@ export async function seedCountryIdentifierRequirements(
             appliesTo: row.appliesTo,
             label: row.label,
             required: row.required,
+            requiredFor: row.requiredFor,
             pattern: row.pattern,
             helpText: row.helpText,
             helpTextKey: row.helpTextKey,
