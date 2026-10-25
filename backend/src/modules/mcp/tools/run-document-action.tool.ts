@@ -15,10 +15,13 @@ const inputSchema = {
     .describe('A DECLARED action id from that type\'s descriptor, e.g. "save-draft" or "send"'),
   documentId: z.string().optional().describe('Omit to create a new document instance of this type'),
   data: z
-    .record(z.unknown())
+    .record(z.string(), z.unknown())
     .optional()
     .describe("The document's own field values (see the type's descriptor)"),
-  params: z.record(z.unknown()).optional().describe("The action's own parameters, if it declares any"),
+  params: z
+    .record(z.string(), z.unknown())
+    .optional()
+    .describe("The action's own parameters, if it declares any"),
 };
 
 /**

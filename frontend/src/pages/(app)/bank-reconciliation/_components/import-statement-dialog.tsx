@@ -817,7 +817,7 @@ export function ImportStatementDialog({ onImported }: ImportStatementDialogProps
     () =>
       z.object({
         file: z.custom<File | null>((value) => value instanceof File, {
-          message: t("bankReconciliation.import.errors.fileRequired"),
+          error: t("bankReconciliation.import.errors.fileRequired"),
         }),
         currency: z.string().min(1, t("bankReconciliation.import.errors.currencyRequired")),
         dateColumn: z.string().min(1, t("bankReconciliation.import.errors.columnRequired")),

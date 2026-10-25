@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
+import { typeErrors } from "@/lib/zod-messages"
 import { zodResolver } from "@hookform/resolvers/zod"
 
 type FieldType = "text" | "number" | "switch" | "select"
@@ -83,10 +84,10 @@ interface DynamicFormModalProps {
 
 // Generate Zod schema dynamically based on field configuration
 function generateZodSchema(fields: FormFieldItem[]) {
-  const schemaFields: Record<string, z.ZodTypeAny> = {}
+  const schemaFields: Record<string, z.ZodType> = {}
 
   fields.forEach((field) => {
-    let fieldSchema: z.ZodTypeAny
+    let fieldSchema: z.ZodType
 
     switch (field.type) {
       case "text": {
@@ -126,8 +127,10 @@ function generateZodSchema(fields: FormFieldItem[]) {
         // Improved handling of optional number fields
         if (field.required) {
           fieldSchema = z.coerce.number({
-            required_error: `${field.label} is required`,
-            invalid_type_error: `${field.label} must be a number`,
+            error: typeErrors({
+              required: `${field.label} is required`,
+              invalid: `${field.label} must be a number`,
+            }),
           })
 
           if (numberField.min !== undefined) {
@@ -148,7 +151,7 @@ function generateZodSchema(fields: FormFieldItem[]) {
             fieldSchema = (fieldSchema as z.ZodNumber).refine(
               (val) => new RegExp(numberField.pattern!).test(val.toString()),
               {
-                message: `${field.label} format is invalid`,
+                error: `${field.label} format is invalid`,
               },
             )
           }
@@ -166,7 +169,7 @@ function generateZodSchema(fields: FormFieldItem[]) {
                   return true
                 },
                 {
-                  message: `${field.label} must be between ${numberField.min ?? 0} and ${numberField.max ?? "infinity"}${numberField.pattern ? " and match the required format" : ""}`,
+                  error: `${field.label} must be between ${numberField.min ?? 0} and ${numberField.max ?? "infinity"}${numberField.pattern ? " and match the required format" : ""}`,
                 },
               ),
             ])

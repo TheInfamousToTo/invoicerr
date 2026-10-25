@@ -90,7 +90,7 @@
     "xadesjs": "^2.6.7",
     "xmlbuilder2": "^4.0.3",
     "xmllint-wasm": "^5.2.0",
-    "zod": "^4.0.0"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.2",
