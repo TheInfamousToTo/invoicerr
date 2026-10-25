@@ -888,6 +888,19 @@
         "notes": "Art. 3, 1°, \"le cas échéant\": whether a partnership has a share capital to state was not settled by this research, so the line prints when filled in and is never asked for. Journal officiel n° 80 du 11 décembre 2005, read at https://www.joradp.dz/FTP/jo-francais/2005/F2005080.pdf. Later amendments of the decree were not searched for."
       }
     ],
+    "demo": {
+      "legalFormByNameSuffix": {
+        "EURL": "DZ_EURL",
+        "SARL": "DZ_SARL"
+      },
+      "values": {
+        "activity": "Prestations de services",
+        "shareCapital": {
+          "amount": "1000000",
+          "currency": "DZD"
+        }
+      }
+    },
     "notes": "The decree lists the legal form and share capital among the invoice mentions themselves, unlike the European countries whose company law sets them."
   }
 }

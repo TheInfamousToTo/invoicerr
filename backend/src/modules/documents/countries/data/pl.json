@@ -1157,6 +1157,19 @@
         "notes": "Art. 300^61 § 1, 4); § 2 lets a paper document show the capital at the end of the previous financial year instead, which is the amount the company enters. Kodeks spółek handlowych, consolidated text prepared by the Kancelaria Sejmu (t.j. Dz. U. z 2024 r. poz. 18, 96, z 2026 r. poz. 176, 187, 644), https://eli.gov.pl/api/acts/DU/2024/18/text/U/D20240018Lj.pdf."
       }
     ],
+    "demo": {
+      "legalFormByNameSuffix": {
+        "Sp. z o.o.": "PL_SP_ZOO"
+      },
+      "values": {
+        "registerCourt": "Sąd Rejonowy dla m.st. Warszawy, XII Wydział Gospodarczy KRS",
+        "krsNumber": "0000123456",
+        "shareCapital": {
+          "amount": "5000",
+          "currency": "PLN"
+        }
+      }
+    },
     "notes": "Every mention reads the \"pisma i zamówienia handlowe\" articles of the Kodeks spółek handlowych."
   }
 }

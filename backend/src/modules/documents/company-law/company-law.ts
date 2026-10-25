@@ -231,6 +231,26 @@ export function companyLawSettings(
   };
 }
 
+/** The legal form and values a demo company of this country is seeded with, read from its section. */
+export function demoCompanyLaw(
+  countryCode: string,
+  companyName: string,
+  city: string,
+  catalog: CompanyLawCatalog = defaultCompanyLawCatalog,
+): CompanyLawDetails | undefined {
+  const demo = catalog.fileFor(countryCode)?.demo;
+  if (!demo) return undefined;
+  const suffix = Object.keys(demo.legalFormByNameSuffix)
+    .toSorted((a, b) => b.length - a.length)
+    .find((candidate) => companyName.endsWith(` ${candidate}`));
+  if (!suffix) return undefined;
+  const values: Record<string, CompanyLawValue> = {};
+  for (const [key, value] of Object.entries(demo.values)) {
+    values[key] = typeof value === 'string' ? value.replaceAll('{city}', city) : value;
+  }
+  return { legalForm: demo.legalFormByNameSuffix[suffix], values };
+}
+
 export class InvalidCompanyLawDetailsError extends Error {}
 
 const AMOUNT = /^\d{1,15}(\.\d{1,4})?$/;

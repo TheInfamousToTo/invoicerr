@@ -1558,6 +1558,20 @@
         "notes": "Art. 2250, fourth paragraph. Read at normattiva.it (testo in vigore dal 29-7-2009), https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:regio.decreto:1942-03-16;262~art2250."
       }
     ],
+    "demo": {
+      "legalFormByNameSuffix": {
+        "SRL": "IT_SRL",
+        "SRLS": "IT_SRL"
+      },
+      "values": {
+        "registerOffice": "{city}",
+        "registerNumber": "01234567890",
+        "shareCapital": {
+          "amount": "10000",
+          "currency": "EUR"
+        }
+      }
+    },
     "notes": "Art. 2250 does not name the REA number: what it asks for is the registro delle imprese office and the registration number, which is what is declared. The FatturaPA format carries the same facts in its own IscrizioneREA block, which the e-invoice export does not fill yet. Not modelled: companies in liquidation."
   }
 }

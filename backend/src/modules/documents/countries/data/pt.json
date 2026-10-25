@@ -1193,6 +1193,19 @@
         "notes": "Artigo 171.º, n.º 2: only \"se for diverso\", which the settings cannot tell: printed when filled in, never asked for. Read at pgdlisboa.pt (DL n.º 262/86, 56.ª versão, DL n.º 171/2026), https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=524A0171&nid=524&tabela=leis."
       }
     ],
+    "demo": {
+      "legalFormByNameSuffix": {
+        "Lda": "PT_LDA",
+        "Unipessoal Lda": "PT_UNIPESSOAL_LDA"
+      },
+      "values": {
+        "registryOffice": "Conservatória do Registo Comercial de {city}",
+        "shareCapital": {
+          "amount": "5000",
+          "currency": "EUR"
+        }
+      }
+    },
     "notes": "Not modelled: the capital próprio of artigo 171.º, n.º 2, owed only when it is at most half the share capital (a balance-sheet fact the settings do not carry), and companies in liquidation."
   }
 }

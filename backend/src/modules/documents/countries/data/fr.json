@@ -1440,6 +1440,19 @@
         "notes": "R. 123-237, 2° binds a person registered at the RCS. An individual entrepreneur or another form may or may not be, which the company settings cannot tell: the mention prints when the city is filled in and is never asked for. Code de commerce, partie réglementaire, read at codes.droit.org (Légifrance mirror, edition of 2026-10-01), https://codes.droit.org/PDF/Code%20de%20commerce.pdf."
       }
     ],
+    "demo": {
+      "legalFormByNameSuffix": {
+        "SARL": "FR_SARL",
+        "SAS": "FR_SAS"
+      },
+      "values": {
+        "shareCapital": {
+          "amount": "10000",
+          "currency": "EUR"
+        },
+        "registerCity": "{city}"
+      }
+    },
     "notes": "Every mention reads the company-law texts of the Code de commerce, not the tax code. The seller's SIREN and VAT number are `identifiers`."
   }
 }

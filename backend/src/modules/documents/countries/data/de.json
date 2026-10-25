@@ -493,6 +493,7 @@
         "scheme": "LEGAL_ID",
         "appliesTo": "COMPANY",
         "label": "Handelsregisternummer",
+        "demoGenerator": { "id": "template", "template": "HRB {digits:6}" },
         "required": false,
         "helpTextKey": "settings.identifiers.help.DE.LEGAL_ID",
         "provenance": {
@@ -1272,6 +1273,16 @@
         "notes": "Read at gesetze-im-internet.de on 2026-10-25: https://www.gesetze-im-internet.de/hgb/__125.html and .../__177a.html. The texts name \"Geschäftsbriefe\" and \"Bestellscheine\", not invoices; an invoice addressed to a client is read here as a Geschäftsbrief, which this research did not settle against case law."
       }
     ],
+    "demo": {
+      "legalFormByNameSuffix": {
+        "GmbH": "DE_GMBH",
+        "UG": "DE_UG"
+      },
+      "values": {
+        "registerCourt": "Amtsgericht {city}",
+        "managingDirectors": "Anna Schmidt"
+      }
+    },
     "notes": "Every mention reads the business-letter provisions of the GmbHG, AktG and HGB. Not modelled: capital details (only required when stated), companies in liquidation, branches of foreign companies."
   }
 }

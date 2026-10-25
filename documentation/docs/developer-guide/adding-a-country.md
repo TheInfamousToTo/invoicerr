@@ -602,10 +602,11 @@ identifier, it never redeclares one) and from `mentions` (notes about the transa
 | `mentions[].required` | `true`: every value it quotes is required, the working copy flags a gap and Validate and Send refuse it. `false`: printed once every value is filled in, never asked for (an RCS city an individual entrepreneur may or may not have). |
 | `mentions[].template` | One string per language a document renders in (`en`, `fr`, `it`, `pl`, `de`, `pt`), all quoting the same placeholders: `{legalForm}`, a field key such as `{shareCapital}`, or `{identifier:LEGAL_ID}` for a value of the company's identifiers. |
 | `provenance`, `notes` | Same discipline as every other fact. |
+| `demo` | Optional. What a demo company of this country is seeded with: `legalFormByNameSuffix` maps the suffix ending a demo company name to a legal form, and `values` fills its fields (`{city}` stands for the company's city). The demo seed (`demo/seed-runtime/seed-company.ts`) reads it, so a demo invoice can be validated. |
 
 `countries/data/all.ts` refuses, at load time, a template missing for one language, a placeholder
 naming an undeclared field, templates of one mention quoting different placeholders, a mention naming
-an undeclared legal form, a legal form code without the country prefix, and a mention without provenance (`assertValidCompanyLawSection`).
+an undeclared legal form, a legal form code without the country prefix, a mention without provenance, and a `demo` naming an undeclared legal form or field (`assertValidCompanyLawSection`).
 
 The settings screen reads `GET /api/documents/company-law?countryCode=XX`
 (`company-law/company-law.ts#companyLawSettings`): each legal form and the fields its mentions quote,

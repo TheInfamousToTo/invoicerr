@@ -50,6 +50,13 @@ export interface CompanyLawMention {
   notes?: string;
 }
 
+/** What a demo company of this country is seeded with; `{city}` in a text value is the company's city. */
+export interface CompanyLawDemo {
+  /** Legal form by the suffix that ends the demo company's name. */
+  legalFormByNameSuffix: Record<string, string>;
+  values: Record<string, string | { amount: string; currency: string }>;
+}
+
 export interface CountryCompanyLawFile {
   countryCode: string;
   /** The country's own name for the legal form, used in a missing marker. */
@@ -57,6 +64,7 @@ export interface CountryCompanyLawFile {
   legalForms: CompanyLegalForm[];
   fields: CompanyLawField[];
   mentions: CompanyLawMention[];
+  demo?: CompanyLawDemo;
   notes?: string;
 }
 
@@ -190,6 +198,21 @@ function assertValidMention(
   assertValidProvenance(mention, fail);
 }
 
+function assertValidDemo(
+  file: CountryCompanyLawFile,
+  formCodes: Set<string>,
+  fieldKeys: Set<string>,
+  fail: Fail,
+) {
+  if (!file.demo) return;
+  const forms = Object.values(file.demo.legalFormByNameSuffix ?? {});
+  if (forms.length === 0) fail('demo names no legal form.');
+  const unknownForm = forms.find((code) => !formCodes.has(code));
+  if (unknownForm) fail(`demo names undeclared legal form "${unknownForm}".`);
+  const unknownField = Object.keys(file.demo.values ?? {}).find((key) => !fieldKeys.has(key));
+  if (unknownField) fail(`demo fills undeclared field "${unknownField}".`);
+}
+
 /** Refused at load time: a section the resolver could only half read would print a wrong mention. */
 export function assertValidCompanyLawSection(file: CountryCompanyLawFile, context: string): void {
   const fail: Fail = (reason) => {
@@ -205,6 +228,7 @@ export function assertValidCompanyLawSection(file: CountryCompanyLawFile, contex
     mentionIds.add(mention.id);
     assertValidMention(mention, formCodes, fieldKeys, fail);
   }
+  assertValidDemo(file, formCodes, fieldKeys, fail);
 }
 
 export function templatePlaceholders(template: string): CompanyLawPlaceholder[] {
