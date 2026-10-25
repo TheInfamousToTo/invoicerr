@@ -436,11 +436,11 @@ function renderCompanyLaw(lines: readonly CompanyLawLine[] | undefined, strings:
   const rendered = lines
     .map((line) => {
       const parts = line.parts
-        .map((part) =>
-          'text' in part
-            ? escapeHtmlSafe(part.text)
-            : `<span class="identifier-missing">${escapeHtmlSafe(`${part.missing}: ${strings.identifierMissing}`)}</span>`,
-        )
+        .map((part) => {
+          if ('text' in part) return escapeHtmlSafe(part.text);
+          const marker = escapeHtmlSafe(`${part.missing}: ${strings.identifierMissing}`);
+          return `<span class="identifier-missing">${marker}</span>`;
+        })
         .join('');
       return `<div>${parts}</div>`;
     })

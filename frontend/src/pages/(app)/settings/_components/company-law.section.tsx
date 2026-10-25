@@ -13,7 +13,10 @@ interface CompanyLawValues {
   currency: string
 }
 
-function MoneyField({ field, defaultCurrency }: { field: CompanyLawFormField; defaultCurrency: string }) {
+function MoneyField({
+  field,
+  defaultCurrency,
+}: Readonly<{ field: CompanyLawFormField; defaultCurrency: string }>) {
   const { t } = useTranslation()
   const form = useFormContext<CompanyLawValues>()
   const value = form.watch(`companyLaw.values.${field.key}`)
@@ -51,7 +54,7 @@ function MoneyField({ field, defaultCurrency }: { field: CompanyLawFormField; de
  * The legal form and the company-law values the selected country's `companyLaw` section asks for.
  * Shown only when that country declares legal forms; every label and field comes from the API.
  */
-export function CompanyLawSection({ countryCode }: { countryCode: string | undefined }) {
+export function CompanyLawSection({ countryCode }: Readonly<{ countryCode: string | undefined }>) {
   const { t } = useTranslation()
   const form = useFormContext<CompanyLawValues>()
   const { data: settings } = useCompanyLawSettings(countryCode)

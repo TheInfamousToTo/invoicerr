@@ -1,3 +1,5 @@
+import { byCodeUnit } from '@/lib/compare';
+
 import { SUPPORTED_RENDER_LANGUAGES, RenderLanguage } from '../rendering/language/supported-languages';
 
 /** The seller's legal form, share capital and trade register a country requires on its documents. */
@@ -69,7 +71,7 @@ const PLACEHOLDER = /\{([^{}]+)\}/g;
 const FIELD_KEY = /^[a-z][A-Za-z0-9]*$/;
 const SCHEME = /^[A-Z][A-Z0-9_]*$/;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-const FIELD_KINDS: readonly CompanyLawFieldKind[] = ['text', 'money'];
+const FIELD_KINDS: ReadonlySet<string> = new Set<CompanyLawFieldKind>(['text', 'money']);
 
 function parsePlaceholder(token: string): CompanyLawPlaceholder | undefined {
   if (token === 'legalForm') return { kind: 'legalForm' };
@@ -95,16 +97,15 @@ export function parseTemplate(template: string): TemplatePart[] {
   return parts;
 }
 
-const placeholderKey = (placeholder: CompanyLawPlaceholder) =>
-  placeholder.kind === 'legalForm'
-    ? 'legalForm'
-    : placeholder.kind === 'field'
-      ? placeholder.key
-      : `identifier:${placeholder.scheme}`;
+function placeholderKey(placeholder: CompanyLawPlaceholder): string {
+  if (placeholder.kind === 'legalForm') return 'legalForm';
+  if (placeholder.kind === 'field') return placeholder.key;
+  return `identifier:${placeholder.scheme}`;
+}
 
 export class InvalidCompanyLawSectionError extends Error {}
 
-function assertValidProvenance(mention: CompanyLawMention, fail: (reason: string) => never): void {
+function assertValidProvenance(mention: CompanyLawMention, fail: Fail): void {
   const provenance = mention.provenance as
     | { kind?: string; sourceText?: string; sourceCheckedAt?: string; resolutionNote?: string }
     | undefined;
@@ -122,11 +123,7 @@ function assertValidProvenance(mention: CompanyLawMention, fail: (reason: string
   fail(`mention "${mention.id}" has no valid provenance (kind must be "legal" or "unverified").`);
 }
 
-function assertValidTemplate(
-  mention: CompanyLawMention,
-  fieldKeys: Set<string>,
-  fail: (reason: string) => never,
-): void {
+function assertValidTemplate(mention: CompanyLawMention, fieldKeys: Set<string>, fail: Fail): void {
   let reference: string | undefined;
   for (const language of SUPPORTED_RENDER_LANGUAGES) {
     const template = mention.template?.[language];
@@ -138,58 +135,75 @@ function assertValidTemplate(
       if (placeholder.kind === 'field' && !fieldKeys.has(placeholder.key))
         fail(`mention "${mention.id}" uses undeclared field "{${token}}".`);
     }
-    const signature = tokens.toSorted().join(',');
+    const signature = tokens.toSorted(byCodeUnit).join(',');
     reference ??= signature;
     if (signature !== reference)
       fail(`mention "${mention.id}" uses different placeholders in its "${language}" template.`);
   }
 }
 
-/** Refused at load time: a section the resolver could only half read would print a wrong mention. */
-export function assertValidCompanyLawSection(file: CountryCompanyLawFile, context: string): void {
-  function fail(reason: string): never {
-    throw new InvalidCompanyLawSectionError(`${context}: ${reason}`);
-  }
-  if (!file.legalFormLabel?.trim()) fail('declares no legalFormLabel.');
-  if (!Array.isArray(file.legalForms) || file.legalForms.length === 0) fail('declares no legal form.');
+type Fail = (reason: string) => never;
 
-  const formCodes = new Set<string>();
+function assertValidLegalForms(file: CountryCompanyLawFile, fail: Fail): Set<string> {
+  if (!Array.isArray(file.legalForms) || file.legalForms.length === 0) fail('declares no legal form.');
+  const codes = new Set<string>();
   for (const form of file.legalForms) {
     if (!form.code?.trim() || !form.name?.trim() || !form.designation?.trim())
       fail(`legal form "${form.code}" needs a code, a name and a designation.`);
     // A company keeps its legal form across a change of country, so a code must never mean a form elsewhere.
     if (!form.code.startsWith(`${file.countryCode}_`))
       fail(`legal form "${form.code}" must start with "${file.countryCode}_".`);
-    if (formCodes.has(form.code)) fail(`legal form "${form.code}" is declared twice.`);
-    formCodes.add(form.code);
+    if (codes.has(form.code)) fail(`legal form "${form.code}" is declared twice.`);
+    codes.add(form.code);
   }
+  return codes;
+}
 
-  const fieldKeys = new Set<string>();
+function assertValidFields(file: CountryCompanyLawFile, fail: Fail): Set<string> {
+  const keys = new Set<string>();
   for (const field of file.fields ?? []) {
     if (!FIELD_KEY.test(field.key ?? '') || field.key === 'legalForm')
       fail(`field key "${field.key}" must be camelCase and not "legalForm".`);
-    if (!FIELD_KINDS.includes(field.kind)) fail(`field "${field.key}" has unknown kind "${field.kind}".`);
+    if (!FIELD_KINDS.has(field.kind)) fail(`field "${field.key}" has unknown kind "${field.kind}".`);
     if (!field.label?.trim()) fail(`field "${field.key}" has no label.`);
-    if (fieldKeys.has(field.key)) fail(`field "${field.key}" is declared twice.`);
-    fieldKeys.add(field.key);
+    if (keys.has(field.key)) fail(`field "${field.key}" is declared twice.`);
+    keys.add(field.key);
   }
+  return keys;
+}
 
+function assertValidMention(
+  mention: CompanyLawMention,
+  formCodes: Set<string>,
+  fieldKeys: Set<string>,
+  fail: Fail,
+): void {
+  if (typeof mention.required !== 'boolean')
+    fail(`mention "${mention.id}" does not say whether it is required.`);
+  if (!Array.isArray(mention.documentTypes) || mention.documentTypes.length === 0)
+    fail(`mention "${mention.id}" names no document type.`);
+  if (!Array.isArray(mention.legalForms) || mention.legalForms.length === 0)
+    fail(`mention "${mention.id}" names no legal form.`);
+  const undeclared = mention.legalForms.find((code) => !formCodes.has(code));
+  if (undeclared) fail(`mention "${mention.id}" names undeclared legal form "${undeclared}".`);
+  assertValidTemplate(mention, fieldKeys, fail);
+  assertValidProvenance(mention, fail);
+}
+
+/** Refused at load time: a section the resolver could only half read would print a wrong mention. */
+export function assertValidCompanyLawSection(file: CountryCompanyLawFile, context: string): void {
+  const fail: Fail = (reason) => {
+    throw new InvalidCompanyLawSectionError(`${context}: ${reason}`);
+  };
+  if (!file.legalFormLabel?.trim()) fail('declares no legalFormLabel.');
+  const formCodes = assertValidLegalForms(file, fail);
+  const fieldKeys = assertValidFields(file, fail);
   const mentionIds = new Set<string>();
   for (const mention of file.mentions ?? []) {
     if (!mention.id?.trim()) fail('a mention has no id.');
     if (mentionIds.has(mention.id)) fail(`mention "${mention.id}" is declared twice.`);
     mentionIds.add(mention.id);
-    if (typeof mention.required !== 'boolean')
-      fail(`mention "${mention.id}" does not say whether it is required.`);
-    if (!Array.isArray(mention.documentTypes) || mention.documentTypes.length === 0)
-      fail(`mention "${mention.id}" names no document type.`);
-    if (!Array.isArray(mention.legalForms) || mention.legalForms.length === 0)
-      fail(`mention "${mention.id}" names no legal form.`);
-    for (const code of mention.legalForms) {
-      if (!formCodes.has(code)) fail(`mention "${mention.id}" names undeclared legal form "${code}".`);
-    }
-    assertValidTemplate(mention, fieldKeys, fail);
-    assertValidProvenance(mention, fail);
+    assertValidMention(mention, formCodes, fieldKeys, fail);
   }
 }
 

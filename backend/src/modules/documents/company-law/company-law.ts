@@ -199,6 +199,21 @@ export interface CompanyLawSettings {
   legalForms: { code: string; name: string; fields: CompanyLawFormField[] }[];
 }
 
+function quotesField(mention: CompanyLawMention, key: string): boolean {
+  return templatePlaceholders(mention.template.en).some(
+    (placeholder) => placeholder.kind === 'field' && placeholder.key === key,
+  );
+}
+
+function fieldsFor(file: CountryCompanyLawFile, formCode: string): CompanyLawFormField[] {
+  const mentions = file.mentions.filter((mention) => mention.legalForms.includes(formCode));
+  return file.fields.flatMap((field) => {
+    const quoting = mentions.filter((mention) => quotesField(mention, field.key));
+    if (quoting.length === 0) return [];
+    return [{ ...field, required: quoting.some((mention) => mention.required) }];
+  });
+}
+
 /** What the company settings screen asks for: each legal form and the fields its mentions quote. */
 export function companyLawSettings(
   countryCode: string | null | undefined,
@@ -208,21 +223,11 @@ export function companyLawSettings(
   if (!file) return { legalForms: [] };
   return {
     legalFormLabel: file.legalFormLabel,
-    legalForms: file.legalForms.map((form) => {
-      const mentions = file.mentions.filter((mention) => mention.legalForms.includes(form.code));
-      const fields = file.fields.flatMap((field) => {
-        const quoting = mentions.filter((mention) =>
-          Object.values(mention.template).some((template) =>
-            templatePlaceholders(template).some(
-              (placeholder) => placeholder.kind === 'field' && placeholder.key === field.key,
-            ),
-          ),
-        );
-        if (quoting.length === 0) return [];
-        return [{ ...field, required: quoting.some((mention) => mention.required) }];
-      });
-      return { code: form.code, name: form.name, fields };
-    }),
+    legalForms: file.legalForms.map((form) => ({
+      code: form.code,
+      name: form.name,
+      fields: fieldsFor(file, form.code),
+    })),
   };
 }
 
@@ -242,10 +247,8 @@ function normalizeValue(key: string, value: unknown): CompanyLawValue | undefine
     return text || undefined;
   }
   if (isRecord(value)) {
-    const amount = String(value.amount ?? '').trim();
-    const currency = String(value.currency ?? '')
-      .trim()
-      .toUpperCase();
+    const amount = typeof value.amount === 'string' ? value.amount.trim() : '';
+    const currency = typeof value.currency === 'string' ? value.currency.trim().toUpperCase() : '';
     if (!amount) return undefined;
     if (!AMOUNT.test(amount) || !CURRENCY.test(currency))
       throw new InvalidCompanyLawDetailsError(
@@ -259,6 +262,19 @@ function normalizeValue(key: string, value: unknown): CompanyLawValue | undefine
   );
 }
 
+function normalizeValues(input: unknown): Record<string, CompanyLawValue> {
+  const values: Record<string, CompanyLawValue> = {};
+  if (input === undefined || input === null) return values;
+  if (!isRecord(input)) throw new InvalidCompanyLawDetailsError('companyLaw.values must be an object.');
+  for (const [key, value] of Object.entries(input)) {
+    if (!/^[a-z][A-Za-z0-9]*$/.test(key))
+      throw new InvalidCompanyLawDetailsError(`companyLaw.values has an invalid key "${key}".`);
+    const normalized = normalizeValue(key, value);
+    if (normalized !== undefined) values[key] = normalized;
+  }
+  return values;
+}
+
 /**
  * Checks what a company submits before it is stored. Values are kept whatever the country, so
  * switching country and back loses nothing; `null` clears everything.
@@ -268,16 +284,5 @@ export function normalizeCompanyLawDetails(input: unknown): CompanyLawDetails | 
   if (input === null) return null;
   if (!isRecord(input)) throw new InvalidCompanyLawDetailsError('companyLaw must be an object.');
   const legalForm = typeof input.legalForm === 'string' ? input.legalForm.trim() || null : null;
-  const values: Record<string, CompanyLawValue> = {};
-  if (input.values !== undefined && input.values !== null) {
-    if (!isRecord(input.values))
-      throw new InvalidCompanyLawDetailsError('companyLaw.values must be an object.');
-    for (const [key, value] of Object.entries(input.values)) {
-      if (!/^[a-z][A-Za-z0-9]*$/.test(key))
-        throw new InvalidCompanyLawDetailsError(`companyLaw.values has an invalid key "${key}".`);
-      const normalized = normalizeValue(key, value);
-      if (normalized !== undefined) values[key] = normalized;
-    }
-  }
-  return { legalForm, values };
+  return { legalForm, values: normalizeValues(input.values) };
 }
