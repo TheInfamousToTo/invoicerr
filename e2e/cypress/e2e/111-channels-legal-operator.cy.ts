@@ -1,4 +1,5 @@
 export {}; // makes this spec a module, not a global script - see tsconfig.json
+import { companyLawFor } from "../fixtures/company-law";
 
 /**
  * Issue #527 - the Channels settings screen redesigned as design C ("legal channel, then operator"),
@@ -33,7 +34,13 @@ function setCompanyCountry(country: string, countryCode: string, identifiers?: {
 	return cy.request({
 		method: "POST",
 		url: `${api}/api/company/info`,
-		body: { name: "Acme Corp", country, countryCode, ...(identifiers ? { identifiers } : {}) },
+		body: {
+			name: "Acme Corp",
+			country,
+			countryCode,
+			companyLaw: companyLawFor(countryCode),
+			...(identifiers ? { identifiers } : {}),
+		},
 	});
 }
 

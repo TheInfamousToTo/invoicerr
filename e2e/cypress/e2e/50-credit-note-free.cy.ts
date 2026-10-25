@@ -1,4 +1,5 @@
 export {}; // makes this spec a module, not a global script -- see tsconfig.json
+import { companyLawFor } from "../fixtures/company-law";
 
 /**
  * The FREE credit note: no `invoice` field at all — a commercial gesture, a refund of
@@ -170,6 +171,7 @@ describe("Free credit note (API) — the country gate: Poland has no separate cr
 				name: "Sklep Testowy",
 				country: "Poland",
 				countryCode: "PL",
+				companyLaw: companyLawFor("PL"),
 				invoiceTransportId: "email",
 			},
 		}).then((res) => {

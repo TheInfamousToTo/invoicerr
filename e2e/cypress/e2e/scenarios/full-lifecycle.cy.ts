@@ -1,3 +1,4 @@
+import { companyLawFor } from "../../fixtures/company-law";
 import { SCENARIOS, Scenario } from "../../fixtures/scenarios";
 
 /**
@@ -647,7 +648,7 @@ describe(`Full lifecycle — ${scenarioId}`, () => {
 		cy.request({
 			method: "POST",
 			url: `${api}/api/company/info`,
-			body: { invoiceTransportId: "email" },
+			body: { invoiceTransportId: "email", companyLaw: companyLawFor(s.company.country) },
 			failOnStatusCode: false,
 		}).then((res) => {
 			expect(res.status, "baseline email transport configured").to.be.oneOf([200, 201]);

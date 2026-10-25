@@ -1,6 +1,7 @@
 export {}; // makes this spec a module, not a global script -- see tsconfig.json
 import { baselineClient, giveBaselineClientItsVat } from "../support/baseline-client";
 import { POLISH_BUYER_IDENTIFIERS } from "../fixtures/identifiers";
+import { companyLawFor } from "../fixtures/company-law";
 
 /**
  * NATIONAL transports — wave 1: the credentials groundwork + the PDP channel,
@@ -113,7 +114,13 @@ function setCompanyCountry(
 	return cy.request({
 		method: "POST",
 		url: `${api}/api/company/info`,
-		body: { name: "Acme Corp", country, countryCode, ...(identifiers ? { identifiers } : {}) },
+		body: {
+			name: "Acme Corp",
+			country,
+			countryCode,
+			companyLaw: companyLawFor(countryCode),
+			...(identifiers ? { identifiers } : {}),
+		},
 	});
 }
 
