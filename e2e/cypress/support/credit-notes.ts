@@ -1,5 +1,4 @@
 import { FRENCH_BUYER_IDENTIFIERS } from "../fixtures/identifiers";
-import { companyLawFor } from "../fixtures/company-law";
 
 /** Before France's e-invoicing mandate date, so an invoice and a credit note can still go by email. */
 export const PRE_MANDATE_DATE = "2026-08-31";
@@ -53,7 +52,6 @@ export function sendInvoiceToCredit(
 				currency: "EUR",
 				country: "France",
 				countryCode: "FR",
-				companyLaw: companyLawFor("FR"),
 				address: "1 Rue de l'Avoir",
 				city: "Paris",
 				postalCode: "75001",
