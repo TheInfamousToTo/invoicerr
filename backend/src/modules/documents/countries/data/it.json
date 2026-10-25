@@ -1492,7 +1492,15 @@
       {
         "id": "it-register",
         "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
-        "legalForms": ["IT_SRL", "IT_SRL_SOCIO_UNICO", "IT_SPA", "IT_SPA_SOCIO_UNICO", "IT_SAPA", "IT_SNC", "IT_SAS"],
+        "legalForms": [
+          "IT_SRL",
+          "IT_SRL_SOCIO_UNICO",
+          "IT_SPA",
+          "IT_SPA_SOCIO_UNICO",
+          "IT_SAPA",
+          "IT_SNC",
+          "IT_SAS"
+        ],
         "required": true,
         "template": {
           "en": "Companies register of {registerOffice}, no. {registerNumber}",
