@@ -1,12 +1,6 @@
 import { SUPPORTED_RENDER_LANGUAGES, RenderLanguage } from '../rendering/language/supported-languages';
 
-/**
- * The seller's company-law identity a country requires on its documents: legal form, share capital,
- * trade register. A mention is a template printed in the document's language, bound to the legal
- * forms and document types its source names. Distinct from `country-identifiers/` (tax and register
- * numbers, which a template may quote as `{identifier:SCHEME}`) and from `mentions/` (free-text
- * notes about the transaction).
- */
+/** The seller's legal form, share capital and trade register a country requires on its documents. */
 
 export interface LegalProvenance {
   kind: 'legal';
