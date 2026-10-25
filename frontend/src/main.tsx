@@ -1,5 +1,6 @@
 import "./index.css"
 import "./lib/i18n"
+import "./lib/zod-messages"
 
 import { QueryClientProvider } from "@tanstack/react-query"
 import { Routes } from "@generouted/react-router/lazy"

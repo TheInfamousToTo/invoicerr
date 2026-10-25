@@ -22,21 +22,21 @@ export default function AccountSecurityPage() {
   const passwordSchema = z
     .object({
       currentPassword: hasCredentialAccount
-        ? z.string().min(1, { message: t("account.security.password.form.currentPassword.errors.required") })
+        ? z.string().min(1, { error: t("account.security.password.form.currentPassword.errors.required") })
         : z.string().optional(),
       password: z
         .string()
-        .min(8, { message: t("account.security.password.form.password.errors.minLength") })
-        .regex(/[a-zA-Z]/, { message: t("account.security.password.form.password.errors.letter") })
-        .regex(/[0-9]/, { message: t("account.security.password.form.password.errors.number") })
+        .min(8, { error: t("account.security.password.form.password.errors.minLength") })
+        .regex(/[a-zA-Z]/, { error: t("account.security.password.form.password.errors.letter") })
+        .regex(/[0-9]/, { error: t("account.security.password.form.password.errors.number") })
         .regex(/[^a-zA-Z0-9]/, {
-          message: t("account.security.password.form.password.errors.special"),
+          error: t("account.security.password.form.password.errors.special"),
         })
         .trim(),
       confirmPassword: z.string().trim(),
     })
     .refine((data) => data.password === data.confirmPassword, {
-      message: t("account.security.password.form.confirmPassword.errors.match"),
+      error: t("account.security.password.form.confirmPassword.errors.match"),
       path: ["confirmPassword"],
     })
 

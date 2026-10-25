@@ -145,6 +145,26 @@ Each exception is named in the guard's allow-list, by file and by text.
 
 `cypress/e2e/124-prose-help.cy.ts` opens a long popover on a 390 px screen and runs axe with it open.
 
+## Validation messages
+
+Forms validate with zod 4 through `zodResolver`. A message a user reads is set on the schema with
+`error`, from `t()`:
+
+```tsx
+z.string().min(1, { error: t("clients.upsert.validation.city.required") })
+```
+
+For a missing value or a value of the wrong type, such as the `NaN` an emptied number input sends,
+use `typeErrors` from `@/lib/zod-messages`. A case it is not given keeps the built-in message:
+
+```tsx
+z.number({ error: typeErrors({ invalid: t("timeTracking.projects.errors.hourlyRateMin") }) })
+```
+
+A field that sets no message shows the built-in English wording `@/lib/zod-messages` installs for the
+whole app (`Required`, `Invalid email`, `Number must be greater than or equal to 0`). `main.tsx` and
+the Vitest setup both load it, so a component spec reads the same messages as the running app.
+
 ## Loading states
 
 Loading never moves or resizes what is already on screen, and never shows figures that no longer

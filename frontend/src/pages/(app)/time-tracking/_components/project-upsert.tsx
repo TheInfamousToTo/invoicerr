@@ -17,18 +17,19 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useClientSearch, useCompany, useCreateProject, useUpdateProject } from "@/hooks/queries"
 import { currencies } from "@/lib/constants/currencies"
+import { typeErrors } from "@/lib/zod-messages"
 import type { Project } from "@/types"
 
 export const buildProjectSchema = (t: TFunction) =>
   z.object({
-    clientId: z.string().min(1, { message: t("timeTracking.projects.errors.clientRequired") }),
-    name: z.string().min(1, { message: t("timeTracking.projects.errors.nameRequired") }),
+    clientId: z.string().min(1, { error: t("timeTracking.projects.errors.clientRequired") }),
+    name: z.string().min(1, { error: t("timeTracking.projects.errors.nameRequired") }),
     description: z.string().optional(),
     // `null` (never `undefined`) when emptied — same "explicit null clears it" convention
     // articles.service.ts's own quantity/lowStockThreshold fields hold (see ArticleUpsert).
     hourlyRate: z
-      .number({ invalid_type_error: t("timeTracking.projects.errors.hourlyRateMin") })
-      .min(0, { message: t("timeTracking.projects.errors.hourlyRateMin") })
+      .number({ error: typeErrors({ invalid: t("timeTracking.projects.errors.hourlyRateMin") }) })
+      .min(0, { error: t("timeTracking.projects.errors.hourlyRateMin") })
       .nullable(),
   })
 

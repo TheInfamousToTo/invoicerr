@@ -17,19 +17,20 @@ import { Textarea } from "@/components/ui/textarea"
 import { useCompany, useCreateTimeEntry, useUpdateTimeEntry } from "@/hooks/queries"
 import { fromCalendarDate, toCalendarDate, todayCalendarDate } from "@/lib/calendar-date"
 import { currencies } from "@/lib/constants/currencies"
+import { typeErrors } from "@/lib/zod-messages"
 import type { TimeEntry } from "@/types"
 
 export const buildTimeEntrySchema = (t: TFunction) =>
   z.object({
-    date: z.string().min(1, { message: t("timeTracking.entries.errors.dateRequired") }),
+    date: z.string().min(1, { error: t("timeTracking.entries.errors.dateRequired") }),
     // Hours, not minutes — the unit a person actually thinks in; converted at the submit boundary
     // (onSubmit below) the same way ArticleUpsert converts a typed price into minor units server-side.
-    hours: z.number().gt(0, { message: t("timeTracking.entries.errors.durationPositive") }),
+    hours: z.number().gt(0, { error: t("timeTracking.entries.errors.durationPositive") }),
     description: z.string().optional(),
     billable: z.boolean(),
     hourlyRate: z
-      .number({ invalid_type_error: t("timeTracking.entries.errors.hourlyRateMin") })
-      .min(0, { message: t("timeTracking.entries.errors.hourlyRateMin") })
+      .number({ error: typeErrors({ invalid: t("timeTracking.entries.errors.hourlyRateMin") }) })
+      .min(0, { error: t("timeTracking.entries.errors.hourlyRateMin") })
       .nullable(),
   })
 

@@ -38,6 +38,7 @@ import {
   useSetReconciliationSettings,
 } from "@/hooks/queries"
 import { currencyForCountry } from "@/lib/reference/countries"
+import { typeErrors } from "@/lib/zod-messages"
 import { useGet, usePost } from "@/hooks/use-fetch"
 import { useMutationWithToast } from "@/hooks/use-mutation-with-toast"
 import { type LookupScheme, useCompanyLookup } from "@/hooks/use-company-lookup"
@@ -82,7 +83,7 @@ export default function CompanySettings() {
   const companySchema = z.object({
     name: z
       .string({
-        required_error: t("settings.company.form.company.errors.required"),
+        error: typeErrors({ required: t("settings.company.form.company.errors.required") }),
       })
       .min(1, t("settings.company.form.company.errors.empty"))
       .max(100, t("settings.company.form.company.errors.maxLength")),
@@ -92,7 +93,7 @@ export default function CompanySettings() {
       .refine((date) => date <= new Date(), t("settings.company.form.foundedAt.errors.future")),
     currency: z
       .string({
-        required_error: t("settings.company.form.currency.errors.required"),
+        error: typeErrors({ required: t("settings.company.form.currency.errors.required") }),
       })
       .min(1, t("settings.company.form.currency.errors.select")),
     address: z.string().min(1, t("settings.company.form.address.errors.empty")),
@@ -114,11 +115,10 @@ export default function CompanySettings() {
         return /^[+]?[0-9\s\-()]{8,20}$/.test(val)
       }, t("settings.company.form.phone.errors.format")),
     email: z
-      .string()
       .email()
       .min(1, t("settings.company.form.email.errors.required"))
       .refine((val) => {
-        return z.string().email().safeParse(val).success
+        return z.email().safeParse(val).success
       }, t("settings.company.form.email.errors.format")),
     // BT-84 (Payment account identifier) — optional; the backend never fabricates one (see
     // Company.iban's own schema.prisma comment). Format checked loosely here (ISO 13616 shape); the
