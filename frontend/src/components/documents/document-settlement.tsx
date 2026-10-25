@@ -112,7 +112,7 @@ export function useBalanceSettled(typeId: string, documentId: string | undefined
 }
 
 /** Stands in the primary action slot once nothing is left to record, in the settled badge's tone. */
-export function SettledMark({ dataCy, className }: { dataCy: string; className?: string }) {
+export function SettledMark({ dataCy, className }: Readonly<{ dataCy: string; className?: string }>) {
   const { t } = useTranslation()
   const label = t("documents.settlement.badge.settled")
   return (

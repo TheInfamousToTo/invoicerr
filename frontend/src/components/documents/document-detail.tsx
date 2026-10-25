@@ -1,5 +1,5 @@
 import { ArrowLeft, ChevronDown, Download, FileCode, FileDown, Link2, Repeat, UserCheck } from "lucide-react"
-import { useState } from "react"
+import { type ReactNode, useState } from "react"
 import { Link, useNavigate } from "react-router"
 import { useTranslation } from "react-i18next"
 
@@ -636,6 +636,31 @@ function DocumentDetailActions({
     !acceptManuallyAction.policyBlockedReason &&
     isActionAvailable(acceptManuallyAction, instance.status)
 
+  let primarySlot: ReactNode = null
+  if (isProcessing) {
+    primarySlot = (
+      <span className="px-2 text-sm text-muted-foreground" data-cy="document-detail-processing">
+        {t("documents.list.processing")}
+      </span>
+    )
+  } else if (settled) {
+    primarySlot = <SettledMark dataCy="document-detail-settled" className="size-9" />
+  } else if (primary) {
+    primarySlot = (
+      // `captions`: the "Draft → Sending" line under the one highlighted button is what tells a
+      // reader what that click commits them to, before they click — the same caption every
+      // secondary entry carries inside the menu.
+      <DocumentActionButton
+        descriptor={descriptor}
+        action={primary}
+        state={state}
+        variant="default"
+        captions
+        className="flex flex-col items-end text-end"
+      />
+    )
+  }
+
   return (
     <>
       {/* Keyed by the component's own function name, not the array index — see document-list.tsx's
@@ -764,27 +789,7 @@ function DocumentDetailActions({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {isProcessing ? (
-        <span className="px-2 text-sm text-muted-foreground" data-cy="document-detail-processing">
-          {t("documents.list.processing")}
-        </span>
-      ) : settled ? (
-        <SettledMark dataCy="document-detail-settled" className="size-9" />
-      ) : (
-        primary && (
-          // `captions`: the "Draft → Sending" line under the one highlighted button is what tells a
-          // reader what that click commits them to, before they click — the same caption every
-          // secondary entry carries inside the menu.
-          <DocumentActionButton
-            descriptor={descriptor}
-            action={primary}
-            state={state}
-            variant="default"
-            captions
-            className="flex flex-col items-end text-end"
-          />
-        )
-      )}
+      {primarySlot}
 
       {gates.recurrence && recurrenceOpen && (
         <CreateRecurrenceDialog

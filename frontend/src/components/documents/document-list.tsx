@@ -342,14 +342,17 @@ function DocumentRowActions({ descriptor, instance, onActionSuccess, children }:
   // second silently replace the first.
   const customRowExtras = getDocumentCustomComponents(descriptor.id, "list-row-extra")
 
-  const primarySlot = isProcessing ? (
-    <span className="text-sm text-muted-foreground" data-cy={`document-row-processing-${instance.id}`}>
-      {t("documents.list.processing")}
-    </span>
-  ) : settled ? (
-    <SettledMark dataCy={`document-row-settled-${instance.id}`} />
-  ) : (
-    primary && (
+  let primarySlot: ReactNode = null
+  if (isProcessing) {
+    primarySlot = (
+      <span className="text-sm text-muted-foreground" data-cy={`document-row-processing-${instance.id}`}>
+        {t("documents.list.processing")}
+      </span>
+    )
+  } else if (settled) {
+    primarySlot = <SettledMark dataCy={`document-row-settled-${instance.id}`} />
+  } else if (primary) {
+    primarySlot = (
       // `outline`, never `default`: the page's one filled button is "New <type>" in the header. A
       // disabled primary still shows, carrying its reason in a tooltip — a rule reads as a rule,
       // an empty slot reads as a bug (the same call the detail page's header makes).
@@ -378,7 +381,7 @@ function DocumentRowActions({ descriptor, instance, onActionSuccess, children }:
         )}
       </span>
     )
-  )
+  }
 
   const menuSlot = (
     <>
