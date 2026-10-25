@@ -952,5 +952,211 @@
       },
       "notes": "Read at standardyprawa.pl/akt/312. The statute says when statutory interest starts to run if the contract sets no payment date: 30 days after the creditor's own performance; it sets no payment term. The application uses those 30 days as its fallback and counts them from the invoice date, not from performance."
     }
+  },
+  "companyLaw": {
+    "countryCode": "PL",
+    "legalFormLabel": "Forma prawna",
+    "legalForms": [
+      {
+        "code": "PL_SP_ZOO",
+        "name": "Spółka z ograniczoną odpowiedzialnością",
+        "designation": "sp. z o.o."
+      },
+      {
+        "code": "PL_SA",
+        "name": "Spółka akcyjna",
+        "designation": "S.A."
+      },
+      {
+        "code": "PL_SKA",
+        "name": "Spółka komandytowo-akcyjna",
+        "designation": "S.K.A."
+      },
+      {
+        "code": "PL_PSA",
+        "name": "Prosta spółka akcyjna",
+        "designation": "P.S.A."
+      },
+      {
+        "code": "PL_SP_J",
+        "name": "Spółka jawna",
+        "designation": "sp.j.",
+        "notes": "No mention: this research read the business-letter articles of the capital companies (206, 374, 127 § 5, 300^61) and none of them binds a partnership."
+      },
+      {
+        "code": "PL_SP_K",
+        "name": "Spółka komandytowa",
+        "designation": "sp.k.",
+        "notes": "No mention: see the spółka jawna note."
+      },
+      {
+        "code": "PL_SP_P",
+        "name": "Spółka partnerska",
+        "designation": "sp.p.",
+        "notes": "No mention: see the spółka jawna note."
+      },
+      {
+        "code": "PL_JDG",
+        "name": "Jednoosobowa działalność gospodarcza",
+        "designation": "Jednoosobowa działalność gospodarcza",
+        "notes": "No mention: the Kodeks spółek handlowych binds companies, not a sole trader."
+      },
+      {
+        "code": "PL_OTHER",
+        "name": "Inna forma",
+        "designation": "Inna forma",
+        "notes": "No mention is declared for a form this catalog does not list."
+      }
+    ],
+    "fields": [
+      {
+        "key": "registerCourt",
+        "kind": "text",
+        "label": "Sąd rejestrowy (z wydziałem)"
+      },
+      {
+        "key": "krsNumber",
+        "kind": "text",
+        "label": "Numer KRS"
+      },
+      {
+        "key": "shareCapital",
+        "kind": "money",
+        "label": "Kapitał zakładowy"
+      },
+      {
+        "key": "paidUpCapital",
+        "kind": "money",
+        "label": "Kapitał wpłacony"
+      },
+      {
+        "key": "shareholdersCapital",
+        "kind": "money",
+        "label": "Kapitał akcyjny"
+      }
+    ],
+    "mentions": [
+      {
+        "id": "pl-sp-zoo-register",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": ["PL_SP_ZOO"],
+        "required": true,
+        "template": {
+          "en": "Register court: {registerCourt}, KRS no. {krsNumber}",
+          "fr": "Tribunal d'enregistrement : {registerCourt}, KRS n° {krsNumber}",
+          "it": "Tribunale del registro: {registerCourt}, KRS n. {krsNumber}",
+          "pl": "Sąd rejestrowy: {registerCourt}, KRS {krsNumber}",
+          "de": "Registergericht: {registerCourt}, KRS-Nr. {krsNumber}",
+          "pt": "Tribunal de registo: {registerCourt}, KRS n.º {krsNumber}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "Art. 206 § 1 KSH: \"Pisma i zamówienia handlowe składane przez spółkę w formie papierowej i elektronicznej, a także informacje na stronach internetowych spółki, powinny zawierać: 1) firmę spółki, jej siedzibę i adres; 2) oznaczenie sądu rejestrowego, w którym przechowywana jest dokumentacja spółki oraz numer pod którym spółka jest wpisana do rejestru; 3) numer identyfikacji podatkowej (NIP); 4) wysokość kapitału zakładowego, a dla spółki, której umowę zawarto przy wykorzystaniu wzorca umowy, do czasu pokrycia kapitału zakładowego, także informację, że wymagane wkłady na kapitał zakładowy nie zostały wniesione; 5) oznaczenie grupy spółek, jeżeli spółka do niej należy.\"",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "Art. 206 § 1, 2). The register is the Krajowy Rejestr Sądowy, hence \"KRS\"; the NIP of 3) is the LEGAL_ID identifier and the seat and address of 1) are the company address printed above. Not modelled: the group of companies of 5) and the unpaid contributions of a company formed from the model agreement. Kodeks spółek handlowych, consolidated text prepared by the Kancelaria Sejmu (t.j. Dz. U. z 2024 r. poz. 18, 96, z 2026 r. poz. 176, 187, 644), https://eli.gov.pl/api/acts/DU/2024/18/text/U/D20240018Lj.pdf."
+      },
+      {
+        "id": "pl-sp-zoo-capital",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": ["PL_SP_ZOO"],
+        "required": true,
+        "template": {
+          "en": "Share capital {shareCapital}",
+          "fr": "Capital social {shareCapital}",
+          "it": "Capitale sociale {shareCapital}",
+          "pl": "Kapitał zakładowy {shareCapital}",
+          "de": "Stammkapital {shareCapital}",
+          "pt": "Capital social {shareCapital}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "Art. 206 § 1 KSH: \"Pisma i zamówienia handlowe składane przez spółkę w formie papierowej i elektronicznej, a także informacje na stronach internetowych spółki, powinny zawierać: 1) firmę spółki, jej siedzibę i adres; 2) oznaczenie sądu rejestrowego, w którym przechowywana jest dokumentacja spółki oraz numer pod którym spółka jest wpisana do rejestru; 3) numer identyfikacji podatkowej (NIP); 4) wysokość kapitału zakładowego, a dla spółki, której umowę zawarto przy wykorzystaniu wzorca umowy, do czasu pokrycia kapitału zakładowego, także informację, że wymagane wkłady na kapitał zakładowy nie zostały wniesione; 5) oznaczenie grupy spółek, jeżeli spółka do niej należy.\"",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "Art. 206 § 1, 4). Kodeks spółek handlowych, consolidated text prepared by the Kancelaria Sejmu (t.j. Dz. U. z 2024 r. poz. 18, 96, z 2026 r. poz. 176, 187, 644), https://eli.gov.pl/api/acts/DU/2024/18/text/U/D20240018Lj.pdf."
+      },
+      {
+        "id": "pl-sa-register",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": ["PL_SA", "PL_SKA"],
+        "required": true,
+        "template": {
+          "en": "Register court: {registerCourt}, KRS no. {krsNumber}",
+          "fr": "Tribunal d'enregistrement : {registerCourt}, KRS n° {krsNumber}",
+          "it": "Tribunale del registro: {registerCourt}, KRS n. {krsNumber}",
+          "pl": "Sąd rejestrowy: {registerCourt}, KRS {krsNumber}",
+          "de": "Registergericht: {registerCourt}, KRS-Nr. {krsNumber}",
+          "pt": "Tribunal de registo: {registerCourt}, KRS n.º {krsNumber}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "Art. 374 § 1 KSH: \"Pisma i zamówienia handlowe składane przez spółkę w formie papierowej i elektronicznej, a także informacje na stronach internetowych spółki powinny zawierać: 1) firmę spółki, jej siedzibę i adres; 2) oznaczenie sądu rejestrowego, w którym przechowywana jest dokumentacja spółki oraz numer pod którym spółka jest wpisana do rejestru; 3) numer identyfikacji podatkowej (NIP); 4) wysokość kapitału zakładowego i kapitału wpłaconego; 5) oznaczenie grupy spółek, jeżeli spółka do niej należy.\" Art. 127 § 5 KSH (spółka komandytowo-akcyjna): \"[...] powinny zawierać: 1) firmę spółki, jej siedzibę i adres; 2) oznaczenie sądu rejestrowego, w którym przechowywana jest dokumentacja spółki oraz numer pod którym spółka jest wpisana do rejestru; 3) numer identyfikacji podatkowej (NIP); 4) wysokość kapitału zakładowego i kapitału wpłaconego.\"",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "Art. 374 § 1, 2) and art. 127 § 5, 2). The register is the Krajowy Rejestr Sądowy, hence \"KRS\"; the NIP of 3) is the LEGAL_ID identifier and the seat and address of 1) are the company address printed above. Not modelled: the group of companies of 5) and the unpaid contributions of a company formed from the model agreement. Kodeks spółek handlowych, consolidated text prepared by the Kancelaria Sejmu (t.j. Dz. U. z 2024 r. poz. 18, 96, z 2026 r. poz. 176, 187, 644), https://eli.gov.pl/api/acts/DU/2024/18/text/U/D20240018Lj.pdf."
+      },
+      {
+        "id": "pl-sa-capital",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": ["PL_SA", "PL_SKA"],
+        "required": true,
+        "template": {
+          "en": "Share capital {shareCapital}, paid-up capital {paidUpCapital}",
+          "fr": "Capital social {shareCapital}, capital libéré {paidUpCapital}",
+          "it": "Capitale sociale {shareCapital}, capitale versato {paidUpCapital}",
+          "pl": "Kapitał zakładowy {shareCapital}, kapitał wpłacony {paidUpCapital}",
+          "de": "Grundkapital {shareCapital}, eingezahltes Kapital {paidUpCapital}",
+          "pt": "Capital social {shareCapital}, capital realizado {paidUpCapital}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "Art. 374 § 1 KSH: \"Pisma i zamówienia handlowe składane przez spółkę w formie papierowej i elektronicznej, a także informacje na stronach internetowych spółki powinny zawierać: 1) firmę spółki, jej siedzibę i adres; 2) oznaczenie sądu rejestrowego, w którym przechowywana jest dokumentacja spółki oraz numer pod którym spółka jest wpisana do rejestru; 3) numer identyfikacji podatkowej (NIP); 4) wysokość kapitału zakładowego i kapitału wpłaconego; 5) oznaczenie grupy spółek, jeżeli spółka do niej należy.\" Art. 127 § 5 KSH (spółka komandytowo-akcyjna): \"[...] powinny zawierać: 1) firmę spółki, jej siedzibę i adres; 2) oznaczenie sądu rejestrowego, w którym przechowywana jest dokumentacja spółki oraz numer pod którym spółka jest wpisana do rejestru; 3) numer identyfikacji podatkowej (NIP); 4) wysokość kapitału zakładowego i kapitału wpłaconego.\"",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "Art. 374 § 1, 4) and art. 127 § 5, 4). Kodeks spółek handlowych, consolidated text prepared by the Kancelaria Sejmu (t.j. Dz. U. z 2024 r. poz. 18, 96, z 2026 r. poz. 176, 187, 644), https://eli.gov.pl/api/acts/DU/2024/18/text/U/D20240018Lj.pdf."
+      },
+      {
+        "id": "pl-psa-register",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": ["PL_PSA"],
+        "required": true,
+        "template": {
+          "en": "Register court: {registerCourt}, KRS no. {krsNumber}",
+          "fr": "Tribunal d'enregistrement : {registerCourt}, KRS n° {krsNumber}",
+          "it": "Tribunale del registro: {registerCourt}, KRS n. {krsNumber}",
+          "pl": "Sąd rejestrowy: {registerCourt}, KRS {krsNumber}",
+          "de": "Registergericht: {registerCourt}, KRS-Nr. {krsNumber}",
+          "pt": "Tribunal de registo: {registerCourt}, KRS n.º {krsNumber}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "Art. 300^61 § 1 KSH: \"Pisma i zamówienia handlowe składane przez spółkę w formie papierowej i elektronicznej, a także informacje na stronach internetowych spółki powinny zawierać: 1) firmę spółki, jej siedzibę i adres; 2) oznaczenie sądu rejestrowego, w którym przechowywana jest dokumentacja spółki, oraz numer, pod którym spółka jest wpisana do rejestru; 3) numer identyfikacji podatkowej (NIP); 4) wysokość kapitału akcyjnego; 5) oznaczenie grupy spółek, jeżeli spółka do niej należy.\"",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "Art. 300^61 § 1, 2). The register is the Krajowy Rejestr Sądowy, hence \"KRS\"; the NIP of 3) is the LEGAL_ID identifier and the seat and address of 1) are the company address printed above. Not modelled: the group of companies of 5) and the unpaid contributions of a company formed from the model agreement. Kodeks spółek handlowych, consolidated text prepared by the Kancelaria Sejmu (t.j. Dz. U. z 2024 r. poz. 18, 96, z 2026 r. poz. 176, 187, 644), https://eli.gov.pl/api/acts/DU/2024/18/text/U/D20240018Lj.pdf."
+      },
+      {
+        "id": "pl-psa-capital",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": ["PL_PSA"],
+        "required": true,
+        "template": {
+          "en": "Share capital (kapitał akcyjny) {shareholdersCapital}",
+          "fr": "Capital actionnarial (kapitał akcyjny) {shareholdersCapital}",
+          "it": "Capitale azionario (kapitał akcyjny) {shareholdersCapital}",
+          "pl": "Kapitał akcyjny {shareholdersCapital}",
+          "de": "Aktienkapital (kapitał akcyjny) {shareholdersCapital}",
+          "pt": "Capital acionista (kapitał akcyjny) {shareholdersCapital}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "Art. 300^61 § 1 KSH: \"Pisma i zamówienia handlowe składane przez spółkę w formie papierowej i elektronicznej, a także informacje na stronach internetowych spółki powinny zawierać: 1) firmę spółki, jej siedzibę i adres; 2) oznaczenie sądu rejestrowego, w którym przechowywana jest dokumentacja spółki, oraz numer, pod którym spółka jest wpisana do rejestru; 3) numer identyfikacji podatkowej (NIP); 4) wysokość kapitału akcyjnego; 5) oznaczenie grupy spółek, jeżeli spółka do niej należy.\"",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "Art. 300^61 § 1, 4); § 2 lets a paper document show the capital at the end of the previous financial year instead, which is the amount the company enters. Kodeks spółek handlowych, consolidated text prepared by the Kancelaria Sejmu (t.j. Dz. U. z 2024 r. poz. 18, 96, z 2026 r. poz. 176, 187, 644), https://eli.gov.pl/api/acts/DU/2024/18/text/U/D20240018Lj.pdf."
+      }
+    ],
+    "notes": "Every mention reads the \"pisma i zamówienia handlowe\" articles of the Kodeks spółek handlowych."
   }
 }

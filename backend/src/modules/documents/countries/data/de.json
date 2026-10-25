@@ -1038,5 +1038,240 @@
       },
       "notes": "Read at gesetze-im-internet.de/bgb/__286.html. The statute says when the debtor of a claim is in default at the latest, 30 days after the due date and receipt of the invoice; it sets no payment term, and absent an agreed date a claim is due at once (BGB § 271 Abs. 1). The application uses those 30 days as its fallback and counts them from the invoice date, not from receipt."
     }
+  },
+  "companyLaw": {
+    "countryCode": "DE",
+    "legalFormLabel": "Rechtsform",
+    "legalForms": [
+      {
+        "code": "DE_GMBH",
+        "name": "Gesellschaft mit beschränkter Haftung",
+        "designation": "GmbH"
+      },
+      {
+        "code": "DE_UG",
+        "name": "Unternehmergesellschaft (haftungsbeschränkt)",
+        "designation": "UG (haftungsbeschränkt)",
+        "notes": "§ 5a Abs. 1 GmbHG: the company \"muss in der Firma [...] die Bezeichnung \"Unternehmergesellschaft (haftungsbeschränkt)\" oder \"UG (haftungsbeschränkt)\" führen\"; it is a GmbH, so § 35a GmbHG applies."
+      },
+      {
+        "code": "DE_AG",
+        "name": "Aktiengesellschaft",
+        "designation": "AG"
+      },
+      {
+        "code": "DE_EK",
+        "name": "Eingetragener Kaufmann / eingetragene Kauffrau",
+        "designation": "e.K."
+      },
+      {
+        "code": "DE_OHG",
+        "name": "Offene Handelsgesellschaft",
+        "designation": "OHG"
+      },
+      {
+        "code": "DE_KG",
+        "name": "Kommanditgesellschaft",
+        "designation": "KG",
+        "notes": "A KG in which no partner is a natural person (GmbH & Co. KG) must also name its partners with their own § 35a GmbHG details (§ 125 Abs. 1 Satz 2 HGB); that is not modelled, such a company adds it to its name or address."
+      },
+      {
+        "code": "DE_EINZEL",
+        "name": "Einzelunternehmen (nicht im Handelsregister eingetragen)",
+        "designation": "Einzelunternehmen",
+        "notes": "No mention: § 37a HGB binds a Kaufmann entered in the Handelsregister, and a business not entered there has no register court or number to print."
+      },
+      {
+        "code": "DE_OTHER",
+        "name": "Andere Rechtsform",
+        "designation": "Andere Rechtsform",
+        "notes": "No mention is declared for a form this catalog does not list."
+      }
+    ],
+    "fields": [
+      {
+        "key": "registerCourt",
+        "kind": "text",
+        "label": "Registergericht"
+      },
+      {
+        "key": "managingDirectors",
+        "kind": "text",
+        "label": "Geschäftsführer (Vor- und Familienname)"
+      },
+      {
+        "key": "boardMembers",
+        "kind": "text",
+        "label": "Vorstand (Vor- und Familienname, Vorsitzender als solcher bezeichnet)"
+      },
+      {
+        "key": "supervisoryBoardChair",
+        "kind": "text",
+        "label": "Vorsitzender des Aufsichtsrats"
+      }
+    ],
+    "mentions": [
+      {
+        "id": "de-gmbh-register",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": ["DE_GMBH", "DE_UG"],
+        "required": true,
+        "template": {
+          "en": "{legalForm}, register court: {registerCourt}, {identifier:LEGAL_ID}",
+          "fr": "{legalForm}, tribunal d'enregistrement : {registerCourt}, {identifier:LEGAL_ID}",
+          "it": "{legalForm}, tribunale del registro: {registerCourt}, {identifier:LEGAL_ID}",
+          "pl": "{legalForm}, sąd rejestrowy: {registerCourt}, {identifier:LEGAL_ID}",
+          "de": "{legalForm}, Registergericht: {registerCourt}, {identifier:LEGAL_ID}",
+          "pt": "{legalForm}, tribunal de registo: {registerCourt}, {identifier:LEGAL_ID}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "§ 35a Abs. 1 GmbHG: \"Auf allen Geschäftsbriefen gleichviel welcher Form, die an einen bestimmten Empfänger gerichtet werden, müssen die Rechtsform und der Sitz der Gesellschaft, das Registergericht des Sitzes der Gesellschaft und die Nummer, unter der die Gesellschaft in das Handelsregister eingetragen ist, sowie alle Geschäftsführer und, sofern die Gesellschaft einen Aufsichtsrat gebildet und dieser einen Vorsitzenden hat, der Vorsitzende des Aufsichtsrats mit dem Familiennamen und mindestens einem ausgeschriebenen Vornamen angegeben werden. Werden Angaben über das Kapital der Gesellschaft gemacht, so müssen in jedem Falle das Stammkapital sowie, wenn nicht alle in Geld zu leistenden Einlagen eingezahlt sind, der Gesamtbetrag der ausstehenden Einlagen angegeben werden.\" § 35a Abs. 3: \"Bestellscheine gelten als Geschäftsbriefe im Sinne des Absatzes 1.\"",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "Read at gesetze-im-internet.de on 2026-10-25: https://www.gesetze-im-internet.de/gmbhg/__35a.html. The register number is the LEGAL_ID identifier (Handelsregisternummer); the Sitz is the company address printed above. Capital is only required when the company states it, so none is printed. The texts name \"Geschäftsbriefe\" and \"Bestellscheine\", not invoices; an invoice addressed to a client is read here as a Geschäftsbrief, which this research did not settle against case law."
+      },
+      {
+        "id": "de-gmbh-managing-directors",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": ["DE_GMBH", "DE_UG"],
+        "required": true,
+        "template": {
+          "en": "Managing directors: {managingDirectors}",
+          "fr": "Gérants : {managingDirectors}",
+          "it": "Amministratori: {managingDirectors}",
+          "pl": "Członkowie zarządu: {managingDirectors}",
+          "de": "Geschäftsführer: {managingDirectors}",
+          "pt": "Gerentes: {managingDirectors}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "§ 35a Abs. 1 GmbHG: \"Auf allen Geschäftsbriefen gleichviel welcher Form, die an einen bestimmten Empfänger gerichtet werden, müssen die Rechtsform und der Sitz der Gesellschaft, das Registergericht des Sitzes der Gesellschaft und die Nummer, unter der die Gesellschaft in das Handelsregister eingetragen ist, sowie alle Geschäftsführer und, sofern die Gesellschaft einen Aufsichtsrat gebildet und dieser einen Vorsitzenden hat, der Vorsitzende des Aufsichtsrats mit dem Familiennamen und mindestens einem ausgeschriebenen Vornamen angegeben werden. Werden Angaben über das Kapital der Gesellschaft gemacht, so müssen in jedem Falle das Stammkapital sowie, wenn nicht alle in Geld zu leistenden Einlagen eingezahlt sind, der Gesamtbetrag der ausstehenden Einlagen angegeben werden.\" § 35a Abs. 3: \"Bestellscheine gelten als Geschäftsbriefe im Sinne des Absatzes 1.\"",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "Read at gesetze-im-internet.de on 2026-10-25: https://www.gesetze-im-internet.de/gmbhg/__35a.html. The texts name \"Geschäftsbriefe\" and \"Bestellscheine\", not invoices; an invoice addressed to a client is read here as a Geschäftsbrief, which this research did not settle against case law."
+      },
+      {
+        "id": "de-gmbh-supervisory-board-chair",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": ["DE_GMBH", "DE_UG"],
+        "required": false,
+        "template": {
+          "en": "Chair of the supervisory board: {supervisoryBoardChair}",
+          "fr": "Président du conseil de surveillance : {supervisoryBoardChair}",
+          "it": "Presidente del consiglio di sorveglianza: {supervisoryBoardChair}",
+          "pl": "Przewodniczący rady nadzorczej: {supervisoryBoardChair}",
+          "de": "Vorsitzender des Aufsichtsrats: {supervisoryBoardChair}",
+          "pt": "Presidente do conselho fiscal: {supervisoryBoardChair}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "§ 35a Abs. 1 GmbHG: \"Auf allen Geschäftsbriefen gleichviel welcher Form, die an einen bestimmten Empfänger gerichtet werden, müssen die Rechtsform und der Sitz der Gesellschaft, das Registergericht des Sitzes der Gesellschaft und die Nummer, unter der die Gesellschaft in das Handelsregister eingetragen ist, sowie alle Geschäftsführer und, sofern die Gesellschaft einen Aufsichtsrat gebildet und dieser einen Vorsitzenden hat, der Vorsitzende des Aufsichtsrats mit dem Familiennamen und mindestens einem ausgeschriebenen Vornamen angegeben werden. Werden Angaben über das Kapital der Gesellschaft gemacht, so müssen in jedem Falle das Stammkapital sowie, wenn nicht alle in Geld zu leistenden Einlagen eingezahlt sind, der Gesamtbetrag der ausstehenden Einlagen angegeben werden.\" § 35a Abs. 3: \"Bestellscheine gelten als Geschäftsbriefe im Sinne des Absatzes 1.\"",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "Only \"sofern die Gesellschaft einen Aufsichtsrat gebildet und dieser einen Vorsitzenden hat\", which the settings cannot tell: printed when filled in, never asked for. Read at gesetze-im-internet.de on 2026-10-25: https://www.gesetze-im-internet.de/gmbhg/__35a.html."
+      },
+      {
+        "id": "de-ag-register",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": ["DE_AG"],
+        "required": true,
+        "template": {
+          "en": "{legalForm}, register court: {registerCourt}, {identifier:LEGAL_ID}",
+          "fr": "{legalForm}, tribunal d'enregistrement : {registerCourt}, {identifier:LEGAL_ID}",
+          "it": "{legalForm}, tribunale del registro: {registerCourt}, {identifier:LEGAL_ID}",
+          "pl": "{legalForm}, sąd rejestrowy: {registerCourt}, {identifier:LEGAL_ID}",
+          "de": "{legalForm}, Registergericht: {registerCourt}, {identifier:LEGAL_ID}",
+          "pt": "{legalForm}, tribunal de registo: {registerCourt}, {identifier:LEGAL_ID}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "§ 80 Abs. 1 AktG: \"Auf allen Geschäftsbriefen gleichviel welcher Form, die an einen bestimmten Empfänger gerichtet werden, müssen die Rechtsform und der Sitz der Gesellschaft, das Registergericht des Sitzes der Gesellschaft und die Nummer, unter der die Gesellschaft in das Handelsregister eingetragen ist, sowie alle Vorstandsmitglieder und der Vorsitzende des Aufsichtsrats mit dem Familiennamen und mindestens einem ausgeschriebenen Vornamen angegeben werden. Der Vorsitzende des Vorstands ist als solcher zu bezeichnen. [...]\" § 80 Abs. 3: \"Bestellscheine gelten als Geschäftsbriefe im Sinne des Absatzes 1.\"",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "Read at gesetze-im-internet.de on 2026-10-25: https://www.gesetze-im-internet.de/aktg/__80.html. The register number is the LEGAL_ID identifier; the Sitz is the company address printed above. The texts name \"Geschäftsbriefe\" and \"Bestellscheine\", not invoices; an invoice addressed to a client is read here as a Geschäftsbrief, which this research did not settle against case law."
+      },
+      {
+        "id": "de-ag-board",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": ["DE_AG"],
+        "required": true,
+        "template": {
+          "en": "Management board: {boardMembers}",
+          "fr": "Directoire : {boardMembers}",
+          "it": "Consiglio di gestione: {boardMembers}",
+          "pl": "Zarząd: {boardMembers}",
+          "de": "Vorstand: {boardMembers}",
+          "pt": "Conselho de administração executivo: {boardMembers}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "§ 80 Abs. 1 AktG: \"Auf allen Geschäftsbriefen gleichviel welcher Form, die an einen bestimmten Empfänger gerichtet werden, müssen die Rechtsform und der Sitz der Gesellschaft, das Registergericht des Sitzes der Gesellschaft und die Nummer, unter der die Gesellschaft in das Handelsregister eingetragen ist, sowie alle Vorstandsmitglieder und der Vorsitzende des Aufsichtsrats mit dem Familiennamen und mindestens einem ausgeschriebenen Vornamen angegeben werden. Der Vorsitzende des Vorstands ist als solcher zu bezeichnen. [...]\" § 80 Abs. 3: \"Bestellscheine gelten als Geschäftsbriefe im Sinne des Absatzes 1.\"",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "Read at gesetze-im-internet.de on 2026-10-25: https://www.gesetze-im-internet.de/aktg/__80.html. The chair of the Vorstand is designated as such within the entered text. The texts name \"Geschäftsbriefe\" and \"Bestellscheine\", not invoices; an invoice addressed to a client is read here as a Geschäftsbrief, which this research did not settle against case law."
+      },
+      {
+        "id": "de-ag-supervisory-board-chair",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": ["DE_AG"],
+        "required": true,
+        "template": {
+          "en": "Chair of the supervisory board: {supervisoryBoardChair}",
+          "fr": "Président du conseil de surveillance : {supervisoryBoardChair}",
+          "it": "Presidente del consiglio di sorveglianza: {supervisoryBoardChair}",
+          "pl": "Przewodniczący rady nadzorczej: {supervisoryBoardChair}",
+          "de": "Vorsitzender des Aufsichtsrats: {supervisoryBoardChair}",
+          "pt": "Presidente do conselho fiscal: {supervisoryBoardChair}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "§ 80 Abs. 1 AktG: \"Auf allen Geschäftsbriefen gleichviel welcher Form, die an einen bestimmten Empfänger gerichtet werden, müssen die Rechtsform und der Sitz der Gesellschaft, das Registergericht des Sitzes der Gesellschaft und die Nummer, unter der die Gesellschaft in das Handelsregister eingetragen ist, sowie alle Vorstandsmitglieder und der Vorsitzende des Aufsichtsrats mit dem Familiennamen und mindestens einem ausgeschriebenen Vornamen angegeben werden. Der Vorsitzende des Vorstands ist als solcher zu bezeichnen. [...]\" § 80 Abs. 3: \"Bestellscheine gelten als Geschäftsbriefe im Sinne des Absatzes 1.\"",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "Read at gesetze-im-internet.de on 2026-10-25: https://www.gesetze-im-internet.de/aktg/__80.html. The texts name \"Geschäftsbriefe\" and \"Bestellscheine\", not invoices; an invoice addressed to a client is read here as a Geschäftsbrief, which this research did not settle against case law."
+      },
+      {
+        "id": "de-registered-merchant-register",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": ["DE_EK"],
+        "required": true,
+        "template": {
+          "en": "{legalForm}, register court: {registerCourt}, {identifier:LEGAL_ID}",
+          "fr": "{legalForm}, tribunal d'enregistrement : {registerCourt}, {identifier:LEGAL_ID}",
+          "it": "{legalForm}, tribunale del registro: {registerCourt}, {identifier:LEGAL_ID}",
+          "pl": "{legalForm}, sąd rejestrowy: {registerCourt}, {identifier:LEGAL_ID}",
+          "de": "{legalForm}, Registergericht: {registerCourt}, {identifier:LEGAL_ID}",
+          "pt": "{legalForm}, tribunal de registo: {registerCourt}, {identifier:LEGAL_ID}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "§ 37a Abs. 1 HGB: \"Auf allen Geschäftsbriefen des Kaufmanns gleichviel welcher Form, die an einen bestimmten Empfänger gerichtet werden, müssen seine Firma, die Bezeichnung nach § 19 Abs. 1 Nr. 1, der Ort seiner Handelsniederlassung, das Registergericht und die Nummer, unter der die Firma in das Handelsregister eingetragen ist, angegeben werden.\" § 19 Abs. 1 Nr. 1 HGB: \"bei Einzelkaufleuten die Bezeichnung \"eingetragener Kaufmann\", \"eingetragene Kauffrau\" oder eine allgemein verständliche Abkürzung dieser Bezeichnung, insbesondere \"e.K.\", \"e.Kfm.\" oder \"e.Kfr.\"",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "Read at gesetze-im-internet.de on 2026-10-25: https://www.gesetze-im-internet.de/hgb/__37a.html and .../__19.html. The Ort der Handelsniederlassung is the company address printed above. The texts name \"Geschäftsbriefe\" and \"Bestellscheine\", not invoices; an invoice addressed to a client is read here as a Geschäftsbrief, which this research did not settle against case law."
+      },
+      {
+        "id": "de-partnership-register",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": ["DE_OHG", "DE_KG"],
+        "required": true,
+        "template": {
+          "en": "{legalForm}, register court: {registerCourt}, {identifier:LEGAL_ID}",
+          "fr": "{legalForm}, tribunal d'enregistrement : {registerCourt}, {identifier:LEGAL_ID}",
+          "it": "{legalForm}, tribunale del registro: {registerCourt}, {identifier:LEGAL_ID}",
+          "pl": "{legalForm}, sąd rejestrowy: {registerCourt}, {identifier:LEGAL_ID}",
+          "de": "{legalForm}, Registergericht: {registerCourt}, {identifier:LEGAL_ID}",
+          "pt": "{legalForm}, tribunal de registo: {registerCourt}, {identifier:LEGAL_ID}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "§ 125 Abs. 1 HGB: \"Auf allen Geschäftsbriefen der Gesellschaft, gleichviel welcher Form, die an einen bestimmten Empfänger gerichtet werden, müssen die Firma und der Sitz der Gesellschaft, das Registergericht und die Nummer, unter der die Gesellschaft in das Handelsregister eingetragen ist, angegeben werden. Bei einer Gesellschaft, bei der kein Gesellschafter eine natürliche Person ist, sind auf den Geschäftsbriefen der Gesellschaft ferner die Firmen oder Namen der Gesellschafter anzugeben [...]\" § 177a HGB: \"§ 125 gilt auch für die Gesellschaft, bei der ein Kommanditist eine natürliche Person ist. [...]\"",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "Read at gesetze-im-internet.de on 2026-10-25: https://www.gesetze-im-internet.de/hgb/__125.html and .../__177a.html. The texts name \"Geschäftsbriefe\" and \"Bestellscheine\", not invoices; an invoice addressed to a client is read here as a Geschäftsbrief, which this research did not settle against case law."
+      }
+    ],
+    "notes": "Every mention reads the business-letter provisions of the GmbHG, AktG and HGB. Not modelled: capital details (only required when stated), companies in liquidation, branches of foreign companies."
   }
 }

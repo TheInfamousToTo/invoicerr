@@ -57,6 +57,7 @@ import { assertValidCompanyLookupFacts } from '../../../company-lookup/coverage/
 import { byCodeUnit } from '@/lib/compare';
 import { assertValidPaymentTerms } from '../../payment-terms/schema';
 import { assertValidEinvoiceCodes } from '../../einvoice-codes/schema';
+import { assertValidCompanyLawSection } from '../../company-law/schema';
 
 const COUNTRY_FILE_PATTERN = /^[a-z]{2}\.json$/;
 
@@ -330,6 +331,16 @@ function validateEinvoiceCodesSection(
   assertValidEinvoiceCodes(einvoiceCodes, `${filePath}#einvoiceCodes`);
 }
 
+function validateCompanyLawSection(
+  companyLaw: ComposedCountryView['companyLaw'],
+  ctx: LoadContext,
+  filePath: string,
+): void {
+  if (!companyLaw) return;
+  assertSectionCountryCode(companyLaw, 'companyLaw', ctx);
+  assertValidCompanyLawSection(companyLaw, `${filePath}#companyLaw`);
+}
+
 function loadCountryFile(dir: string, code: string): ComposedCountryView {
   const path = join(dir, `${code}.json`);
   const raw = readFileSync(path, 'utf-8');
@@ -360,6 +371,7 @@ function loadCountryFile(dir: string, code: string): ComposedCountryView {
   validateCompanyLookupSection(parsed.companyLookup, ctx, filePath);
   validatePaymentTermsSection(parsed.paymentTerms, ctx, filePath);
   validateEinvoiceCodesSection(parsed.einvoiceCodes, ctx, filePath);
+  validateCompanyLawSection(parsed.companyLaw, ctx, filePath);
 
   return parsed;
 }
