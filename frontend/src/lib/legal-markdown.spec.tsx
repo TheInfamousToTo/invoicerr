@@ -43,6 +43,22 @@ describe("LegalMarkdown", () => {
     expect(screen.getByText("Draft").parentElement).toHaveClass("border-s-warning")
   })
 
+  it("renders a bracketed-title admonition with CRLF line endings", () => {
+    const { container } = render(
+      <LegalMarkdown content={[":::warning[Draft]", "Body.", ":::"].join("\r\n")} />,
+    )
+
+    expect(container).not.toHaveTextContent(":::")
+    expect(screen.getByText("Draft").parentElement).toHaveClass("border-s-warning")
+  })
+
+  it("leaves a fence whose tone runs into other text as plain text", () => {
+    const { container } = render(<LegalMarkdown content={[":::warningDraft", "Body.", ":::"].join("\n")} />)
+
+    expect(container).toHaveTextContent(":::warningDraft")
+    expect(container.querySelector(".border-s-warning")).toBeNull()
+  })
+
   it("falls back to the tone's default title when none is given", () => {
     render(<LegalMarkdown content={[":::info", "Body.", ":::"].join("\n")} />)
 

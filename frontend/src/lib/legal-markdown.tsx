@@ -20,9 +20,14 @@ interface AdmonitionSegment {
 
 type Segment = TextSegment | AdmonitionSegment
 
-// `:::tone[Title]` (Docusaurus 3) or `:::tone Title`, fenced at column 0; these documents never nest one.
-const ADMONITION_RE =
-  /^:::(note|tip|info|warning|danger)(?:\[([^\]\n]*)\][ \t]*|[ \t]([^\n]*))?\r?\n([\s\S]*?)\r?\n:::[ \t]*$/gm
+// Fenced at column 0; these documents never nest one admonition inside another.
+const ADMONITION_RE = /^:::(note|tip|info|warning|danger)([[ \t][^\n]*)?\r?\n([\s\S]*?)\r?\n:::[ \t]*$/gm
+
+// The fence's title: `[Title]` (Docusaurus 3) or ` Title`.
+function fenceTitle(rest = ""): string {
+  const title = rest.trim()
+  return rest.startsWith("[") && title.endsWith("]") ? title.slice(1, -1).trim() : title
+}
 
 const ADMONITION_DEFAULT_TITLE: Record<AdmonitionTone, string> = {
   note: "Note",
@@ -56,7 +61,7 @@ function splitAdmonitions(content: string): Segment[] {
   const segments: Segment[] = []
   let lastIndex = 0
   for (const match of content.matchAll(ADMONITION_RE)) {
-    const [full, rawTone, bracketTitle, plainTitle, body] = match
+    const [full, rawTone, rest, body] = match
     const index = match.index ?? 0
     if (index > lastIndex) {
       segments.push({ kind: "text", content: content.slice(lastIndex, index) })
@@ -65,7 +70,7 @@ function splitAdmonitions(content: string): Segment[] {
     segments.push({
       kind: "admonition",
       tone,
-      title: (bracketTitle ?? plainTitle)?.trim() || ADMONITION_DEFAULT_TITLE[tone],
+      title: fenceTitle(rest) || ADMONITION_DEFAULT_TITLE[tone],
       content: body,
     })
     lastIndex = index + full.length
