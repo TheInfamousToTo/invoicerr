@@ -4,7 +4,7 @@ import prisma from '@/prisma/prisma.service';
 
 import * as atcudIssuance from './atcud-issuance';
 import { draftInvoiceContext, issuanceDocument, rejection } from '../__tests__/invoice-action-harness';
-import { createTestCompany } from '../__tests__/issuable-client';
+import { createTestCompany, FRENCH_SAS_COMPANY_LAW } from '../__tests__/issuable-client';
 import { ActionRegistry } from './action-registry';
 import { registerInvoiceActions } from './invoice-actions';
 import * as b2gRouting from '../b2g-routing/b2g-routing';
@@ -28,6 +28,7 @@ interface MandateCountry {
   countryCode: string;
   city: string;
   sellerIdentifiers: Record<string, string>;
+  sellerCompanyLaw: object;
   buyerIdentifiers: Record<BuyerType, Record<string, string>>;
   channel: string;
 }
@@ -37,6 +38,7 @@ const FRANCE: MandateCountry = {
   countryCode: 'FR',
   city: 'Paris',
   sellerIdentifiers: { LEGAL_ID: '732829320', VAT: 'FR44732829320' },
+  sellerCompanyLaw: FRENCH_SAS_COMPANY_LAW,
   buyerIdentifiers: { COMPANY: { LEGAL_ID: '552100554' }, INDIVIDUAL: {} },
   channel: 'pdp',
 };
@@ -46,6 +48,14 @@ const ITALY: MandateCountry = {
   countryCode: 'IT',
   city: 'Roma',
   sellerIdentifiers: { VAT: 'IT00743110157' },
+  sellerCompanyLaw: {
+    legalForm: 'IT_SRL',
+    values: {
+      registerOffice: 'Roma',
+      registerNumber: '00743110157',
+      shareCapital: { amount: '10000', currency: 'EUR' },
+    },
+  },
   buyerIdentifiers: { COMPANY: { VAT: 'IT01114601006' }, INDIVIDUAL: { LEGAL_ID: 'RSSMRA80A01H501U' } },
   channel: 'sdi',
 };
@@ -65,6 +75,7 @@ async function sellerWithoutChannel(where: MandateCountry) {
       countryCode: where.countryCode,
       city: where.city,
       invoiceTransportId: null,
+      companyLaw: where.sellerCompanyLaw,
       partyIdentifiers: { create: identifierRows(where.sellerIdentifiers) },
     },
   });

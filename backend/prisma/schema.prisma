@@ -481,6 +481,11 @@ model Company {
 
   dateFormat String @default("dd/MM/yyyy") // Date format for quotes and invoices
 
+  // Legal form and the company-law values its country's `companyLaw` section asks for, e.g.
+  // `{ "legalForm": "SAS", "values": { "registerCity": "Lyon" } }`. Read through
+  // documents/company-law/company-law.ts#readCompanyLawDetails, which ignores any entry of the wrong shape.
+  companyLaw Json?
+
   // Multi-currency consolidation. Null — the default, and the only state every
   // company was already in before this column existed — means NO consolidation happens anywhere:
   // every dashboard/statistics aggregate stays grouped BY CURRENCY, exactly as

@@ -101,7 +101,7 @@ async function renderInvoice(
       .replaceAll('&#039;', "'")
       .replaceAll(/\s+/g, ' ');
   return {
-    seller: textBetween('class="company-info"', 'class="recipient-info"'),
+    seller: textBetween('class="company-address"', 'class="recipient-info"'),
     buyer: textBetween('class="recipient-info"', 'class="meta-grid"'),
   };
 }

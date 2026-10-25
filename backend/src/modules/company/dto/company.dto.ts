@@ -45,6 +45,9 @@ export class EditCompanyDto {
   // written through this DTO either. There is no "starting number" capability any more either - see that
   // migration's own header for what a migrating customer loses.
   identifiers?: IdentifierEntry[];
+  /** Legal form and company-law values, see `documents/company-law/company-law.ts#normalizeCompanyLawDetails`.
+   *  Null clears them; absent leaves them untouched. */
+  companyLaw?: unknown;
   /** Which registered document transport (documents/transports/transport-registry.ts) the invoice
    *  "send" action uses — e.g. "email". Null/empty clears the choice, which blocks sending until a
    *  new one is chosen; see Company.invoiceTransportId's own comment in schema.prisma. */

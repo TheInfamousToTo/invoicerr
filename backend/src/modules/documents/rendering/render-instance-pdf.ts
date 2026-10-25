@@ -4,6 +4,7 @@ import prisma from '@/prisma/prisma.service';
 import { guessCountryCode } from '@/utils/country-name-to-iso';
 
 import { DocumentInstanceResult } from '../actions/action-registry';
+import { companyLawMentions } from '../company-law/company-law';
 import {
   PrintedIdentifier,
   invoiceBuyer,
@@ -399,6 +400,7 @@ export async function renderDocumentInstance(
       language: true,
       exemptVat: true,
       partyIdentifiers: { select: { scheme: true, value: true } },
+      companyLaw: true,
       brandingAccentColor: true,
       brandingFont: true,
       brandingLogoId: true,
@@ -516,12 +518,21 @@ export async function renderDocumentInstance(
   }
 
   const printStatus = printsStatusLine(descriptor, instance.status, purpose);
+  const seller = invoiceSeller(company);
+  // Only a working copy names a missing identifier: the copy a client keeps never prints a gap.
+  const includeMissingRequired = !!descriptor.usesLegalMentions && printStatus;
   const partyIdentifiers = printedPartyIdentifiers({
-    seller: invoiceSeller(company),
+    seller,
     buyer: recipientClient ? invoiceBuyer(recipientClient) : undefined,
-    // Only a working copy names a missing identifier: the copy a client keeps never prints a gap.
-    includeMissingRequired: !!descriptor.usesLegalMentions && printStatus,
+    includeMissingRequired,
   });
+  const companyLaw = companyLawMentions({
+    countryCode: seller.countryCode,
+    documentTypeId: descriptor.id,
+    language,
+    details: company.companyLaw,
+    identifiers: seller.identifiers,
+  }).lines.filter((line) => includeMissingRequired || line.parts.every((part) => 'text' in part));
 
   const html = renderDocumentHtml({
     descriptor,
@@ -534,7 +545,7 @@ export async function renderDocumentInstance(
       atcud: instance.atcud,
     },
     printStatus,
-    company: { ...company, identifiers: partyIdentifiers.seller },
+    company: { ...company, identifiers: partyIdentifiers.seller, companyLaw },
     recipient: recipientPartyFor(descriptor, referenceLabels, recipientClient, partyIdentifiers.buyer),
     referenceLabels,
     ...(linkedCreditNote ? linkedCreditNoteRenderInput(descriptor, linkedCreditNote) : {}),

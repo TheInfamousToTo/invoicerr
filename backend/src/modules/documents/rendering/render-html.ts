@@ -3,6 +3,7 @@ import { numberingDisplayState } from '../numbering/display-state';
 import { decimalsFor, fromMinor } from '@/utils/financial';
 import type { PaymentMethodPresentation } from '../payment-methods/types';
 import type { DocumentTotals } from '../totals/compute-totals';
+import type { CompanyLawLine } from '../company-law/company-law';
 import { fontFaceCssFor, fontStackFor } from './branding/font-catalog';
 import { pdfChromeStrings, PdfChromeStrings } from './language/pdf-chrome-strings';
 import { DEFAULT_RENDER_LANGUAGE, RenderLanguage } from './language/supported-languages';
@@ -430,6 +431,23 @@ function renderPartyIdentifiers(
   return `\n        <div class="party-identifiers">${lines}</div>`;
 }
 
+function renderCompanyLaw(lines: readonly CompanyLawLine[] | undefined, strings: PdfChromeStrings): string {
+  if (!lines?.length) return '';
+  const rendered = lines
+    .map((line) => {
+      const parts = line.parts
+        .map((part) =>
+          'text' in part
+            ? escapeHtmlSafe(part.text)
+            : `<span class="identifier-missing">${escapeHtmlSafe(`${part.missing}: ${strings.identifierMissing}`)}</span>`,
+        )
+        .join('');
+      return `<div>${parts}</div>`;
+    })
+    .join('');
+  return `\n        <div class="party-identifiers company-law">${rendered}</div>`;
+}
+
 function renderPartyAddress(party: PartyAddress): string {
   const locality = [party.postalCode, party.city].filter(Boolean).join(' ');
   return [party.address, party.addressLine2, locality, party.country]
@@ -469,7 +487,12 @@ export interface RenderDocumentHtmlInput {
    * so every caller that never asked (the branding preview, dozens of specs) keeps its exact bytes.
    */
   printStatus?: boolean;
-  company: PartyAddress & { name: string; identifiers?: readonly PartyIdentifierLine[] };
+  company: PartyAddress & {
+    name: string;
+    identifiers?: readonly PartyIdentifierLine[];
+    /** The seller's company-law mentions, printed right under its name. */
+    companyLaw?: readonly CompanyLawLine[];
+  };
   /**
    * The party the document is addressed to, printed next to the seller instead of as an ordinary
    * field. `fieldKey` names the descriptor field it stands for, which the field loop then skips. Absent
@@ -1045,7 +1068,7 @@ export function renderDocumentHtml(input: RenderDocumentHtmlInput): string {
     <div class="parties">
       <div class="company-info">
         ${recipient ? '<div class="field-label party-label-spacer">&nbsp;</div>' : ''}
-        <div class="company-name">${escapeHtmlSafe(company.name)}</div>
+        <div class="company-name">${escapeHtmlSafe(company.name)}</div>${renderCompanyLaw(company.companyLaw, strings)}
         <div class="company-address">${renderPartyAddress(company)}</div>${renderPartyIdentifiers(company.identifiers, strings)}
       </div>${
         recipient

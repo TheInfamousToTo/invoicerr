@@ -46,6 +46,10 @@ import {
   DeclareLastNumberResponse,
 } from './dto/number-formats.dto';
 import { assertIdentifierValueMatchesPattern } from '@/modules/documents/country-identifiers/validate-identifier-value';
+import {
+  InvalidCompanyLawDetailsError,
+  normalizeCompanyLawDetails,
+} from '@/modules/documents/company-law/company-law';
 import { ensureDefaultExpenseCategoriesSeeded } from '@/modules/documents/expense-categories/persistence';
 import { withSeatReservation } from '@/modules/billing/seat-sync';
 import { syncCompanyMemberOnMembershipChange } from '@/modules/billing/member-sync';
@@ -160,8 +164,22 @@ function normalizeDistanceSalesRegime(value: string | null | undefined): string 
   return normalized;
 }
 
-export function pickCompanyInput(input: EditCompanyDto): PickedCompanyInput {
+function normalizeCompanyLaw(value: unknown): Prisma.InputJsonValue | typeof Prisma.DbNull | undefined {
+  try {
+    const details = normalizeCompanyLawDetails(value);
+    if (details === undefined) return undefined;
+    return details === null ? Prisma.DbNull : (details as Prisma.InputJsonValue);
+  } catch (error) {
+    if (error instanceof InvalidCompanyLawDetailsError) throw new BadRequestException(error.message);
+    throw error;
+  }
+}
+
+export function pickCompanyInput(
+  input: EditCompanyDto,
+): PickedCompanyInput & { companyLaw?: Prisma.InputJsonValue | typeof Prisma.DbNull } {
   return {
+    companyLaw: normalizeCompanyLaw(input.companyLaw),
     description: input.description,
     foundedAt: input.foundedAt,
     name: input.name,
