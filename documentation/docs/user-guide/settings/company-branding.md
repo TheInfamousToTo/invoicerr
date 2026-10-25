@@ -27,6 +27,26 @@ rates you can pick, how an invoice may be corrected, and whether the law forces 
 channel. The [country compliance matrix](../../developer-guide/country-support/index.md) shows what is
 established for each supported country, and says plainly where nothing has been established.
 
+### Company-law details
+
+When your country's company law asks for more than identifiers, a **Company-law details** group
+appears under them. Pick your **legal form** first: the fields that follow are the ones that form must
+show on your documents, for example in France the share capital and the city of the RCS registry for
+an SAS or an SARL, in Germany the register court and the managing directors of a GmbH, in Italy the
+companies register office, registration number and paid-up capital of an S.r.l. A field marked
+required is one the law asks of your form; the others are printed only when you fill them in.
+
+A sole trader, or any form with no share capital, is never asked for one, and no capital line is
+printed. The group does not appear at all for a country that has nothing declared. What you enter is
+printed under your company name on the PDF, in the document's language (see
+[Company-law mentions on the PDF](../billing/invoices.md#company-law-mentions-on-the-pdf)). Changing
+country keeps what you entered, so switching back loses nothing.
+
+:::info[Amounts]
+Type the share capital as a plain amount, with a dot or a comma for decimals, and pick its currency.
+It is printed like every other amount of the PDF, for example `1000.00 EUR`.
+:::
+
 ### Invoice PDF format
 
 - A dropdown offers **PDF**, **Factur-X**, **ZUGFeRD**, **XRechnung**, **UBL**, or **CII** as your
@@ -144,7 +164,7 @@ mentions and identifiers each country requires, and one fixed layout is what kee
 document reads, from top to bottom:
 
 1. **Header**: your logo on the left; the document type, its number and its date on the right.
-2. **Parties**: your company and its address on the left, the client (or the supplier, on a purchase
+2. **Parties**: your company, its company-law mentions and its address on the left, the client (or the supplier, on a purchase
    order or a received invoice) and its address on the right, each followed by the identifiers filled
    in for it (see [Identifiers on the PDF](../billing/invoices.md#identifiers-on-the-pdf)).
 3. **Details**: the short fields of the document (issue date, due date, currency, client reference,

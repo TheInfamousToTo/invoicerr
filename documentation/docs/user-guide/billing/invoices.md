@@ -163,7 +163,8 @@ VAT numbers when you invoice a business in another EU country. While the invoice
 marks each mandatory identifier that is still empty as missing, in red and in the language of the
 PDF. The PDF the client receives never shows that marker.
 
-**Validate** and **Send** refuse an invoice while one of those mandatory identifiers is empty. The
+**Validate** and **Send** refuse an invoice while one of those mandatory identifiers, or one of the
+[company-law mentions](#company-law-mentions-on-the-pdf) your legal form requires, is empty. The
 message names each one, under its country's name and with whose it is (your company or the client),
 and offers a button to the place to fill it in: **Edit company** when your company lacks one, **Edit
 client** otherwise. A draft can always be saved.
@@ -173,6 +174,28 @@ The rules for each country are sourced to its invoicing law and listed on its
 [country support page](../../developer-guide/country-support/index.md), under "Required identifiers".
 The app reads a client of type **Company** as a business and a client of type **Individual** as a
 private person: it does not know whether a client is registered for VAT.
+:::
+
+## Company-law mentions on the PDF
+
+Right under your company name, the PDF prints the company-law mentions your country requires of your
+legal form: for example "SAS au capital de 1000.00 EUR" and "RCS Lyon" in France, the register court,
+register number and managing directors of a German GmbH, or the registry office and share capital of
+a Portuguese sociedade por quotas. They are printed in the language of the document, on the document
+types your country's law names (invoices, quotes, credit notes and purchase orders for the European
+countries, invoices only for Algeria). You fill them in under
+[Company-law details](../settings/company-branding.md#company-law-details).
+
+A form without share capital, such as a French individual entrepreneur, never prints a capital line.
+While the invoice is a draft, a required value still empty is marked as missing, like an identifier,
+and the PDF the client receives leaves that mention out. **Validate** and **Send** refuse the invoice
+until it is filled in, with the same message and the same **Edit company** button as a missing
+identifier. A company that has not chosen its legal form yet is asked for it first.
+
+:::info[Where the list comes from]
+Each mention is sourced to its country's company law (Code de commerce, GmbHG and HGB, codice civile,
+Código das Sociedades Comerciais, Kodeks spółek handlowych, Algerian invoicing decree) and explained on
+that country's page under "Company-law mentions".
 :::
 
 ## VAT in your own country's currency

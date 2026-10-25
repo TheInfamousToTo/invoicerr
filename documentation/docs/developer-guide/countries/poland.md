@@ -46,3 +46,21 @@ preventing excessive delays in commercial transactions starts statutory interest
 creditor's performance when the contract sets no payment date (`basis: "latePaymentThreshold"`). It
 sets no payment term. The application counts the 30 days from the invoice date, not from the
 creditor's performance.
+
+## Company-law mentions
+
+The `companyLaw` section of `countries/data/pl.json` prints, under the seller's name on invoices,
+quotes, credit notes and purchase orders (pisma i zamówienia handlowe), from the Kodeks spółek
+handlowych:
+
+| Legal forms | Printed | Source |
+| --- | --- | --- |
+| sp. z o.o. | "Sąd rejestrowy: …, KRS 0000123456", "Kapitał zakładowy 5000.00 PLN" | art. 206 § 1 |
+| S.A., S.K.A. | register line, "Kapitał zakładowy …, kapitał wpłacony …" | art. 374 § 1, art. 127 § 5 |
+| P.S.A. | register line, "Kapitał akcyjny …" | art. 300^61 § 1 |
+| spółka jawna, komandytowa, partnerska, sole trader, other forms | nothing | none of these articles binds them |
+
+The NIP of point 3) is the `LEGAL_ID` identifier; the seat and address of point 1) are the company
+address. Not modelled: the group of companies (point 5) and the unpaid contributions of a sp. z o.o.
+formed from the model agreement. Text read in the Kancelaria Sejmu consolidated text (t.j. Dz. U. z
+2024 r. poz. 18, with the amendments up to Dz. U. z 2026 r. poz. 644) on 2026-10-25.
