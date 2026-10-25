@@ -1728,6 +1728,12 @@
                         "maxLength": "Le numéro de TVA doit faire moins de 15 caractères",
                         "format": "Le format du numéro de TVA est invalide (ex: FR12345678901)"
                     }
+                },
+                "companyLaw": {
+                    "label": "Mentions de droit des sociétés",
+                    "description": "Ce que le droit des sociétés de votre pays exige sur vos documents : forme juridique, capital social, registre du commerce. Imprimé sous le nom de votre entreprise. Les champs dépendent de la forme juridique choisie.",
+                    "legalFormPlaceholder": "Choisissez votre forme juridique",
+                    "amountPlaceholder": "Montant"
                 }
             },
             "messages": {

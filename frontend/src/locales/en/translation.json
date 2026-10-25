@@ -2442,6 +2442,12 @@
             "min": "Tolerance must be zero or greater",
             "saveFailed": "Failed to save the reconciliation tolerance"
           }
+        },
+        "companyLaw": {
+          "label": "Company-law details",
+          "description": "What your country's company law requires on your documents, such as your legal form, share capital and trade register. Printed under your company name. The fields depend on the legal form you choose.",
+          "legalFormPlaceholder": "Choose your legal form",
+          "amountPlaceholder": "Amount"
         }
       },
       "onboarding": {
