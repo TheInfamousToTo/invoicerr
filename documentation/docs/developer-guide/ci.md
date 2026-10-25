@@ -146,6 +146,20 @@ the run. `workflow_dispatch` can simulate a pre-release publish (with made-up re
 exercise that skip path, or the real posting once the secret is set, without waiting for an actual
 release.
 
+## Backend dependency updates
+
+Two rules for anyone, Renovate included, who changes `backend/package.json` or its lockfile:
+
+- **The NestJS framework packages move together.** `@nestjs/common`, `@nestjs/core`,
+  `@nestjs/platform-express` and `@nestjs/testing` are released together and stay on one version.
+  `@nestjs/platform-express` imports internals of `@nestjs/core` from the same release, so a lockfile
+  that moves it alone breaks every spec that loads an upload controller, and the backend never boots:
+  `The requested module '@nestjs/core/internal' does not provide an export named ...`.
+- **`multer` is overridden.** `@nestjs/platform-express` pins an exact `multer`, and
+  `FileInterceptor` parses uploads with that copy, not with the backend's own dependency. The
+  `overrides` entry `"multer": "$multer"` makes both the version `backend/package.json` names. After a
+  `multer` update, `npm ls multer` shows a single version, `deduped` under `@nestjs/platform-express`.
+
 ## Docker image vulnerability scanning (Trivy)
 
 Every image this repository builds and pushes gets scanned for known OS package and Node
