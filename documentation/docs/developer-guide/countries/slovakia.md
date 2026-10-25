@@ -65,5 +65,5 @@ does not implement, and its XML schema has no format provider. Both are code, no
 Check the [open compliance
 issues](https://github.com/invoicerr-app/invoicerr/issues?q=is%3Aissue+label%3Acompliance) first. If
 there is no issue for Slovakia, [open
-one](https://github.com/invoicerr-app/invoicerr/issues/new/choose) and name which of the files above
+one](https://github.com/invoicerr-app/invoicerr/issues/new?template=country_rule.yml) and name which of the files above
 you need — a request that names one mechanism is far more actionable than "please add Slovakia".

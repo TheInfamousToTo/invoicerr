@@ -1,0 +1,84 @@
+name: Bug report
+description: Something does not work as it should.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A security problem does not belong here: report it privately through a [security advisory](https://github.com/invoicerr-app/invoicerr/security/advisories/new).
+        Fill in what you know. Only the fields marked required are needed to start looking.
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      description: Where did it happen?
+      options:
+        - Hosted
+        - Beta
+        - Demo
+        - Self-hosted (Docker)
+        - Self-hosted (other)
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Shown in the app's settings, or the Docker image tag.
+      placeholder: v2.0.0-alpha.9
+    validations:
+      required: true
+  - type: input
+    id: seller-country
+    attributes:
+      label: Seller country
+      description: The country of the company issuing the document.
+      placeholder: France
+  - type: input
+    id: client-country
+    attributes:
+      label: Client country
+      placeholder: Germany
+  - type: dropdown
+    id: document-type
+    attributes:
+      label: Document type
+      options:
+        - Quote
+        - Invoice
+        - Credit note
+        - Receipt
+        - Purchase
+        - Other
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: Include the exact error message if there is one.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open ...
+        2. Click ...
+        3. See ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+  - type: textarea
+    id: logs
+    attributes:
+      label: Backend or browser logs
+      description: Paste the relevant lines. Remove any key, token or personal data first.
+      render: shell
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Drag images here.

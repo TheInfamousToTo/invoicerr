@@ -1,0 +1,113 @@
+name: Country rule
+description: Add or fix a legal or tax rule of a country, with its official source.
+labels: ["compliance"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Every rule Invoicerr applies for a country lives in one file, `backend/src/modules/documents/countries/data/<cc>.json`, and every fact in it carries its source. This form asks for the same pieces, so a request can become data without guesswork. [Adding a country](https://docs.invoicerr.app/docs/developer-guide/adding-a-country) explains each section.
+  - type: dropdown
+    id: country
+    attributes:
+      label: Country
+      options:
+        - Algeria (DZ)
+        - France (FR)
+        - Germany (DE)
+        - Italy (IT)
+        - Poland (PL)
+        - Portugal (PT)
+        - Other (say which in the rule below)
+    validations:
+      required: true
+  - type: dropdown
+    id: section
+    attributes:
+      label: Section of the country file
+      description: The top-level key of the country JSON this rule belongs to.
+      options:
+        - policy
+        - identifiers
+        - correctionRoutes
+        - vatRates
+        - taxSystem
+        - vatCurrency
+        - channelPolicy
+        - retention
+        - mentions
+        - localizedMentions
+        - reporting
+        - domesticReverseCharge
+        - countryFields
+        - contentRequirements
+        - b2gRouting
+        - companyLookup
+        - paymentTerms
+        - einvoiceCodes
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: rule
+    attributes:
+      label: The rule
+      description: In plain words. What must, may or must not happen, and what Invoicerr does today instead.
+      placeholder: An invoice between two businesses must state the late payment penalty rate.
+    validations:
+      required: true
+  - type: textarea
+    id: concerned
+    attributes:
+      label: Who is concerned
+      description: Buyer type (business, consumer, public body), seller VAT regime, any size or amount threshold.
+      placeholder: Domestic B2B invoices only, any seller size.
+  - type: input
+    id: legal-ref
+    attributes:
+      label: Legal reference
+      description: The article that sets the rule (`legalRef` in the JSON).
+      placeholder: C. com. art. L441-10 II
+    validations:
+      required: true
+  - type: textarea
+    id: source-text
+    attributes:
+      label: Quoted text
+      description: The exact sentence of the text, copied in its original language, never translated or summarised (`sourceText`).
+    validations:
+      required: true
+  - type: input
+    id: source-url
+    attributes:
+      label: Source URL
+      description: Where the quoted text can be read.
+      placeholder: https://www.legifrance.gouv.fr/...
+    validations:
+      required: true
+  - type: input
+    id: source-checked-at
+    attributes:
+      label: Date read
+      description: When you read the text at that URL, as YYYY-MM-DD (`sourceCheckedAt`).
+      placeholder: "2026-01-31"
+    validations:
+      required: true
+  - type: input
+    id: valid-from
+    attributes:
+      label: Date in force
+      description: When the rule starts to apply, as YYYY-MM-DD (`validFrom`). Leave empty if it has applied for a long time.
+      placeholder: "2026-09-01"
+  - type: textarea
+    id: json
+    attributes:
+      label: Proposed JSON (optional)
+      description: The entry as you would write it in the country file, if you know the shape.
+      render: json
+  - type: checkboxes
+    id: official-source
+    attributes:
+      label: Source
+      options:
+        - label: The source is official (a law, a decree, or the tax authority's own publication), not a blog, a consultancy page or an AI answer.
+          required: true
