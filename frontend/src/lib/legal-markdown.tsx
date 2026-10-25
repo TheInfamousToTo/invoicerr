@@ -20,14 +20,9 @@ interface AdmonitionSegment {
 
 type Segment = TextSegment | AdmonitionSegment
 
-/**
- * Matches a Docusaurus container-directive admonition (`:::tone [Title]` … `:::`) — the syntax
- * `documentation/docs/legal/*.md` uses for its "Draft — not yet reviewed by counsel" banner. The
- * fence must sit at column 0 on its own line, true of every admonition these documents actually
- * contain, so a single non-greedy body match (stopping at the first closing `:::`) is enough; there
- * is no nesting to track.
- */
-const ADMONITION_RE = /^:::(note|tip|info|warning|danger)(?:[ \t]+([^\n]*))?\r?\n([\s\S]*?)\r?\n:::[ \t]*$/gm
+// `:::tone[Title]` (Docusaurus 3) or `:::tone Title`, fenced at column 0; these documents never nest one.
+const ADMONITION_RE =
+  /^:::(note|tip|info|warning|danger)(?:\[([^\]\n]*)\][ \t]*|[ \t]([^\n]*))?\r?\n([\s\S]*?)\r?\n:::[ \t]*$/gm
 
 const ADMONITION_DEFAULT_TITLE: Record<AdmonitionTone, string> = {
   note: "Note",
@@ -61,7 +56,7 @@ function splitAdmonitions(content: string): Segment[] {
   const segments: Segment[] = []
   let lastIndex = 0
   for (const match of content.matchAll(ADMONITION_RE)) {
-    const [full, rawTone, rawTitle, body] = match
+    const [full, rawTone, bracketTitle, plainTitle, body] = match
     const index = match.index ?? 0
     if (index > lastIndex) {
       segments.push({ kind: "text", content: content.slice(lastIndex, index) })
@@ -70,7 +65,7 @@ function splitAdmonitions(content: string): Segment[] {
     segments.push({
       kind: "admonition",
       tone,
-      title: rawTitle?.trim() || ADMONITION_DEFAULT_TITLE[tone],
+      title: (bracketTitle ?? plainTitle)?.trim() || ADMONITION_DEFAULT_TITLE[tone],
       content: body,
     })
     lastIndex = index + full.length
@@ -109,10 +104,8 @@ function renderMarkdown(content: string): ReactNode {
  * documents as plain markdown text with no server-side sanitization of its own
  * (`legal-documents.ts`) — this is still the one place that renders it, just without ever turning it
  * into a raw-HTML string first. Shared by `pages/legal/[slug].tsx` and `pages/legal/accept.tsx` so the
- * two never drift on how a legal document actually renders. `:::note|tip|info|warning|danger [Title]`
- * … `:::` blocks (Docusaurus admonitions — these documents currently only ever use `:::warning
- * Draft`) are pulled out via `splitAdmonitions` and rendered as a toned, left-bordered callout instead
- * of showing up as raw `:::` punctuation.
+ * two never drift on how a legal document actually renders. Docusaurus admonitions are pulled out
+ * via `splitAdmonitions` and rendered as a toned, left-bordered callout.
  */
 export function LegalMarkdown({ content, className }: { content: string; className?: string }) {
   const segments = splitAdmonitions(content)
