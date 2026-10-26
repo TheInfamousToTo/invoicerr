@@ -5,9 +5,15 @@ import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common'
 import prisma from '@/prisma/prisma.service';
 import { resolveB2gRoutingRule } from '@/modules/documents/b2g-routing/b2g-routing';
 import { defaultB2gRoutingCatalog } from '@/modules/documents/b2g-routing/registry';
-import { resolveCompanyCountryCode } from '@/modules/documents/country-policy/country-policy';
+import {
+  resolveCompanyCountryCode,
+  resolveCompanyProfile,
+} from '@/modules/documents/country-policy/country-policy';
 import { PolicyProvenance } from '@/modules/documents/country-policy/schema';
-import { activeChannelMandateFor } from '@/modules/documents/transports/channel-policy/mandate';
+import {
+  activeChannelMandateFor,
+  channelFactsForSeller,
+} from '@/modules/documents/transports/channel-policy/mandate';
 import { defaultChannelPolicyCatalog } from '@/modules/documents/transports/channel-policy/registry';
 import { ChannelPolicyFact, ChannelRequirement } from '@/modules/documents/transports/channel-policy/schema';
 import { defaultOperatorCatalog } from '@/modules/documents/operators/registry';
@@ -436,7 +442,12 @@ export class ChannelCredentialsService {
     // this is deliberately never `activeChannelMandateForOperation`, which needs an invoice this
     // listing does not have).
     const activeMandate = countryCode
-      ? activeChannelMandateFor(countryCode, new Date().toISOString())
+      ? activeChannelMandateFor(
+          countryCode,
+          new Date().toISOString(),
+          undefined,
+          await resolveCompanyProfile(companyId),
+        )
       : undefined;
     // See `computeBlockedBySend`'s own header on why this is read here too - a channel this
     // company's own B2G routing selects automatically is never subject to the domestic mandate.
@@ -542,10 +553,16 @@ export class ChannelCredentialsService {
     const countryCode = await resolveCompanyCountryCode(companyId);
     if (!countryCode) return [];
 
-    const facts = defaultChannelPolicyCatalog.factsFor(countryCode);
+    const sellerProfile = await resolveCompanyProfile(companyId);
+    const facts = channelFactsForSeller(countryCode, sellerProfile);
     // Computed ONCE per call, against "now" — see `ChannelPolicyStatus.effectiveNow`'s own header on
     // why this is a deliberately different question from the one `invoice-actions.ts` asks.
-    const activeToday = activeChannelMandateFor(countryCode, new Date().toISOString());
+    const activeToday = activeChannelMandateFor(
+      countryCode,
+      new Date().toISOString(),
+      undefined,
+      sellerProfile,
+    );
 
     return facts.map((fact) => ({
       providerId: fact.providerId,
@@ -580,10 +597,11 @@ export class ChannelCredentialsService {
       }
     }
 
-    const ownFacts = countryCode ? defaultChannelPolicyCatalog.factsFor(countryCode) : [];
+    const sellerProfile = await resolveCompanyProfile(companyId);
+    const ownFacts = countryCode ? channelFactsForSeller(countryCode, sellerProfile) : [];
     const ownFactByChannel = new Map(ownFacts.map((fact) => [fact.providerId, fact] as const));
     const activeToday = countryCode
-      ? activeChannelMandateFor(countryCode, new Date().toISOString())
+      ? activeChannelMandateFor(countryCode, new Date().toISOString(), undefined, sellerProfile)
       : undefined;
     const b2gRule = countryCode ? await resolveB2gRoutingRule(countryCode) : undefined;
 
@@ -594,6 +612,7 @@ export class ChannelCredentialsService {
       if (file.countryCode === countryCode) continue;
       for (const fact of file.facts) {
         const list = elsewhereByChannel.get(fact.providerId) ?? [];
+        if (list.some((entry) => entry.countryCode === file.countryCode)) continue;
         list.push({ countryCode: file.countryCode, requirement: fact.requirement });
         elsewhereByChannel.set(fact.providerId, list);
       }

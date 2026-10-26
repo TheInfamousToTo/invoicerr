@@ -39,6 +39,13 @@ import { constraintsFor, patternViolations } from '@/modules/documents/country-p
 import { defaultCountryPolicyCatalog } from '@/modules/documents/country-policy/registry';
 import { guessCountryCode } from '@/utils/country-name-to-iso';
 import {
+  applyCompanyProfileInput,
+  InvalidCompanyProfileValueError,
+  parseCompanyProfileValues,
+} from '@/modules/documents/company-profile/profile';
+import { defaultCompanyProfileCatalog } from '@/modules/documents/company-profile/registry';
+import { CompanyProfileValues } from '@/modules/documents/company-profile/schema';
+import {
   CompanyNumberFormats,
   DeclareLastNumberInferRequest,
   DeclareLastNumberInferResponse,
@@ -160,6 +167,40 @@ function normalizeDistanceSalesRegime(value: string | null | undefined): string 
   return normalized;
 }
 
+/**
+ * The company profile to store after this edit, or `undefined` to leave the column untouched. Values
+ * are checked against the attributes of the country the company has AFTER the edit, and a country
+ * change drops the values the new country does not ask for.
+ */
+function nextReportingProfile(
+  existing: { country: string; countryCode: string | null; reportingProfile: unknown },
+  input: Pick<EditCompanyDto, 'country' | 'countryCode' | 'reportingProfile'>,
+): CompanyProfileValues | undefined {
+  const existingCountry = resolveCountryCode(existing.countryCode, existing.country);
+  const nextCountry = resolveCountryCode(
+    input.countryCode === null ? null : (input.countryCode ?? existing.countryCode),
+    input.country ?? existing.country,
+  );
+  if (input.reportingProfile === undefined && nextCountry === existingCountry) return undefined;
+  try {
+    return applyCompanyProfileInput(
+      parseCompanyProfileValues(existing.reportingProfile),
+      input.reportingProfile === undefined ? {} : input.reportingProfile,
+      defaultCompanyProfileCatalog.attributesFor(nextCountry),
+    );
+  } catch (error) {
+    if (error instanceof InvalidCompanyProfileValueError) throw new BadRequestException(error.message);
+    throw error;
+  }
+}
+
+function resolveCountryCode(
+  countryCode: string | null | undefined,
+  country: string | null | undefined,
+): string {
+  return (countryCode || guessCountryCode(country ?? undefined) || '').trim().toUpperCase();
+}
+
 export function pickCompanyInput(input: EditCompanyDto): PickedCompanyInput {
   return {
     description: input.description,
@@ -244,12 +285,13 @@ export class CompanyService {
     // instead of letting the frontend decide from `country`/`countryCode` itself - see
     // country-policy/schema.ts's own header. Replaces the settings tab's and the ATCUD settings
     // screen's own `=== "PT"` / `=== "PORTUGAL"` checks, which read this same endpoint.
-    const countryCode = (result.countryCode || guessCountryCode(result.country ?? undefined) || '')
-      .trim()
-      .toUpperCase();
+    const countryCode = resolveCountryCode(result.countryCode, result.country);
     return {
       ...result,
       documentValidationCode: defaultCountryPolicyCatalog.documentValidationCodeFor(countryCode) ?? null,
+      companyProfileAttributes: defaultCompanyProfileCatalog
+        .attributesFor(countryCode)
+        .map(({ key, label, help, values }) => ({ key, label, help, values })),
     };
   }
 
@@ -339,7 +381,10 @@ export class CompanyService {
     // above — shared with `createCompany` so the two paths can never diverge.
     const updatedCompany = await prisma.company.update({
       where: { id: companyId },
-      data: pickCompanyInput(rest),
+      data: {
+        ...pickCompanyInput(rest),
+        reportingProfile: nextReportingProfile(existingCompany, rest),
+      },
     });
     if (existingCompany.name !== updatedCompany.name) {
       await sessionCache.invalidateUsers(await companyMemberIds(prisma, companyId));

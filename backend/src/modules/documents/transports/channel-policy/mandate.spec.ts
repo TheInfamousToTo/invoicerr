@@ -325,3 +325,53 @@ describe('activeChannelMandateForOperation - a national mandate governs DOMESTIC
     expect(activeChannelMandateFor('FR', '2026-09-15')?.providerId).toBe('pdp');
   });
 });
+
+describe('activeChannelMandateForOperation - the French PDP mandate follows the seller size category', () => {
+  const domesticBusinessSale = {
+    sellerCountryCode: 'FR',
+    buyerCountryCode: 'FR',
+    buyerType: 'COMPANY' as const,
+  };
+
+  it('a micro-enterprise is not bound before 2027-09-01', () => {
+    expect(
+      activeChannelMandateForOperation({
+        ...domesticBusinessSale,
+        issueDate: '2026-10-25',
+        sellerProfile: { sizeCategory: 'MICRO' },
+      }),
+    ).toBeUndefined();
+  });
+
+  it('an SME is not bound on 2027-08-31 and is bound from 2027-09-01', () => {
+    const sme = { ...domesticBusinessSale, sellerProfile: { sizeCategory: 'SME' } };
+
+    expect(activeChannelMandateForOperation({ ...sme, issueDate: '2027-08-31' })).toBeUndefined();
+    expect(activeChannelMandateForOperation({ ...sme, issueDate: '2027-09-01' })?.providerId).toBe('pdp');
+  });
+
+  it('a large company and a mid-size company are bound from 2026-09-01', () => {
+    for (const sizeCategory of ['LARGE', 'MID']) {
+      expect(
+        activeChannelMandateForOperation({
+          ...domesticBusinessSale,
+          issueDate: '2026-10-25',
+          sellerProfile: { sizeCategory },
+        })?.providerId,
+      ).toBe('pdp');
+    }
+  });
+
+  it('a seller that has not declared its size category is bound from 2026-09-01', () => {
+    expect(
+      activeChannelMandateForOperation({ ...domesticBusinessSale, issueDate: '2026-10-25' })?.providerId,
+    ).toBe('pdp');
+    expect(
+      activeChannelMandateForOperation({
+        ...domesticBusinessSale,
+        issueDate: '2026-10-25',
+        sellerProfile: {},
+      })?.providerId,
+    ).toBe('pdp');
+  });
+});

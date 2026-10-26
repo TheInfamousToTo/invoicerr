@@ -55,7 +55,7 @@ const createdCompanyIds: string[] = [];
 const identifierRows = (identifiers: Record<string, string>) =>
   Object.entries(identifiers).map(([scheme, value]) => ({ scheme, value }));
 
-async function sellerWithoutChannel(where: MandateCountry) {
+async function sellerWithoutChannel(where: MandateCountry, reportingProfile?: Record<string, string>) {
   const company = await createTestCompany(`Seller ${where.countryCode} without channel`);
   createdCompanyIds.push(company.id);
   return prisma.company.update({
@@ -65,6 +65,7 @@ async function sellerWithoutChannel(where: MandateCountry) {
       countryCode: where.countryCode,
       city: where.city,
       invoiceTransportId: null,
+      reportingProfile,
       partyIdentifiers: { create: identifierRows(where.sellerIdentifiers) },
     },
   });
@@ -94,22 +95,35 @@ function registry() {
   return actions;
 }
 
-async function validate(where: MandateCountry, buyerType: BuyerType) {
-  const company = await sellerWithoutChannel(where);
+interface Seller {
+  reportingProfile?: Record<string, string>;
+  issueDate?: string;
+}
+
+function invoiceContext(companyId: string, clientId: string, issueDate?: string) {
+  const context = draftInvoiceContext(companyId, clientId);
+  return issueDate ? { ...context, data: { ...context.data, issueDate } } : context;
+}
+
+async function validate(where: MandateCountry, buyerType: BuyerType, seller: Seller = {}) {
+  const company = await sellerWithoutChannel(where, seller.reportingProfile);
   const client = await buyer(company.id, where, buyerType);
   (persistence.findOwnedDocument as Mock).mockResolvedValue(issuanceDocument(client.id, 'invoice', 'draft'));
   (takeNumber.takeDocumentNumberForTransitionWithStatus as Mock).mockResolvedValue({
     document: issuanceDocument(client.id, 'invoice', 'validated'),
     numbered: { number: 1, displayNumber: 'INV-2026-0001' },
   });
-  return registry().resolve('invoice', 'validate')!(draftInvoiceContext(company.id, client.id));
+  return registry().resolve('invoice', 'validate')!(invoiceContext(company.id, client.id, seller.issueDate));
 }
 
-async function transmissionPreview(where: MandateCountry, buyerType: BuyerType) {
-  const company = await sellerWithoutChannel(where);
+async function transmissionPreview(where: MandateCountry, buyerType: BuyerType, seller: Seller = {}) {
+  const company = await sellerWithoutChannel(where, seller.reportingProfile);
   const client = await buyer(company.id, where, buyerType);
   const preview = registry().resolveTransmissionPreview('invoice', 'validate')!;
-  return preview({ companyId: company.id, data: draftInvoiceContext(company.id, client.id).data });
+  return preview({
+    companyId: company.id,
+    data: invoiceContext(company.id, client.id, seller.issueDate).data,
+  });
 }
 
 describe('Validate, against each shipped channel mandate, for a private and a business buyer', () => {
@@ -153,8 +167,39 @@ describe('Validate, against each shipped channel mandate, for a private and a bu
     expect(await transmissionPreview(FRANCE, 'INDIVIDUAL')).toEqual({ transmits: false });
   });
 
-  it('France, business buyer: still refused without a PDP', async () => {
+  it('France, business buyer, size category not declared: still refused without a PDP', async () => {
     const error = await rejection(validate(FRANCE, 'COMPANY'));
+
+    expect(error.message).toMatch(/to go through the "pdp" channel/);
+    expect(takeNumber.takeDocumentNumberForTransitionWithStatus).not.toHaveBeenCalled();
+  });
+
+  it('France, micro-enterprise selling to a business before 2027-09-01: validates without a PDP', async () => {
+    const result = await validate(FRANCE, 'COMPANY', { reportingProfile: { sizeCategory: 'MICRO' } });
+
+    expect(result.document).toMatchObject({ status: 'validated' });
+    expect(takeNumber.takeDocumentNumberForTransitionWithStatus).toHaveBeenCalled();
+  });
+
+  it('France, SME selling to a business before 2027-09-01: the Validate dialog announces no transmission', async () => {
+    expect(
+      await transmissionPreview(FRANCE, 'COMPANY', { reportingProfile: { sizeCategory: 'SME' } }),
+    ).toEqual({ transmits: false });
+  });
+
+  it('France, SME selling to a business from 2027-09-01: refused without a PDP', async () => {
+    const error = await rejection(
+      validate(FRANCE, 'COMPANY', { reportingProfile: { sizeCategory: 'SME' }, issueDate: '2027-09-01' }),
+    );
+
+    expect(error.message).toMatch(/to go through the "pdp" channel/);
+    expect(takeNumber.takeDocumentNumberForTransitionWithStatus).not.toHaveBeenCalled();
+  });
+
+  it('France, large company selling to a business: refused without a PDP', async () => {
+    const error = await rejection(
+      validate(FRANCE, 'COMPANY', { reportingProfile: { sizeCategory: 'LARGE' } }),
+    );
 
     expect(error.message).toMatch(/to go through the "pdp" channel/);
     expect(takeNumber.takeDocumentNumberForTransitionWithStatus).not.toHaveBeenCalled();
