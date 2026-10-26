@@ -522,6 +522,10 @@ model Company {
   // hand but never the reverse - see `resolve-revenue-basis.ts`'s own header).
   revenuePeriod String?
 
+  // The values this company declared for the attributes its country's `companyProfile` section asks
+  // for (documents/company-profile/), e.g. { "sizeCategory": "SME" }. An absent key is undeclared.
+  reportingProfile Json?
+
   // Default due date for new quotes and invoices, one pair per document type: a day count and a mode
   // ("net": issue date + N days; "endOfMonth": issue date + N days, then that month's last day).
   // Nullable, resolved by `company/payment-terms/resolve-payment-terms.ts`: NULL days means "no

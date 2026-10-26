@@ -58,6 +58,7 @@ import { byCodeUnit } from '@/lib/compare';
 import { assertValidPaymentTerms } from '../../payment-terms/schema';
 import { assertValidEinvoiceCodes } from '../../einvoice-codes/schema';
 import { assertValidCompanyLawSection } from '../../company-law/schema';
+import { assertProfileConditionIsDeclared, assertValidCompanyProfile } from '../../company-profile/schema';
 
 const COUNTRY_FILE_PATTERN = /^[a-z]{2}\.json$/;
 
@@ -201,6 +202,7 @@ function validateVatCurrencySection(
 
 function validateChannelPolicySection(
   channelPolicy: ComposedCountryView['channelPolicy'],
+  companyProfile: ComposedCountryView['companyProfile'],
   ctx: LoadContext,
   filePath: string,
 ): void {
@@ -208,7 +210,24 @@ function validateChannelPolicySection(
   assertSectionCountryCode(channelPolicy, 'channelPolicy', ctx);
   for (const fact of channelPolicy.facts) {
     assertValidChannelPolicyFact(fact, `${filePath}#channelPolicy`);
+    if (fact.scope?.seller) {
+      assertProfileConditionIsDeclared(
+        fact.scope.seller,
+        companyProfile,
+        `${filePath}#channelPolicy: fact "${fact.providerId}"`,
+      );
+    }
   }
+}
+
+function validateCompanyProfileSection(
+  companyProfile: ComposedCountryView['companyProfile'],
+  ctx: LoadContext,
+  filePath: string,
+): void {
+  if (!companyProfile) return;
+  assertSectionCountryCode(companyProfile, 'companyProfile', ctx);
+  assertValidCompanyProfile(companyProfile, `${filePath}#companyProfile`);
 }
 
 function validateRetentionSection(
@@ -359,7 +378,8 @@ function loadCountryFile(dir: string, code: string): ComposedCountryView {
   validateVatRatesSection(parsed.vatRates, ctx, filePath);
   validateTaxSystemSection(parsed.taxSystem, ctx, filePath);
   validateVatCurrencySection(parsed.vatCurrency, ctx, filePath);
-  validateChannelPolicySection(parsed.channelPolicy, ctx, filePath);
+  validateCompanyProfileSection(parsed.companyProfile, ctx, filePath);
+  validateChannelPolicySection(parsed.channelPolicy, parsed.companyProfile, ctx, filePath);
   validateRetentionSection(parsed.retention, ctx, filePath);
   validateMentionsSection(parsed.mentions, ctx, filePath);
   validateLocalizedMentionsSection(parsed.localizedMentions, ctx, filePath);

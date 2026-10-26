@@ -621,6 +621,115 @@ describe("Credit note — the mandatory reference, the locked currency, the cred
   // disappears from the screen. Reverted; suite green again.
 })
 
+describe("Settlement - a settled invoice no longer offers Record payment", () => {
+  const descriptor: DocumentTypeDescriptor = {
+    id: "invoice",
+    label: "Invoice",
+    statuses: [{ id: "sent", label: "Sent" }],
+    initialStatus: "draft",
+    numbering: { onEnterStatus: "sent" },
+    fields: [{ key: "issueDate", kind: "date", label: "Date", required: true }],
+    actions: [
+      { id: "record-payment", label: "Record payment", availableWhen: ["sent"] },
+      { id: "export-accounting", label: "Export to accounting", availableWhen: ["sent"] },
+    ],
+  }
+
+  function sentInvoice(id: string, number: string): DocumentInstance {
+    return {
+      id,
+      typeId: "invoice",
+      status: "sent",
+      data: { issueDate: "2026-08-01T00:00:00.000Z" },
+      createdAt: "2026-08-01T00:00:00.000Z",
+      updatedAt: "2026-08-01T00:00:00.000Z",
+      displayNumber: number,
+      lastActionError: null,
+    }
+  }
+
+  function settlementOf(paidMinor: number, outstandingMinor: number) {
+    return {
+      totals: { currency: "EUR", grossMinor: 24000 },
+      payments: [],
+      credits: [],
+      warnings: [],
+      settlement: {
+        totalGrossMinor: 24000,
+        paidMinor,
+        creditedMinor: 0,
+        outstandingMinor,
+        excessMinor: 0,
+        settled: outstandingMinor === 0,
+      },
+    }
+  }
+
+  const unpaid = sentInvoice("inv-unpaid", "INV-2026-0001")
+  const partial = sentInvoice("inv-partial", "INV-2026-0002")
+  const paid = sentInvoice("inv-paid", "INV-2026-0003")
+
+  function installSettlementMock() {
+    installFetchMock({
+      "GET /api/documents/types/invoice": () => descriptor,
+      "GET /api/documents": () => documentsPage([unpaid, partial, paid]),
+      "GET /api/documents/inv-paid": () => paid,
+      "GET /api/documents/inv-paid/authority-events": () => [],
+      "GET /api/documents/inv-paid/archives": () => [],
+      "GET /api/documents/inv-unpaid/settlement": () => settlementOf(0, 24000),
+      "GET /api/documents/inv-partial/settlement": () => settlementOf(10000, 14000),
+      "GET /api/documents/inv-paid/settlement": () => settlementOf(24000, 0),
+    })
+  }
+
+  function openMenu(trigger: HTMLElement) {
+    fireEvent.keyDown(trigger, { key: "Enter" })
+  }
+
+  it("unpaid and partially paid rows keep Record payment, the settled row shows the settled check", async () => {
+    installSettlementMock()
+    renderDocumentTypeScreen("invoice")
+
+    expect(await screen.findByTestId("document-row-settled-inv-paid")).toHaveAccessibleName("Settled")
+    expect(screen.queryByTestId("document-row-action-record-payment-inv-paid")).not.toBeInTheDocument()
+    // The next action down the descriptor is not promoted into the freed slot.
+    expect(screen.queryByTestId("document-row-action-export-accounting-inv-paid")).not.toBeInTheDocument()
+
+    expect(screen.getByTestId("document-row-action-record-payment-inv-unpaid")).toBeInTheDocument()
+    expect(screen.getByTestId("document-row-action-record-payment-inv-partial")).toBeInTheDocument()
+    expect(screen.queryByTestId("document-row-settled-inv-unpaid")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("document-row-settled-inv-partial")).not.toBeInTheDocument()
+  })
+
+  it("the settled row's menu keeps its other actions but not Record payment", async () => {
+    installSettlementMock()
+    renderDocumentTypeScreen("invoice")
+
+    await screen.findByTestId("document-row-settled-inv-paid")
+    openMenu(screen.getByTestId("document-row-menu-inv-paid"))
+    const menu = await screen.findByTestId("document-row-menu-content-inv-paid")
+    expect(within(menu).getByTestId("document-row-action-export-accounting-inv-paid")).toBeInTheDocument()
+    expect(within(menu).queryByTestId("document-row-action-record-payment-inv-paid")).not.toBeInTheDocument()
+  })
+
+  it("the settled invoice's own page shows the settled check instead of Record payment", async () => {
+    installSettlementMock()
+    renderDocumentTypeScreen("invoice")
+
+    fireEvent.click(await screen.findByTestId("document-open-link-inv-paid"))
+    expect(await screen.findByTestId("document-detail-settled")).toHaveAccessibleName("Settled")
+    expect(screen.queryByTestId("document-action-record-payment")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("document-action-export-accounting")).not.toBeInTheDocument()
+    // Settled, the balance stays on the page.
+    expect(screen.getByTestId("document-settlement-outstanding")).toHaveTextContent("0.00 EUR")
+
+    openMenu(screen.getByTestId("document-actions-menu"))
+    const menu = await screen.findByTestId("document-actions-menu-content")
+    expect(within(menu).getByTestId("document-action-export-accounting")).toBeInTheDocument()
+    expect(within(menu).queryByTestId("document-action-record-payment")).not.toBeInTheDocument()
+  })
+})
+
 describe("Cancellation — the journey as it exists (GAP logged: no dedicated screen)", () => {
   /**
    * GAP LOGGED: `grep`-ing the five shipped descriptors

@@ -221,3 +221,103 @@ describe('countries/data: an empty catalogue directory is refused', () => {
     expect(() => loadComposedCountryFilesFrom(tmpDir)).toThrow(/no country file/);
   });
 });
+
+describe('countries/data: the company profile and the seller conditions that read it are checked at load time', () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), 'countries-data-company-profile-'));
+  });
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  const provenance = { kind: 'legal', sourceText: 'Fixture statutory text.', sourceCheckedAt: '2026-10-25' };
+  const sizeCategory = {
+    key: 'sizeCategory',
+    label: 'Size category',
+    values: [
+      { value: 'LARGE', label: 'Large' },
+      { value: 'SMALL', label: 'Small' },
+    ],
+    provenance,
+  };
+
+  function writeCountry(companyProfile: unknown, seller?: unknown): void {
+    writeFileSync(
+      join(tmpDir, 'zz.json'),
+      JSON.stringify({
+        countryCode: 'ZZ',
+        ...(companyProfile === undefined ? {} : { companyProfile }),
+        channelPolicy: {
+          countryCode: 'ZZ',
+          facts: [
+            {
+              providerId: 'fixture-channel',
+              requirement: 'mandated',
+              mandatedFrom: '2030-01-01',
+              ...(seller === undefined ? {} : { scope: { seller } }),
+              provenance,
+            },
+          ],
+        },
+      }),
+      'utf-8',
+    );
+  }
+
+  it('loads a mandate whose seller condition names a declared attribute and value', () => {
+    writeCountry({ countryCode: 'ZZ', attributes: [sizeCategory] }, { sizeCategory: ['SMALL'] });
+
+    const [zz] = loadComposedCountryFilesFrom(tmpDir);
+
+    expect(zz.companyProfile?.attributes.map((attribute) => attribute.key)).toEqual(['sizeCategory']);
+    expect(zz.channelPolicy?.facts[0].scope?.seller).toEqual({ sizeCategory: ['SMALL'] });
+  });
+
+  it('refuses a seller condition when the country declares no company profile', () => {
+    writeCountry(undefined, { sizeCategory: ['SMALL'] });
+
+    expect(() => loadComposedCountryFilesFrom(tmpDir)).toThrow(
+      /names attribute "sizeCategory", which this country's "companyProfile" does not declare/,
+    );
+  });
+
+  it('refuses a seller condition on an attribute the profile does not declare', () => {
+    writeCountry({ countryCode: 'ZZ', attributes: [sizeCategory] }, { headcount: ['SMALL'] });
+
+    expect(() => loadComposedCountryFilesFrom(tmpDir)).toThrow(/names attribute "headcount"/);
+  });
+
+  it('refuses a seller condition on a value the attribute does not declare', () => {
+    writeCountry({ countryCode: 'ZZ', attributes: [sizeCategory] }, { sizeCategory: ['MEDIUM'] });
+
+    expect(() => loadComposedCountryFilesFrom(tmpDir)).toThrow(
+      /seller condition "sizeCategory" names value "MEDIUM".*expected one of LARGE, SMALL/,
+    );
+  });
+
+  it('refuses a profile with no attribute, a duplicate attribute, an attribute with no value or no provenance', () => {
+    const cases: [unknown, RegExp][] = [
+      [{ countryCode: 'ZZ', attributes: [] }, /"attributes" must be a non-empty array/],
+      [
+        { countryCode: 'ZZ', attributes: [sizeCategory, sizeCategory] },
+        /attribute "sizeCategory" is declared twice/,
+      ],
+      [
+        { countryCode: 'ZZ', attributes: [{ ...sizeCategory, values: [] }] },
+        /attribute "sizeCategory" declares no "values"/,
+      ],
+      [
+        { countryCode: 'ZZ', attributes: [{ ...sizeCategory, provenance: undefined }] },
+        /attribute "sizeCategory" has no valid provenance/,
+      ],
+      [{ countryCode: 'YY', attributes: [sizeCategory] }, /"companyProfile.countryCode" \("YY"\) must match/],
+    ];
+    for (const [companyProfile, error] of cases) {
+      writeCountry(companyProfile);
+      expect(() => loadComposedCountryFilesFrom(tmpDir)).toThrow(error);
+    }
+  });
+});

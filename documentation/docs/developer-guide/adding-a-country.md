@@ -129,7 +129,8 @@ separate directory or file to open any more; the "Section" column names the exac
 | B2G routing | `b2gRouting` | When this country is the **government client's** country: which transport + format, which client identifiers/document fields it needs. | Yes - `boot-upsert.ts`, unconditionally re-upserted on **every** backend boot (`OnModuleInit`). |
 | Correction routes | `correctionRoutes` | For each of the 11 canonical correction routes (credit note, corrective invoice, cancel-and-replace, …), is it `required`/`allowed`/`forbidden`/`unverified` for this country. | No - read live from the file. |
 | Local cancel | `correctionRoutes` (`locallyImplementable` / `restrictedToStatuses` on the `CANCEL_AND_REPLACE` route) | Whether *this app* can actually realize `CANCEL_AND_REPLACE` locally for this country, and from which invoice statuses. Read by `correction-routes/cancel-policy.ts`. | No - read live from the file. |
-| Channel policy | `channelPolicy` | For a company **established** in this country: is a given transmission channel merely usual (`suggested`) or legally required from a date (`mandated`)? A `mandated` fact may narrow itself with `scope`: `"parties": "domestic"` binds only an invoice whose buyer is established in the same country, which is what both national mandates shipped today actually say; `"buyerType": ["COMPANY"]` binds only an invoice to a business client, so an invoice to a private client (client type Individual) is outside it. An absent key binds every invoice; an unknown key or value is refused at load. A buyer whose type cannot be read is treated as bound. | No - read live from the file. |
+| Channel policy | `channelPolicy` | For a company **established** in this country: is a given transmission channel merely usual (`suggested`) or legally required from a date (`mandated`)? A `mandated` fact may narrow itself with `scope`: `"parties": "domestic"` binds only an invoice whose buyer is established in the same country, which is what both national mandates shipped today actually say; `"buyerType": ["COMPANY"]` binds only an invoice to a business client, so an invoice to a private client (client type Individual) is outside it; `"seller": { "sizeCategory": ["SME"] }` binds only a seller whose company profile carries one of the listed values. An absent key binds every invoice; an unknown key or value is refused at load. A buyer whose type cannot be read, and a seller that has not declared the attribute, are treated as bound. | No - read live from the file. |
+| Company profile | `companyProfile` | The facts about a seller this country's rules depend on and only the company can declare (France: its size category). Each attribute has a `key`, an English `label`, an optional `help`, the `values` it may take and a `provenance`. The company settings show one choice per attribute; the API refuses an attribute or a value the country does not declare. | No - read live from the file; the company's values are stored in `Company.reportingProfile`. |
 | Tax system | `taxSystem` | What the cross-border tax engine assumes about this country's rate structure (VAT/GST/SALES_TAX/NONE, standard rate). Does **not** cover EU/GCC union membership or a Peppol EAS code - see the maintainer note below, "EU/GCC membership and Peppol EAS live in a reference table, not a country file". | No - read live from the file. |
 | Country identifiers | `identifiers` | Which national identifier schemes (SIRET, EIN, VAT number, …) a party of this country must supply, and how a legal identifier is written into an e-invoice (see the maintainer note below, "how a legal identifier is written into an e-invoice"). A scheme with `required: true` must be filled in to save a party of this country, for the party types `requiredFor` names (every type in `appliesTo` when absent). What an issued invoice must carry is `invoiceRequirements`, read from the seller's country. | Yes - auto-corrected on **every boot**, same mechanism as document-action policy (see below), plus `prisma/seed.ts`. |
 | Country field overlay | `countryFields` | Adds/modifies/removes a **field** on an existing document type's shape for this country. | No - read live from the file. |
@@ -742,15 +743,21 @@ comments explaining exactly why each field exists. A few shapes worth knowing up
   you're not yet confident the channel is genuinely *required* rather than merely usual, stay
  `suggested` - see Italy's and Poland's own `suggested` entries, both still `unverified` today but
   honestly so.
-  The mandate mechanism understands exactly ONE narrowing, and no other: `scope: { "parties":
-  "domestic" }`, which makes the fact bind only when the buyer is established in the same country.
+  The mandate mechanism understands three narrowings, and no other. `scope: { "parties":
+  "domestic" }` makes the fact bind only when the buyer is established in the same country.
   Declare it whenever the statute you quote restricts itself to operations between parties
   established there, as France's CGI art. 289 bis and Italy's D.Lgs. 127/2015 art. 1 comma 3 both do
-  - without it the mandate would refuse a lawful cross-border invoice. `scope` is a **closed** shape:
+  - without it the mandate would refuse a lawful cross-border invoice. `"buyerType"` lists the client
+  types it binds. `"seller"` is a condition on the seller's company profile, `{ "<attribute>":
+  ["<value>", ...] }`: every attribute it names must be declared by the same file's `companyProfile`
+  section, with the listed values, or the file is refused at load. A mandate whose start date depends
+  on the seller is written as one fact per start date, each with its own `seller` condition, as
+  France does for its size categories; a seller that has not declared the attribute matches every
+  such fact, so the earliest date binds it. `scope` is a **closed** shape:
   any other key, or any other value, throws at load rather than being ignored, because a silently
   ignored narrowing is a legal block left armed (or disarmed) by accident. Every other kind of
-  conditional or partial exception - a turnover threshold, a taxpayer status, a transaction type -
-  still has no way to be encoded, and a fact that would need one stays `suggested`: see Poland's
+  conditional or partial exception - a turnover threshold, a transaction type, a seller fact no
+  `companyProfile` attribute declares - still has no way to be encoded, and a fact that would need one stays `suggested`: see Poland's
   own notes for a worked example of that choice.
   Narrowing the invoicing mandate does not discharge whatever DECLARATION the same law may still
   require for the cross-border operation (France's e-reporting, Italy's art. 1 comma 3-bis). That

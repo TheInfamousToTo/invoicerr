@@ -37,6 +37,7 @@ import { CountryCompanyLookupSection } from '../../company-lookup/coverage/schem
 import { CountryPaymentTermsFile } from '../payment-terms/schema';
 import { CountryEinvoiceCodesFile } from '../einvoice-codes/schema';
 import { CountryCompanyLawFile } from '../company-law/schema';
+import { CountryCompanyProfileFile } from '../company-profile/schema';
 
 /** One composed view per country, one optional field per existing catalog: see this module's own
  *  header. A field is present if and only if that catalog's own `data/<cc>.json` exists for this
@@ -62,6 +63,7 @@ export interface ComposedCountryView {
   paymentTerms?: CountryPaymentTermsFile;
   einvoiceCodes?: CountryEinvoiceCodesFile;
   companyLaw?: CountryCompanyLawFile;
+  companyProfile?: CountryCompanyProfileFile;
 }
 
 /** Every section key `ComposedCountryView` declares besides `countryCode` itself, in the same order
@@ -87,6 +89,7 @@ export const COMPOSED_COUNTRY_SECTION_KEYS: ReadonlyArray<keyof Omit<ComposedCou
   'paymentTerms',
   'einvoiceCodes',
   'companyLaw',
+  'companyProfile',
 ];
 
 /** One composed view per country with a `countries/data/<cc>.json` file: see this module's own

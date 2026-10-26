@@ -710,6 +710,33 @@ describe('DocumentsService — the invoice type, the SECOND descriptor-only type
       expect(result.message).not.toMatch(/outstanding/i);
     });
 
+    // Money that did arrive (a client paying twice, a checkout completing after a manual entry) must
+    // be recorded so the excess stays visible: the screens stop offering the action, the API does not.
+    it('a payment on an ALREADY-settled invoice is still recorded, and the result names the excess', async () => {
+      (settlementPayments.listPayments as Mock).mockResolvedValue([
+        {
+          id: 'payment-0',
+          documentId: 'doc-1',
+          amountMinor: GROSS_MINOR,
+          currency: 'EUR',
+          documentAmountMinor: GROSS_MINOR,
+        },
+        { id: 'payment-1', documentId: 'doc-1', amountMinor: 500, currency: 'EUR', documentAmountMinor: 500 },
+      ]);
+
+      const { service } = buildService();
+      const result = await service.runAction('company-1', 'invoice', 'record-payment', {
+        documentId: 'doc-1',
+        data: validInvoiceData,
+        params: { amount: 5, currency: 'EUR', paidAt: '2026-09-01' },
+      });
+
+      expect(settlementPayments.recordPayment).toHaveBeenCalledWith(
+        expect.objectContaining({ documentId: 'doc-1', amountMinor: 500 }),
+      );
+      expect(result.message).toMatch(/fully paid.*5\.00 EUR overpaid/);
+    });
+
     it('a PRE-EXISTING credit is folded into the balance THIS message states — never contradicting a follow-up read of the settlement screen', async () => {
       // The invoice (GROSS_MINOR = 2376) was already credited 2000 minor before this payment —
       // recording a further 376 must be exactly enough to settle it.

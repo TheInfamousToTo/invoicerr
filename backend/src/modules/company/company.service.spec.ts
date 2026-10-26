@@ -22,7 +22,7 @@ vi.mock('../webhooks/webhook-dispatcher.service', () => ({
 
 import { randomUUID } from 'node:crypto';
 
-import { MethodNotAllowedException } from '@nestjs/common';
+import { BadRequestException, MethodNotAllowedException } from '@nestjs/common';
 import { CompanyService } from './company.service';
 import { WebhookDispatcherService } from '../webhooks/webhook-dispatcher.service';
 import { getSeatsView } from '@/modules/billing/seats-view';
@@ -214,6 +214,103 @@ describe('CompanyService#getCompanyInfo - issue #603: documentValidationCode', (
     } finally {
       await prisma.company.delete({ where: { id: company.id } }).catch(() => undefined);
     }
+  });
+});
+
+describe('CompanyService - the company profile its country asks for', () => {
+  let service: CompanyService;
+
+  beforeAll(() => {
+    service = new CompanyService(fakeWebhookDispatcher);
+  });
+
+  async function withCompany(test: (companyId: string) => Promise<void>) {
+    const company = await createTestCompany();
+    try {
+      await test(company.id);
+    } finally {
+      await prisma.company.delete({ where: { id: company.id } }).catch(() => undefined);
+    }
+  }
+
+  const edit = (companyId: string, changes: Record<string, unknown>) =>
+    service.editCompanyInfo(companyId, {
+      name: 'Profile Co',
+      currency: 'EUR',
+      country: 'France',
+      ...changes,
+    } as never);
+
+  it('a French company is asked its size category, with the four statutory categories', async () => {
+    await withCompany(async (companyId) => {
+      const info = await service.getCompanyInfo(companyId);
+
+      expect(info?.companyProfileAttributes).toEqual([
+        expect.objectContaining({
+          key: 'sizeCategory',
+          values: [
+            expect.objectContaining({ value: 'LARGE' }),
+            expect.objectContaining({ value: 'MID' }),
+            expect.objectContaining({ value: 'SME' }),
+            expect.objectContaining({ value: 'MICRO' }),
+          ],
+        }),
+      ]);
+    });
+  });
+
+  it('a Portuguese company is asked nothing', async () => {
+    await withCompany(async (companyId) => {
+      await prisma.company.update({
+        where: { id: companyId },
+        data: { country: 'Portugal', countryCode: 'PT' },
+      });
+
+      expect((await service.getCompanyInfo(companyId))?.companyProfileAttributes).toEqual([]);
+    });
+  });
+
+  it('stores a declared size category, and clears it with null', async () => {
+    await withCompany(async (companyId) => {
+      expect(
+        (await edit(companyId, { reportingProfile: { sizeCategory: 'MICRO' } })).reportingProfile,
+      ).toEqual({
+        sizeCategory: 'MICRO',
+      });
+      expect((await edit(companyId, { reportingProfile: { sizeCategory: null } })).reportingProfile).toEqual(
+        {},
+      );
+    });
+  });
+
+  it('leaves the stored profile alone when an edit does not mention it', async () => {
+    await withCompany(async (companyId) => {
+      await edit(companyId, { reportingProfile: { sizeCategory: 'SME' } });
+
+      expect((await edit(companyId, { name: 'Renamed' })).reportingProfile).toEqual({ sizeCategory: 'SME' });
+    });
+  });
+
+  it('refuses a value the attribute does not list, and an attribute the country does not ask for (400)', async () => {
+    await withCompany(async (companyId) => {
+      await expect(edit(companyId, { reportingProfile: { sizeCategory: 'HUGE' } })).rejects.toThrow(
+        /reportingProfile.sizeCategory must be one of LARGE, MID, SME, MICRO, not "HUGE"/,
+      );
+      await expect(edit(companyId, { reportingProfile: { headcount: '12' } })).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
+      expect((await prisma.company.findUnique({ where: { id: companyId } }))?.reportingProfile).toBeNull();
+    });
+  });
+
+  it('drops the values the new country does not ask for when the company moves country', async () => {
+    await withCompany(async (companyId) => {
+      await edit(companyId, { reportingProfile: { sizeCategory: 'SME' } });
+
+      const moved = await edit(companyId, { country: 'Portugal', countryCode: 'PT' });
+
+      expect(moved.reportingProfile).toEqual({});
+    });
   });
 });
 

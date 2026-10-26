@@ -47,6 +47,37 @@ Type the share capital as a plain amount, with a dot or a comma for decimals, an
 It is printed like every other amount of the PDF, for example `1000.00 EUR`.
 :::
 
+### Company profile
+
+Some rules of your country depend on facts about your company that only you can declare. When your
+country asks for any, the company settings show a **Company profile** card with one choice per
+question. A country that asks nothing shows no card.
+
+France asks one question today, the **Company size category**: large enterprise, intermediate-sized
+enterprise (ETI), small or medium-sized enterprise (PME) or micro-enterprise, the categories of the
+loi de modernisation de l'économie (art. 51), assessed on 1 January 2025 from your last closed
+financial year. It decides from when your invoices to French business clients must go through an
+accredited platform (PDP):
+
+| Size category | Accredited platform required for invoices issued from |
+| --- | --- |
+| Large enterprise, ETI | 1 September 2026 |
+| PME, micro-enterprise | 1 September 2027 |
+| Not declared | 1 September 2026 |
+
+:::warning[Not declared means the earliest date]
+Until you declare a category, Invoicerr applies the earliest date. A PME or micro-enterprise without
+a connected platform cannot validate an invoice to a French business client until it declares its
+category.
+:::
+
+"Micro-enterprise" is the statistical category, not the micro-entrepreneur tax regime, although most
+micro-entrepreneurs belong to it. A company that is a member of a VAT group (assujetti unique) follows
+the large-company calendar whatever its size: do not declare PME or micro-enterprise for it.
+
+Receiving invoices through a platform is required of every company from 1 September 2026, whatever
+its size.
+
 ### Invoice PDF format
 
 - A dropdown offers **PDF**, **Factur-X**, **ZUGFeRD**, **XRechnung**, **UBL**, or **CII** as your
