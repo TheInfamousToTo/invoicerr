@@ -66,6 +66,40 @@ not transmit it.
 A client recorded as a company is treated as an assujetti. An association or a public body outside
 the scope of VAT may not be one; the data cannot tell them apart today.
 
+## Seller size and the PDP mandate
+
+The obligation to issue through an accredited platform does not start on the same day for every
+seller. Loi n° 2022-1157 art. 26, III, A (version in force since 2026-02-21) applies it to invoices
+issued from 2026-09-01, « Toutefois, pour les factures émises par les assujettis relevant des
+catégories des microentreprises et des petites et moyennes entreprises qui ne sont pas membres d'un
+assujetti unique [...], les 2° et 4° du I et le II du présent article s'appliquent à compter du 1er
+septembre 2027 ». The categories are those of LME art. 51, assessed on 2025-01-01.
+
+`countries/data/fr.json` carries this as data in two places:
+
+- the `companyProfile` section declares one attribute, `sizeCategory`, with the values `LARGE`,
+  `MID`, `SME` and `MICRO`. A company declares its value in the company settings
+  (`Company.reportingProfile`, see [Company settings](../../user-guide/settings/company-branding.md#company-profile));
+- the `channelPolicy` section holds two `pdp` facts: one mandated from 2026-09-01 with
+  `scope.seller: { "sizeCategory": ["LARGE", "MID"] }`, one mandated from 2027-09-01 with
+  `scope.seller: { "sizeCategory": ["SME", "MICRO"] }`. Both keep `parties: "domestic"` and
+  `buyerType: ["COMPANY"]`.
+
+A company that has not declared its size category is in scope of both facts, so it is bound from
+2026-09-01. Issuing outside an accredited platform when bound costs a fine per invoice (CGI art.
+1737) and an issued invoice cannot be taken back, whereas the refusal is visible and lifted by
+declaring the category once.
+
+The channels settings screen reads the same facts for the company's own category: a PME sees the PDP
+mandated from 2027-09-01, not yet in force.
+
+:::info[What the data cannot express]
+An SME or micro-enterprise that is a member of an assujetti unique (CGI art. 256 C) is bound from
+2026-09-01; the profile has no attribute for that membership. Each paragraph also lets a decree set a
+later date (at the latest 2026-12-01 and 2027-12-01); none was found. Reception is not modelled and is
+required of every company from 2026-09-01.
+:::
+
 ## Validate and the PDP mandate
 
 Invoicerr's **Validate** action normally only assigns an invoice's legal number and locks it, with

@@ -14,6 +14,7 @@ import {
   resolveClientCountryCode,
   resolveClientType,
   resolveCompanyCountryCode,
+  resolveCompanyProfile,
 } from '../country-policy/country-policy';
 import { resolveInvoiceValidationTransmission } from '../country-policy/invoice-validation-transmission';
 import { runDomesticInvoiceCurrencyPreflight } from '../country-policy/domestic-currency-issuance';
@@ -102,10 +103,12 @@ async function resolveActiveInvoiceMandate(
   if (!countryCode) return undefined;
   const buyerCountryCode = await resolveClientCountryCode(companyId, clientId);
   const buyerType = await resolveClientType(companyId, clientId);
+  const sellerProfile = await resolveCompanyProfile(companyId);
   const mandate = activeChannelMandateForOperation({
     sellerCountryCode: countryCode,
     buyerCountryCode,
     buyerType,
+    sellerProfile,
     issueDate,
   });
   return mandate ? { countryCode, mandate } : undefined;

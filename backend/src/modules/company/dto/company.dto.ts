@@ -82,4 +82,8 @@ export class EditCompanyDto {
   quoteDueMode?: string | null;
   invoiceDueDays?: number | null;
   invoiceDueMode?: string | null;
+  /** Values for the attributes the company's country declares in its `companyProfile` section, e.g.
+   *  `{ "sizeCategory": "SME" }`. A key set to null or "" is cleared; `null` clears them all. An
+   *  attribute or value the country does not declare is refused with a 400. */
+  reportingProfile?: Record<string, string | null> | null;
 }
