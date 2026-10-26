@@ -9,7 +9,7 @@ import {
   Repeat,
   UserCheck,
 } from "lucide-react"
-import { useState } from "react"
+import { type ReactNode, useState } from "react"
 import { Link, useNavigate } from "react-router"
 import { useTranslation } from "react-i18next"
 
@@ -20,9 +20,8 @@ import "@/components/documents/custom-registrations"
 import {
   extraActionGates,
   findSaveAction,
-  pickPrimaryAction,
+  presentActions,
   saveDraftLockNotice,
-  secondaryActions,
   transitionHint,
 } from "@/components/documents/action-presentation"
 import { CreateRecurrenceDialog } from "@/components/documents/create-recurrence-dialog"
@@ -51,6 +50,8 @@ import { DocumentReconciliationSection } from "@/components/documents/document-r
 import {
   DocumentSettlementBadge,
   DocumentSettlementSection,
+  SettledMark,
+  useBalanceSettled,
 } from "@/components/documents/document-settlement"
 import { DocumentStatusBadge } from "@/components/documents/document-status-badge"
 import { DocumentTaxWarningsSection } from "@/components/documents/document-tax-warnings"
@@ -213,8 +214,8 @@ function DocumentDetailBody({ descriptor, instance, state, baseline, onDiscard }
   // from also being a button a human could click a second time mid-flight and race the queue.
   const isProcessing = currentStatus === "sending"
   const actions = isProcessing ? [] : availableActions
-  const primary = pickPrimaryAction(actions, currentStatus, isDirty)
-  const secondary = secondaryActions(actions, primary)
+  const balanceSettled = useBalanceSettled(descriptor.id, instance.id, showSettlement)
+  const { primary, secondary, settled } = presentActions(actions, currentStatus, isDirty, balanceSettled)
   const saveAction = findSaveAction(actions, currentStatus)
   // Issue #468 (and the pre-existing France invoice case) - see `saveDraftLockNotice`'s own header:
   // reads the FULL descriptor, not `availableActions`, since the whole point is to explain why
@@ -236,6 +237,7 @@ function DocumentDetailBody({ descriptor, instance, state, baseline, onDiscard }
           state={state}
           primary={primary}
           secondary={secondary}
+          settled={settled}
           isProcessing={isProcessing}
         />
       </DocumentDetailHeader>
@@ -609,6 +611,8 @@ interface DocumentDetailActionsProps {
   state: DocumentFormState
   primary: DocumentActionDescriptor | undefined
   secondary: DocumentActionDescriptor[]
+  /** The primary slot shows the settled mark (see `presentActions`). */
+  settled: boolean
   isProcessing: boolean
 }
 
@@ -625,6 +629,7 @@ function DocumentDetailActions({
   state,
   primary,
   secondary,
+  settled,
   isProcessing,
 }: DocumentDetailActionsProps) {
   const { t } = useTranslation()
@@ -641,6 +646,31 @@ function DocumentDetailActions({
     !!acceptManuallyAction &&
     !acceptManuallyAction.policyBlockedReason &&
     isActionAvailable(acceptManuallyAction, instance.status)
+
+  let primarySlot: ReactNode = null
+  if (isProcessing) {
+    primarySlot = (
+      <span className="px-2 text-sm text-muted-foreground" data-cy="document-detail-processing">
+        {t("documents.list.processing")}
+      </span>
+    )
+  } else if (settled) {
+    primarySlot = <SettledMark dataCy="document-detail-settled" className="size-9" />
+  } else if (primary) {
+    primarySlot = (
+      // `captions`: the "Draft → Sending" line under the one highlighted button is what tells a
+      // reader what that click commits them to, before they click — the same caption every
+      // secondary entry carries inside the menu.
+      <DocumentActionButton
+        descriptor={descriptor}
+        action={primary}
+        state={state}
+        variant="default"
+        captions
+        className="flex flex-col items-end text-end"
+      />
+    )
+  }
 
   return (
     <>
@@ -777,25 +807,7 @@ function DocumentDetailActions({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {isProcessing ? (
-        <span className="px-2 text-sm text-muted-foreground" data-cy="document-detail-processing">
-          {t("documents.list.processing")}
-        </span>
-      ) : (
-        primary && (
-          // `captions`: the "Draft → Sending" line under the one highlighted button is what tells a
-          // reader what that click commits them to, before they click — the same caption every
-          // secondary entry carries inside the menu.
-          <DocumentActionButton
-            descriptor={descriptor}
-            action={primary}
-            state={state}
-            variant="default"
-            captions
-            className="flex flex-col items-end text-end"
-          />
-        )
-      )}
+      {primarySlot}
 
       {gates.recurrence && recurrenceOpen && (
         <CreateRecurrenceDialog

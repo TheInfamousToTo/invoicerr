@@ -34,8 +34,9 @@ before any payment or credit note. What is still owed on it is in its settlement
   [Identifiers on the PDF](#identifiers-on-the-pdf)); the message names what is missing
   and links to the client
 - **Send**: deliver the invoice through email or, once connected, a country's e-invoicing channel (KSeF, SdI, PDP…). Available both before and after validating; sending an already-validated invoice never re-assigns its number, it only delivers it
-- **Mark as paid** — record payment manually, or use [Bank Reconciliation](bank-reconciliation.md)
-  to confirm one from an imported bank statement
+- **Record payment**: enter a payment received (amount, date, method), or use
+  [Bank Reconciliation](bank-reconciliation.md) to confirm one from an imported bank statement. See
+  [Recording payments](#recording-payments)
 - **Edit** — available only while the invoice is still a **Draft**; once sent, a mistake is fixed with a correction, not a re-edit
 - **Delete** - available only on a **Draft**, after a confirmation; see [Deleting a draft](#deleting-a-draft)
 - **Correct** (scale icon, appears once an invoice is **Validated**, **Sent** or **Send failed**): opens the correction routes for this invoice; see below. This is also where **cancelling** an invoice lives: an invoice that reached "Sent" is never removed, only cancelled, and only where this country's law allows it
@@ -81,7 +82,7 @@ When you type a **Designation**, matching items from your [article catalog](../a
 offered under the field. A small spinner shows at the right of the field while the search is
 running, and the list says so when nothing in the catalog matches.
 
-There is no per-document "Payment Method" field: every enabled [payment method](../billing/payment-methods.md) your company has turned on is printed on the invoice automatically - unless the client has its own [restriction](../clients.md#restricting-payment-methods-for-a-client), in which case only the methods you allowed for that client are printed. The one actually used is only recorded afterwards, when you mark the invoice as paid.
+There is no per-document "Payment Method" field: every enabled [payment method](../billing/payment-methods.md) your company has turned on is printed on the invoice automatically - unless the client has its own [restriction](../clients.md#restricting-payment-methods-for-a-client), in which case only the methods you allowed for that client are printed. The one actually used is only recorded afterwards, when you record the payment.
 
 ### Creating from a quote
 
@@ -135,9 +136,26 @@ Choosing a local cancellation asks you to confirm first: it is irreversible, and
 | --- | --- |
 | **Draft** | Created, not yet sent — editable |
 | **Sending** | Send in progress |
-| **Sent** | Delivered to the client — this is also when **Paid** / **Partially paid** starts being tracked as a balance, shown alongside the status rather than replacing it |
+| **Sent** | Delivered to the client. This is also when the balance starts being tracked (**Unpaid**, **Partially paid**, **Settled**), shown alongside the status rather than replacing it |
 | **Send failed** | The last delivery attempt failed |
 | **Cancelled** | Voided; no longer legally in force |
+
+## Recording payments
+
+**Record payment** is offered on a sent invoice, in its row and on its own page, for as long as
+something is still owed. An invoice can be paid in several instalments: each payment is listed in the
+invoice's settlement panel, and the badge reads **Partially paid** until the balance reaches zero.
+
+Once nothing is owed any more, whether through payments, [credit notes](credit-notes.md) or both, the
+badge reads **Settled** and a green check takes the place of **Record payment**, in the list and on
+the invoice's page. The action is no longer offered there.
+
+:::info[Money received after the invoice is settled]
+A payment that still arrives afterwards, through an online payment link or
+[Bank Reconciliation](bank-reconciliation.md), is recorded rather than refused. The settlement panel
+then shows the amount paid on top as an **Excess**, so you can refund it or issue a
+[credit note](credit-notes.md).
+:::
 
 ## Download formats
 
