@@ -30,8 +30,8 @@ import {
   createBlockedReasons,
   extraActionGates,
   isOfferedOnRecord,
-  pickPrimaryAction,
-  secondaryActions,
+  presentActions,
+  RECORD_PAYMENT_ACTION_ID,
   transitionHint,
 } from "@/components/documents/action-presentation"
 import { ConfirmationDialog } from "@/components/confirmation-dialog"
@@ -47,7 +47,11 @@ import {
 import { ShareLinkDialog } from "@/components/documents/share-link-dialog"
 import { DocumentFieldValue } from "@/components/documents/field-value"
 import { DocumentConformityListIndicator } from "@/components/documents/document-conformity-section"
-import { DocumentSettlementBadge } from "@/components/documents/document-settlement"
+import {
+  DocumentSettlementBadge,
+  SettledMark,
+  useBalanceSettled,
+} from "@/components/documents/document-settlement"
 import { DocumentStatusBadge } from "@/components/documents/document-status-badge"
 import { formatTotal } from "@/components/documents/document-totals"
 import { LtrValue } from "@/components/ui/ltr-value"
@@ -322,19 +326,33 @@ function DocumentRowActions({ descriptor, instance, onActionSuccess, children }:
           isOfferedOnRecord(action, instance.displayNumber) &&
           isActionAvailable(action, instance.status),
       )
-  const primary = pickPrimaryAction(availableActions, instance.status, false)
-  const secondary = secondaryActions(availableActions, primary)
+  const balanceSettled = useBalanceSettled(
+    descriptor.id,
+    instance.id,
+    availableActions.some((action) => action.id === RECORD_PAYMENT_ACTION_ID),
+  )
+  const { primary, secondary, settled } = presentActions(
+    availableActions,
+    instance.status,
+    false,
+    balanceSettled,
+  )
   // A LIST, not a single component — more than one extension may register for the same
   // (type, slot); see custom-slots.ts's own header for why a single `Map.set` used to make the
   // second silently replace the first.
   const customRowExtras = getDocumentCustomComponents(descriptor.id, "list-row-extra")
 
-  const primarySlot = isProcessing ? (
-    <span className="text-sm text-muted-foreground" data-cy={`document-row-processing-${instance.id}`}>
-      {t("documents.list.processing")}
-    </span>
-  ) : (
-    primary && (
+  let primarySlot: ReactNode = null
+  if (isProcessing) {
+    primarySlot = (
+      <span className="text-sm text-muted-foreground" data-cy={`document-row-processing-${instance.id}`}>
+        {t("documents.list.processing")}
+      </span>
+    )
+  } else if (settled) {
+    primarySlot = <SettledMark dataCy={`document-row-settled-${instance.id}`} />
+  } else if (primary) {
+    primarySlot = (
       // `outline`, never `default`: the page's one filled button is "New <type>" in the header. A
       // disabled primary still shows, carrying its reason in a tooltip — a rule reads as a rule,
       // an empty slot reads as a bug (the same call the detail page's header makes).
@@ -363,7 +381,7 @@ function DocumentRowActions({ descriptor, instance, onActionSuccess, children }:
         )}
       </span>
     )
-  )
+  }
 
   const menuSlot = (
     <>

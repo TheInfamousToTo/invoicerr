@@ -1,3 +1,4 @@
+import { Check } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { useDocumentSettlement, usePaymentMethods } from "@/hooks/queries"
@@ -100,6 +101,34 @@ export function DocumentSettlementBadge({
     >
       {t(labelKey)}
     </Badge>
+  )
+}
+
+/** Whether the record's balance is settled. False until the balance has loaded, so the action stays
+ *  offered rather than vanishing on a slow or failed read. */
+export function useBalanceSettled(typeId: string, documentId: string | undefined, enabled: boolean): boolean {
+  const { data } = useDocumentSettlement(typeId, enabled ? documentId : undefined)
+  return data?.settlement.settled === true
+}
+
+/** Stands in the primary action slot once nothing is left to record, in the settled badge's tone. */
+export function SettledMark({ dataCy, className }: Readonly<{ dataCy: string; className?: string }>) {
+  const { t } = useTranslation()
+  const label = t("documents.settlement.badge.settled")
+  return (
+    <span
+      role="img"
+      aria-label={label}
+      title={label}
+      className={cn(
+        "inline-flex size-8 shrink-0 items-center justify-center rounded-full",
+        TONE_CLASSES.success,
+        className,
+      )}
+      data-cy={dataCy}
+    >
+      <Check className="size-4" strokeWidth={2.5} aria-hidden="true" />
+    </span>
   )
 }
 
