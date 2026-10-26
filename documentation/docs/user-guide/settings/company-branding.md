@@ -9,9 +9,9 @@ sidebar_position: 1
 Your business identity — this information appears on every document you issue.
 
 - **Name** (required)
-- **VAT Number** (optional)
-- **Legal ID / SIRET** (optional) — the identifiers offered here depend on your country; see
-  [Country support](../../developer-guide/country-support/index.md)
+- **VAT Number** and **Legal ID**: the identifiers offered here, and the ones you must fill in to
+  save, depend on your country (a SIRET in France, a Partita IVA in Italy, a NIP in Poland, a NIF in
+  Portugal); see [Country support](../../developer-guide/country-support/index.md)
 - **Address** — Street, Address Line 2, Postal Code, City, State / Province, Country
 - **Email** and **Phone**
 - **Currency** — default currency for new documents
