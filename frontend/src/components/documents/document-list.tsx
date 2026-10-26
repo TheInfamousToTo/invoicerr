@@ -1,6 +1,7 @@
 import {
   Download,
   Ellipsis,
+  Eye,
   FileCode,
   FileDown,
   FileStack,
@@ -43,6 +44,7 @@ import {
   downloadDocumentOriginal,
   downloadDocumentPdf,
   downloadDocumentXml,
+  previewDocumentPdf,
 } from "@/components/documents/document-downloads"
 import { ShareLinkDialog } from "@/components/documents/share-link-dialog"
 import { DocumentFieldValue } from "@/components/documents/field-value"
@@ -377,7 +379,7 @@ function DocumentRowActions({ descriptor, instance, onActionSuccess, children }:
         <CustomExtra key={CustomExtra.name} descriptor={descriptor} instance={instance} />
       ))}
 
-      {/* Always present: the PDF download alone earns the menu its place on every saved row.
+      {/* Always present: the PDF actions alone earn the menu its place on every saved row.
           `Tooltip` wraps the trigger from OUTSIDE (three nested `asChild` Slots onto one real
           <button>) rather than through `Button`'s own `tooltip` prop, which would wrap the DOM
           node in a component `DropdownMenuTrigger asChild` cannot clone — see sidebar.tsx's own
@@ -432,8 +434,15 @@ function DocumentRowActions({ descriptor, instance, onActionSuccess, children }:
           {secondary.length > 0 && <DropdownMenuSeparator />}
 
           <DropdownMenuItem
-            onSelect={() => void downloadDocumentPdf(descriptor.id, instance.id, t)}
+            onSelect={() => void previewDocumentPdf(descriptor.id, instance.id, t)}
             data-cy={`document-pdf-button-${instance.id}`}
+          >
+            <Eye aria-hidden="true" />
+            {t("documents.list.previewPdf")}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => void downloadDocumentPdf(descriptor, instance, t)}
+            data-cy={`document-pdf-download-button-${instance.id}`}
           >
             <Download aria-hidden="true" />
             {t("documents.list.downloadPdf")}

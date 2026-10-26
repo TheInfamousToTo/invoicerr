@@ -1,4 +1,14 @@
-import { ArrowLeft, ChevronDown, Download, FileCode, FileDown, Link2, Repeat, UserCheck } from "lucide-react"
+import {
+  ArrowLeft,
+  ChevronDown,
+  Download,
+  Eye,
+  FileCode,
+  FileDown,
+  Link2,
+  Repeat,
+  UserCheck,
+} from "lucide-react"
 import { useState } from "react"
 import { Link, useNavigate } from "react-router"
 import { useTranslation } from "react-i18next"
@@ -28,6 +38,7 @@ import {
   downloadDocumentOriginal,
   downloadDocumentPdf,
   downloadDocumentXml,
+  previewDocumentPdf,
 } from "@/components/documents/document-downloads"
 import {
   DocumentActionButton,
@@ -639,7 +650,7 @@ function DocumentDetailActions({
         <CustomExtra key={CustomExtra.name} descriptor={descriptor} instance={instance} />
       ))}
 
-      {/* Always present: the PDF download alone earns the menu its place on every saved record. */}
+      {/* Always present: the PDF actions alone earn the menu its place on every saved record. */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button type="button" variant="outline" dataCy="document-actions-menu">
@@ -683,8 +694,15 @@ function DocumentDetailActions({
           {secondary.length > 0 && <DropdownMenuSeparator />}
 
           <DropdownMenuItem
-            onSelect={() => void downloadDocumentPdf(descriptor.id, instance.id, t)}
+            onSelect={() => void previewDocumentPdf(descriptor.id, instance.id, t)}
             data-cy="document-pdf-button"
+          >
+            <Eye aria-hidden="true" />
+            {t("documents.list.previewPdf")}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => void downloadDocumentPdf(descriptor, instance, t)}
+            data-cy="document-pdf-download-button"
           >
             <Download aria-hidden="true" />
             {t("documents.list.downloadPdf")}

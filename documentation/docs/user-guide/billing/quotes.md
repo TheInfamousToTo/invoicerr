@@ -12,7 +12,7 @@ The **Quotes** page is where you create estimates, send them to clients for sign
 - **Search** — find a quote by its number or client name
 - **Filter** — toggle the status chips: **Draft**, **Sending**, **Sent**, **Send failed**, **Signed**, **Refused**
 - **View** (eye icon) — read-only details
-- **View PDF** / **Download PDF** — preview or save the quote as `quote-{number}.pdf`
+- **Preview PDF** / **Download PDF** - open the quote's PDF in a new tab, or save it under the quote's number, for example `QUOTE-2026-0001.pdf` (see [PDF file name](invoices.md#pdf-file-name))
 - **Edit** (pencil icon) — available while the quote isn't signed
 - **Send for signature** (signature icon) — email the client a secure signing link; click again to resend
 - **Create invoice** (plus icon) — appears once a quote is **Signed**, turning it into an invoice

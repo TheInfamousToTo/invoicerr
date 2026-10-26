@@ -17,7 +17,8 @@ before any payment or credit note. What is still owed on it is in its settlement
 - **Search** — find an invoice by its number or client name
 - **Filter**: toggle the status chips: **Draft**, **Validated**, **Sending**, **Sent**, **Send failed**, **Cancelled**, **Imported**
 - **View** (eye icon) — read-only details
-- **Download** - a plain **PDF** is always available; once the invoice has been numbered, **Download normalized XML** adds **CII**, **UBL**, **Factur-X**, **FA(3)** (Polish KSeF), **FatturaPA** (Italian SdI), **Peppol BIS Billing 3.0**, and **XRechnung**. An **Imported** invoice also offers **Download original** - see [Migrating from another tool](migrating-from-another-tool.md#downloading-the-original)
+- **Preview PDF** / **Download PDF** - open the invoice's PDF in a new tab, or save it to your computer as a file named after the invoice's number (see [PDF file name](#pdf-file-name))
+- **Download normalized XML** - once the invoice has been numbered: **CII**, **UBL**, **Factur-X**, **FA(3)** (Polish KSeF), **FatturaPA** (Italian SdI), **Peppol BIS Billing 3.0**, and **XRechnung**. An **Imported** invoice also offers **Download original** - see [Migrating from another tool](migrating-from-another-tool.md#downloading-the-original)
 - **Validate** - assign the invoice's legal number and lock it, without sending anything. A warning
   appears first: this is final, correct a mistake with a credit note afterwards, the same as for a sent
   invoice. For a French domestic invoice to a business client, or any Italian domestic invoice,
@@ -150,6 +151,14 @@ Choosing a local cancellation asks you to confirm first: it is irreversible, and
 | **FatturaPA** | Italian SdI national schema |
 | **Peppol BIS Billing 3.0** | Pan-European Peppol network format |
 | **XRechnung** | German public-sector e-invoicing (KoSIT) |
+
+### PDF file name
+
+**Download PDF** saves the file under the document's number, for example `INVOICE-2026-0001.pdf`. A
+document with no number yet (a draft) is saved as its type, status and the first eight characters of
+its identifier, for example `Invoice Draft cmvoks8p.pdf`. Characters a file name cannot hold, such as
+`/`, become `-`. **Preview PDF** saves nothing: it opens the same PDF in a new browser tab. The same
+rule applies to every document type.
 
 ## Identifiers on the PDF
 

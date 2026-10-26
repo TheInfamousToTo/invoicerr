@@ -26,7 +26,8 @@ A credit note reaches its client through the invoice it corrects; the type carri
 - **Search** - find a credit note by its number or client name
 - **Filter** - toggle the status chips: **Draft**, **Sending**, **Sent**, **Send failed**, **Imported**
 - **View** (eye icon) - read-only details
-- **Download** - PDF, and once numbered, the same normalized XML formats as an [invoice](invoices.md#download-formats). An **Imported** credit note also offers **Download original** - see [Migrating from another tool](migrating-from-another-tool.md#downloading-the-original)
+- **Preview PDF** / **Download PDF** - open the credit note's PDF in a new tab, or save it under the credit note's number (see [PDF file name](invoices.md#pdf-file-name))
+- **Download normalized XML** - once numbered, the same normalized XML formats as an [invoice](invoices.md#download-formats). An **Imported** credit note also offers **Download original** - see [Migrating from another tool](migrating-from-another-tool.md#downloading-the-original)
 - **Send** - issue the credit note: it is delivered on the invoice's own channel (email or e-invoicing) and archived. There is no separate "edit after issued" action; a mistake here is fixed with a further credit note
 - **Delete** - available only on a **Draft**, after a confirmation; see [Deleting a draft](#deleting-a-draft)
 

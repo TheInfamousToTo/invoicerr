@@ -306,7 +306,7 @@ export function numberingDisplayState(
 /** `statuses[].label` for `statusId`, falling back to the raw id when the descriptor names no
  *  lifecycle at all or this particular status isn't in it — the same "degrade honestly, never
  *  crash" rule the rest of this generic model already holds for a descriptor/data mismatch. */
-export function statusLabel(descriptor: DocumentTypeDescriptor, statusId: string): string {
+export function statusLabel(descriptor: Pick<DocumentTypeDescriptor, "statuses">, statusId: string): string {
   return descriptor.statuses?.find((s) => s.id === statusId)?.label ?? statusId
 }
 
