@@ -66,6 +66,7 @@ const UNDECLARED_DISTANCE_SALES_REGIME = "__undeclared__"
  *  legitimately empty ("use the computed per-country default"), not merely a loading placeholder. */
 const USE_DEFAULT_REVENUE_BASIS = "__default_basis__"
 const USE_DEFAULT_REVENUE_PERIOD = "__default_period__"
+const UNDECLARED_PROFILE_VALUE = "__undeclared__"
 
 export default function CompanySettings() {
   const { t, i18n } = useTranslation()
@@ -149,6 +150,7 @@ export default function CompanySettings() {
     // backend's Company.distanceSalesRegime comment). Same "empty stays empty, the backend decides
     // what that blocks" shape as invoiceTransportId below.
     distanceSalesRegime: z.string().optional(),
+    reportingProfile: z.record(z.string(), z.string().optional()).optional(),
     identifiers: z.array(z.object({ scheme: z.string(), value: z.string() })).optional(),
     // Peppol / electronic routing (stored as PEPPOL_ENDPOINT party identifier)
     peppolSchemeId: z.string().optional(),
@@ -190,6 +192,7 @@ export default function CompanySettings() {
   })
 
   const { data } = useGet<Company>("/api/company/info")
+  const profileAttributes = data?.companyProfileAttributes ?? []
   // Issue #516 - the RESOLVED basis/period (this company's own explicit choice, or the computed
   // per-country default) plus whether each is explicit, so the select below can show "using the
   // default (<reason>)" without duplicating the backend's own per-country table client-side.
@@ -217,6 +220,7 @@ export default function CompanySettings() {
       description: "",
       exemptVat: false,
       distanceSalesRegime: "",
+      reportingProfile: {},
       foundedAt: new Date(),
       currency: "",
       address: "",
@@ -277,6 +281,7 @@ export default function CompanySettings() {
         foundedAt: fromCalendarDate(data.foundedAt) ?? new Date(data.foundedAt),
         exemptVat: !!data.exemptVat,
         distanceSalesRegime: data.distanceSalesRegime ?? "",
+        reportingProfile: data.reportingProfile ?? {},
         remindersEnabled: !!data.remindersEnabled,
         iban: data.iban ?? "",
         invoiceTransportId: data.invoiceTransportId ?? "",
@@ -477,10 +482,24 @@ export default function CompanySettings() {
       peppolEndpointId: _pe,
       approvalThreshold,
       reconciliationTolerancePercent,
+      reportingProfile,
       ...valuesWithoutPeppol
     } = values
+    // The attributes on screen belong to the saved country; after a country change the backend
+    // drops what the new country does not ask for, so nothing is sent until the next visit.
+    const sameCountry =
+      (values.countryCode || "") === (data?.countryCode || "") && values.country === data?.country
     const payload = {
       ...valuesWithoutPeppol,
+      reportingProfile:
+        sameCountry && profileAttributes.length > 0
+          ? Object.fromEntries(
+              profileAttributes.map((attribute) => [
+                attribute.key,
+                reportingProfile?.[attribute.key] || null,
+              ]),
+            )
+          : undefined,
       identifiers: [
         ...(values.identifiers || []).filter((i) => i.value.trim() !== ""),
         ...(peppolEntry ? [peppolEntry] : []),
@@ -1294,6 +1313,59 @@ export default function CompanySettings() {
               )}
             />
           </SettingsSection>
+
+          {profileAttributes.length > 0 && (
+            <SettingsSection
+              title={t("settings.company.profile.title")}
+              description={t("settings.company.profile.description")}
+              contentClassName="grid gap-5 sm:grid-cols-2"
+            >
+              {profileAttributes.map((attribute) => (
+                <FormField
+                  key={attribute.key}
+                  control={form.control}
+                  name={`reportingProfile.${attribute.key}`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel description={attribute.help}>{attribute.label}</FormLabel>
+                      <Select
+                        value={field.value ? field.value : UNDECLARED_PROFILE_VALUE}
+                        // Radix fires a spurious "" when the stored value arrives after mount; a
+                        // real pick is never "", so it is dropped (same as invoiceTransportId).
+                        onValueChange={(value) => {
+                          if (value) field.onChange(value === UNDECLARED_PROFILE_VALUE ? "" : value)
+                        }}
+                      >
+                        <FormControl>
+                          <SelectTrigger
+                            className="w-full"
+                            data-cy={`company-profile-${attribute.key}-select`}
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value={UNDECLARED_PROFILE_VALUE}>
+                            {t("settings.company.profile.notDeclared")}
+                          </SelectItem>
+                          {attribute.values.map((option) => (
+                            <SelectItem
+                              key={option.value}
+                              value={option.value}
+                              data-cy={`company-profile-${attribute.key}-option-${option.value}`}
+                            >
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ))}
+            </SettingsSection>
+          )}
 
           <SettingsSection
             title={t("settings.company.approval.title")}

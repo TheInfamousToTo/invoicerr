@@ -35,6 +35,7 @@
  * file loader (a test, a future caller) must be refused too, never trusted just because it constructed
  * fine as an object literal.
  */
+import { assertWellFormedProfileCondition, ProfileCondition } from '../../company-profile/schema';
 import { PARTY_TYPES, PartyType } from '../../country-identifiers/schema';
 import { PolicyProvenance } from '../../country-policy/schema';
 
@@ -51,9 +52,12 @@ export interface ChannelPolicyScope {
   parties?: ChannelPolicyParties;
   /** The buyer types the fact binds; a buyer of another type is outside it. */
   buyerType?: PartyType[];
+  /** The sellers the fact binds, read from the company profile. A seller that has not declared an
+   *  attribute the condition names is bound. */
+  seller?: ProfileCondition;
 }
 
-const SCOPE_KEYS = ['parties', 'buyerType'];
+const SCOPE_KEYS = ['parties', 'buyerType', 'seller'];
 
 export interface ChannelPolicyFact {
   /** A `documents/transports/transport-registry.ts` id — e.g. "pdp". Deliberately NOT validated
@@ -201,6 +205,9 @@ export function assertValidChannelPolicyFact(fact: ChannelPolicyFact, context: s
             `"${String(unknownType)}" - expected one of ${PARTY_TYPES.join(', ')}.`,
         );
       }
+    }
+    if (scope.seller !== undefined) {
+      assertWellFormedProfileCondition(scope.seller, `${context}: fact "${fact.providerId}" "scope.seller"`);
     }
     if (Object.keys(scope).length === 0) {
       throw new InvalidChannelPolicyProvenanceError(

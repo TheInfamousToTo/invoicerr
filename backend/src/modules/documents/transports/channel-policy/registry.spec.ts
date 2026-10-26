@@ -8,12 +8,20 @@ import { ALL_CHANNEL_POLICY_FILES } from './data/all';
 import { ChannelPolicyCatalog, defaultChannelPolicyCatalog } from './registry';
 
 describe('channel policy files — loaded, not hard-coded', () => {
-  it('FR mandates the "pdp" provider from 2026-09-01 — a fact read from data/fr.json, not a branch in code', () => {
+  it('FR mandates the "pdp" provider from 2026-09-01 for large and mid-size sellers, from 2027-09-01 for SMEs and micro-enterprises', () => {
     expect(defaultChannelPolicyCatalog.factsFor('FR')).toEqual([
       expect.objectContaining({
         providerId: 'pdp',
         requirement: 'mandated',
         mandatedFrom: '2026-09-01',
+        scope: expect.objectContaining({ seller: { sizeCategory: ['LARGE', 'MID'] } }),
+        provenance: expect.objectContaining({ kind: 'legal' }),
+      }),
+      expect.objectContaining({
+        providerId: 'pdp',
+        requirement: 'mandated',
+        mandatedFrom: '2027-09-01',
+        scope: expect.objectContaining({ seller: { sizeCategory: ['SME', 'MICRO'] } }),
         provenance: expect.objectContaining({ kind: 'legal' }),
       }),
     ]);
@@ -224,6 +232,29 @@ describe('channel policy files — loaded, not hard-coded', () => {
         'fixture',
       ),
     ).toThrow(/empty "scope.buyerType"/);
+  });
+
+  it('a "scope.seller" that is not an object, names no attribute, or lists no value is REJECTED at load', () => {
+    const withSeller = (seller: unknown) => () =>
+      assertValidChannelPolicyFact(
+        {
+          providerId: 'pdp',
+          requirement: 'mandated',
+          mandatedFrom: '2026-09-01',
+          scope: { seller } as never,
+          provenance: { kind: 'legal', sourceText: 'Some exact legal text.', sourceCheckedAt: '2026-08-27' },
+        },
+        'fixture',
+      );
+
+    expect(withSeller(['SME'])).toThrow(/a seller condition must be an object/);
+    expect(withSeller({})).toThrow(/a seller condition names no attribute/);
+    expect(withSeller({ sizeCategory: [] })).toThrow(
+      /seller condition "sizeCategory" must list at least one value/,
+    );
+    expect(withSeller({ sizeCategory: 'SME' })).toThrow(
+      /seller condition "sizeCategory" must list at least one value/,
+    );
   });
 
   it('the two shipped mandates both declare `scope.parties: "domestic"` - the statutory restriction each one quotes', () => {

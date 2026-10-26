@@ -18,6 +18,8 @@
 import prisma from '@/prisma/prisma.service';
 import { guessCountryCode } from '@/utils/country-name-to-iso';
 
+import { parseCompanyProfileValues } from '../company-profile/profile';
+import { CompanyProfileValues } from '../company-profile/schema';
 import { PartyType } from '../country-identifiers/schema';
 import { defaultCountryPolicyCatalog } from './registry';
 
@@ -119,6 +121,15 @@ export async function resolveClientType(
     select: { type: true },
   });
   return client?.type;
+}
+
+/** The issuing company's declared profile values; empty when it declared none. */
+export async function resolveCompanyProfile(companyId: string): Promise<CompanyProfileValues> {
+  const company = await prisma.company.findUnique({
+    where: { id: companyId },
+    select: { reportingProfile: true },
+  });
+  return parseCompanyProfileValues(company?.reportingProfile);
 }
 
 type DocumentCountryActionRuleRow = Awaited<
