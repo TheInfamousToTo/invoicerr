@@ -28,6 +28,20 @@ To widen that coverage, or to add a country of your own, see [Adding a
 country](../adding-a-country.md): the catalogue files listed on every other page in this directory
 are the ones Poland already has.
 
+## NIP
+
+Art. 106e ust. 1 of the VAT act asks every invoice for the seller's tax number (pkt 4) and for the
+number under which the buyer received the supply (pkt 5). For a Polish business both are its NIP, the
+`LEGAL_ID` scheme of the `identifiers` section of `countries/data/pl.json`. The scheme applies to a
+company only and is `required: true`: your company's NIP must be filled in to save Settings or finish
+onboarding, and a Polish company client's NIP to save the client. A private client has no NIP and is
+not offered the field.
+
+:::info[Clients saved before]
+A Polish company client saved without its NIP keeps its record. The client form asks for it at the
+next edit, and Validate and Send keep refusing an invoice to it until it is filled in.
+:::
+
 ## KSeF and private buyers
 
 Art. 106ga ust. 2 pkt 4 of the VAT act lifts the KSeF obligation for an invoice « na rzecz nabywcy

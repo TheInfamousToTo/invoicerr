@@ -23,6 +23,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { ComposedCountryView, COMPOSED_COUNTRY_SECTION_KEYS } from '../compose';
+import { formDriftsFrom } from '../../country-identifiers/schema';
 import { ALL_COMPOSED_COUNTRY_FILES, loadComposedCountryFilesFrom } from './all';
 
 const DATA_DIR = __dirname;
@@ -201,6 +202,121 @@ describe('countries/data: invoice identifier requirements are checked at load ti
     writeRule({ party: 'BUYER', scheme: 'VAT', when: { invoiceTotalAbove: [150] }, provenance });
 
     expect(() => loadComposedCountryFilesFrom(tmpDir)).toThrow(/invoiceTotalAbove/);
+  });
+});
+
+describe('countries/data: the forms require what every invoice requires', () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(join(tmpdir(), 'countries-data-form-drift-'));
+  });
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  const provenance = { kind: 'legal', sourceText: 'Fixture statutory text.', sourceCheckedAt: '2026-10-23' };
+  const legalId = (facts: Record<string, unknown> = {}) => ({
+    scheme: 'LEGAL_ID',
+    appliesTo: 'BOTH',
+    label: 'Fixture number',
+    required: false,
+    provenance,
+    ...facts,
+  });
+  const domesticCompanyBuyer = { buyerType: ['COMPANY'], buyerEstablishment: ['DOMESTIC'] };
+
+  function writeIdentifiers(schemes: unknown[], invoiceRequirements: unknown[]): void {
+    writeFileSync(
+      join(tmpDir, 'zz.json'),
+      JSON.stringify({ countryCode: 'ZZ', identifiers: { countryCode: 'ZZ', schemes, invoiceRequirements } }),
+      'utf-8',
+    );
+  }
+
+  it('refuses a scheme every domestic business buyer must carry that a company client may leave empty', () => {
+    writeIdentifiers(
+      [legalId()],
+      [{ party: 'BUYER', scheme: 'LEGAL_ID', when: domesticCompanyBuyer, provenance }],
+    );
+
+    expect(() => loadComposedCountryFilesFrom(tmpDir)).toThrow(/"LEGAL_ID".*BUYER.*COMPANY/);
+  });
+
+  it('refuses a scheme every seller must carry that the company settings may leave empty', () => {
+    writeIdentifiers([legalId()], [{ party: 'SELLER', scheme: 'LEGAL_ID', provenance }]);
+
+    expect(() => loadComposedCountryFilesFrom(tmpDir)).toThrow(/"LEGAL_ID".*SELLER.*COMPANY/);
+  });
+
+  it('refuses a scheme every invoice requires that the file does not declare', () => {
+    writeIdentifiers([], [{ party: 'SELLER', scheme: 'LEGAL_ID', provenance }]);
+
+    expect(() => loadComposedCountryFilesFrom(tmpDir)).toThrow(/"LEGAL_ID".*not declared/);
+  });
+
+  it('names every drift of the file in one refusal', () => {
+    writeIdentifiers(
+      [legalId({ required: true, requiredFor: ['COMPANY'] })],
+      [
+        { party: 'SELLER', scheme: 'VAT', provenance },
+        { party: 'BUYER', scheme: 'LEGAL_ID', when: { buyerType: ['INDIVIDUAL'] }, provenance },
+      ],
+    );
+
+    expect(() => loadComposedCountryFilesFrom(tmpDir)).toThrow(/"VAT"[\s\S]*"LEGAL_ID".*INDIVIDUAL/);
+  });
+
+  it('treats a condition listing every value of its axis as no condition', () => {
+    writeIdentifiers(
+      [legalId()],
+      [
+        {
+          party: 'SELLER',
+          scheme: 'LEGAL_ID',
+          when: { sellerVatRegime: ['STANDARD', 'FRANCHISE_BASE'] },
+          provenance,
+        },
+      ],
+    );
+
+    expect(() => loadComposedCountryFilesFrom(tmpDir)).toThrow(/"LEGAL_ID".*SELLER.*COMPANY/);
+  });
+
+  it('loads a file whose forms require every scheme its invoices always require, per party type', () => {
+    writeIdentifiers(
+      [legalId({ required: true, requiredFor: ['COMPANY'] })],
+      [
+        { party: 'SELLER', scheme: 'LEGAL_ID', provenance },
+        { party: 'BUYER', scheme: 'LEGAL_ID', when: domesticCompanyBuyer, provenance },
+      ],
+    );
+
+    expect(() => loadComposedCountryFilesFrom(tmpDir)).not.toThrow();
+  });
+
+  it.each([
+    ['a seller under one VAT regime', { party: 'SELLER', when: { sellerVatRegime: ['STANDARD'] } }],
+    ['a seller invoicing one type of buyer', { party: 'SELLER', when: { buyerType: ['COMPANY'] } }],
+    [
+      'a buyer in another member state',
+      { party: 'BUYER', when: { buyerEstablishment: ['OTHER_UNION_MEMBER'] } },
+    ],
+    [
+      'a buyer of a seller under one VAT regime',
+      { party: 'BUYER', when: { sellerVatRegime: ['FRANCHISE_BASE'] } },
+    ],
+  ])('leaves the field optional when the rule binds only %s', (_label, rule) => {
+    writeIdentifiers([legalId()], [{ scheme: 'LEGAL_ID', provenance, ...rule }]);
+
+    expect(() => loadComposedCountryFilesFrom(tmpDir)).not.toThrow();
+  });
+
+  it.each(
+    Object.entries(independentlyParsedFiles()).filter(([, file]) => file.identifiers),
+  )('shipped %s.json: no drift', (_countryCode, file) => {
+    expect(formDriftsFrom(file.identifiers!)).toEqual([]);
   });
 });
 

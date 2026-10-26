@@ -40,8 +40,14 @@ const EXPECTED: Record<string, { form: Asked; issuance: Asked }> = {
     issuance: { COMPANY: ['LEGAL_ID'], INDIVIDUAL: [] },
   },
   // The codice fiscale is a personal tax code, owed on the invoice of an Italian private buyer.
-  IT: { form: { COMPANY: [], INDIVIDUAL: [] }, issuance: { COMPANY: ['VAT'], INDIVIDUAL: ['LEGAL_ID'] } },
-  PL: { form: { COMPANY: [], INDIVIDUAL: [] }, issuance: { COMPANY: ['LEGAL_ID'], INDIVIDUAL: [] } },
+  IT: {
+    form: { COMPANY: ['VAT'], INDIVIDUAL: ['LEGAL_ID'] },
+    issuance: { COMPANY: ['VAT'], INDIVIDUAL: ['LEGAL_ID'] },
+  },
+  PL: {
+    form: { COMPANY: ['LEGAL_ID'], INDIVIDUAL: [] },
+    issuance: { COMPANY: ['LEGAL_ID'], INDIVIDUAL: [] },
+  },
   PT: {
     form: { COMPANY: ['LEGAL_ID'], INDIVIDUAL: [] },
     issuance: { COMPANY: ['LEGAL_ID'], INDIVIDUAL: [] },

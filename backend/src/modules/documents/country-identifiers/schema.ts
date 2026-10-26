@@ -301,3 +301,58 @@ export function assertValidInvoiceRequirement(rule: InvoiceIdentifierRequirement
   }
   assertValidProvenance(rule, context);
 }
+
+/** Company settings and onboarding read a seller's own schemes as a COMPANY's. */
+const SELLER_FORM_PARTY_TYPE: PartyType = 'COMPANY';
+
+function coversEveryValue(listed: readonly string[] | undefined, axis: keyof InvoiceIdentifierCondition) {
+  return !listed || CONDITION_VALUES[axis].every((value) => listed.includes(value));
+}
+
+/**
+ * The party types of this country a rule requires its scheme of on every invoice a seller of this
+ * country issues, whatever the transaction: as the seller, or as a domestic buyer.
+ */
+function partyTypesAlwaysBound(rule: InvoiceIdentifierRequirement): PartyType[] {
+  const when = rule.when ?? {};
+  if (!coversEveryValue(when.sellerVatRegime, 'sellerVatRegime')) return [];
+  if (rule.party === 'SELLER') {
+    const everyBuyer = coversEveryValue(when.buyerType, 'buyerType') && !when.buyerEstablishment;
+    return everyBuyer ? [SELLER_FORM_PARTY_TYPE] : [];
+  }
+  if (when.buyerEstablishment && !when.buyerEstablishment.includes('DOMESTIC')) return [];
+  return when.buyerType ?? [...PARTY_TYPES];
+}
+
+/**
+ * Every scheme an invoice rule always requires of a party type that the forms let that party type
+ * leave empty, which would surface only at Validate.
+ */
+export function formDriftsFrom(file: CountryIdentifierRequirementsFile): string[] {
+  const drifts = new Set<string>();
+  for (const rule of file.invoiceRequirements ?? []) {
+    const fact = file.schemes.find((scheme) => scheme.scheme === rule.scheme);
+    const formRequires = fact ? requiredPartyTypes(fact) : [];
+    for (const partyType of partyTypesAlwaysBound(rule)) {
+      if (formRequires.includes(partyType)) continue;
+      const gap = fact ? `is not required for ${partyType}` : 'is not declared';
+      drifts.add(
+        `scheme "${rule.scheme}" is required of every ${rule.party} of type ${partyType} by ` +
+          `invoiceRequirements but ${gap} in schemes`,
+      );
+    }
+  }
+  return [...drifts];
+}
+
+export class IdentifierFormDriftError extends Error {}
+
+/** A party saved without a scheme its invoices always require would be refused only at Validate. */
+export function assertFormRequiresInvoiceIdentifiers(
+  file: CountryIdentifierRequirementsFile,
+  context: string,
+): void {
+  const drifts = formDriftsFrom(file);
+  if (drifts.length === 0) return;
+  throw new IdentifierFormDriftError(`${context}: ${drifts.join('; ')}.`);
+}

@@ -57,10 +57,13 @@ enabled on your instance, picking one fills the whole block.
 - **Currency**: overrides your company's default currency for this client
 - **Country-specific identifiers**: the identifiers your client's country asks for (for example a
   SIREN or SIRET in France, a NIF in Portugal). The ones marked as required must be filled in to save
-  the client from this wizard. What is required depends on the client type: a French SIREN or a
-  Portuguese NIF is required of a company, while an individual may leave it empty (a private person
-  in France has no SIREN, and a Portuguese private client's NIF goes on the invoice only when they
-  ask for it). Every identifier you fill in is printed on the client's documents. Where
+  the client from this wizard. What is required depends on the client type: a French SIREN, a
+  Portuguese NIF, an Italian Partita IVA or a Polish NIP is required of a company, while an
+  individual may leave it empty (a private person in France has no SIREN, and a Portuguese private
+  client's NIF goes on the invoice only when they ask for it). An Italian individual must give a
+  codice fiscale instead. A client saved before its country required one of these keeps its record,
+  and the wizard asks for the missing identifier the next time you edit it. Every identifier you fill
+  in is printed on the client's documents. Where
   your instance supports it, **Look up** fills the client's name, address and founded date from the
   official business registry
 - **Peppol**: an optional electronic routing address

@@ -50,6 +50,29 @@ the same comma provides for e-invoices issued to final consumers. The `sdi` fact
 no `scope.buyerType`: an Italian invoice to a client of type Individual still goes through SdI, and
 Validate still transmits it.
 
+## Partita IVA and codice fiscale
+
+DPR 633/1972 art. 21, comma 2 asks every invoice for the seller's Partita IVA (lettera d) and, for
+the buyer (lettera f), its Partita IVA, the VAT number of its own member state when it is established
+elsewhere in the Union, or its codice fiscale when it is resident in Italy and does not act as a
+business. The `identifiers` section of `countries/data/it.json` encodes it with the party's type
+standing in for "acts as a business", which the app does not record:
+
+| Party | Must be filled in to save | Scheme |
+| --- | --- | --- |
+| Your company (Settings, onboarding) | Partita IVA | `VAT`, `required: true` |
+| Company client | Partita IVA | `VAT`, `required: true` |
+| Individual client | Codice fiscale | `LEGAL_ID`, `requiredFor: ["INDIVIDUAL"]` |
+
+A company client may leave the codice fiscale empty, and an individual client is not offered a
+Partita IVA field. A sole trader entered as an individual is therefore asked for a codice fiscale,
+not a Partita IVA.
+
+:::info[Clients saved before]
+An Italian client saved without the number keeps its record. The client form asks for it at the next
+edit, and Validate and Send keep refusing an invoice to it until it is filled in.
+:::
+
 This page is a pointer by design. Everything Invoicerr knows about Italy lives in its own data
 files, and two pages already say it without anyone retyping it:
 

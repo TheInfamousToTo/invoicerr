@@ -543,6 +543,29 @@ for a VAT-registered seller and one for an intra-Community B2B sale, which appli
 franchise. `countries/data/all.ts` refuses an unknown party, axis or value at load time
 (`assertValidInvoiceRequirement`), since a condition no code evaluates would silently never match.
 
+The two must not drift apart: a party saved without a number every invoice asks of it would only be
+refused at Validate. `countries/data/all.ts` therefore refuses, at load time, a file in which a rule
+always binds a party type that the scheme's `required` / `requiredFor` leaves free
+(`assertFormRequiresInvoiceIdentifiers`, `country-identifiers/schema.ts`). A rule always binds:
+
+| Rule | Party type it binds | Form that must require the scheme |
+| --- | --- | --- |
+| `SELLER`, no `buyerType` or `buyerEstablishment` condition | `COMPANY` | Company settings and onboarding |
+| `BUYER`, `buyerEstablishment` absent or listing `DOMESTIC` | each `buyerType` listed, both when absent | Client wizard and client CSV import |
+
+A `sellerVatRegime` or `buyerType` condition listing every value counts as absent; any other
+`sellerVatRegime` condition makes the rule conditional, and so does a `BUYER` rule for another member
+state only. A conditional rule is left to Validate. The refusal names every drift of the file at once,
+for example:
+
+```text
+documents/countries/data/pl.json#identifiers: scheme "LEGAL_ID" is required of every BUYER of type
+COMPANY by invoiceRequirements but is not required for COMPANY in schemes.
+```
+
+Fix the scheme, not the rule: set `required` (and `requiredFor` when only some party types are bound)
+with the same legal source the rule quotes.
+
 What the PDF does with them (`country-identifiers/printed-identifiers.ts`): each party block prints
 every identifier the party has filled in, required or not. On a working copy of an invoice (a draft,
 or any copy that still prints its status), every identifier these rules require that is still empty

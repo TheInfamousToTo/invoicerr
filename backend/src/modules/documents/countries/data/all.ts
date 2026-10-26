@@ -34,6 +34,7 @@ import {
   assertValidRevenueBasisDefaultFact,
 } from '../../country-policy/schema';
 import {
+  assertFormRequiresInvoiceIdentifiers,
   assertPatternIsExplainable,
   assertValidEinvoiceFacts,
   assertValidRequiredFor,
@@ -153,6 +154,7 @@ function validateIdentifiersSection(
   for (const rule of identifiers.invoiceRequirements ?? []) {
     assertValidInvoiceRequirement(rule, `${filePath}#identifiers`);
   }
+  assertFormRequiresInvoiceIdentifiers(identifiers, `${filePath}#identifiers`);
 }
 
 function validateCorrectionRoutesSection(
