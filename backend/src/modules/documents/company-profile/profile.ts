@@ -46,7 +46,7 @@ export function applyCompanyProfileInput(
     if (typeof value !== 'string' || !attribute.values.some((entry) => entry.value === value)) {
       throw new InvalidCompanyProfileValueError(
         `reportingProfile.${key} must be one of ${attribute.values.map((entry) => entry.value).join(', ')}, ` +
-          `not "${String(value)}".`,
+          `not ${JSON.stringify(value)}.`,
       );
     }
     next[key] = value;

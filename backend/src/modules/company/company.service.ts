@@ -178,7 +178,7 @@ function nextReportingProfile(
 ): CompanyProfileValues | undefined {
   const existingCountry = resolveCountryCode(existing.countryCode, existing.country);
   const nextCountry = resolveCountryCode(
-    input.countryCode !== undefined ? input.countryCode : existing.countryCode,
+    input.countryCode === null ? null : (input.countryCode ?? existing.countryCode),
     input.country ?? existing.country,
   );
   if (input.reportingProfile === undefined && nextCountry === existingCountry) return undefined;
