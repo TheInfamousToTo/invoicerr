@@ -191,7 +191,9 @@ describe("Default due date", () => {
 
 		cy.get('[data-cy="payment-terms-invoice-days-input"]').clear();
 		cy.get('[data-cy="payment-terms-invoice-days-input"]').type("90");
+		cy.intercept("POST", `${api}/api/company/info`).as("savePaymentTerms");
 		cy.get('[data-cy="payment-terms-save-button"]').click();
+		cy.wait("@savePaymentTerms").its("response.statusCode").should("be.oneOf", [200, 201]);
 		cy.request(`${api}/api/company/payment-terms`)
 			.its("body")
 			.should((terms) => {
