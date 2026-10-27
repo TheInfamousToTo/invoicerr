@@ -24,12 +24,12 @@ function DemoCredentialsNotice({
   loading,
   disabled,
   onTry,
-}: {
+}: Readonly<{
   demo: DemoInstanceView
   loading: boolean
   disabled: boolean
   onTry: () => void
-}) {
+}>) {
   const { t } = useTranslation()
   return (
     <Alert variant="default" className="mb-4" data-cy="demo-credentials-notice">
