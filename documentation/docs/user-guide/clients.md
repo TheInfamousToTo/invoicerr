@@ -31,7 +31,7 @@ and you can go back at any time without losing what you typed.
 | **Company** | Company name |
 | **Individual** | First name and last name |
 | Any client | Country, street address and city |
-| Any client | The identifiers marked as required for the client's country |
+| Any client | The identifiers the client's country marks as required for its type |
 
 Everything else is optional, including the postal code, the email and the phone number.
 
@@ -57,8 +57,15 @@ enabled on your instance, picking one fills the whole block.
 - **Currency**: overrides your company's default currency for this client
 - **Country-specific identifiers**: the identifiers your client's country asks for (for example a
   SIREN or SIRET in France, a NIF in Portugal). The ones marked as required must be filled in to save
-  the client from this wizard. Where your instance supports it, **Look up** fills the client's name,
-  address and founded date from the official business registry
+  the client from this wizard. What is required depends on the client type: a French SIREN, a
+  Portuguese NIF, an Italian Partita IVA or a Polish NIP is required of a company, while an
+  individual may leave it empty (a private person in France has no SIREN, and a Portuguese private
+  client's NIF goes on the invoice only when they ask for it). An Italian individual must give a
+  codice fiscale instead. A client saved before its country required one of these keeps its record,
+  and the wizard asks for the missing identifier the next time you edit it. Every identifier you fill
+  in is printed on the client's documents. Where
+  your instance supports it, **Look up** fills the client's name, address and founded date from the
+  official business registry
 - **Peppol**: an optional electronic routing address
 
 ### Contact & portal
@@ -90,16 +97,19 @@ issued without it, see below.
 an issued invoice needs:
 
 - the street address and the city
-- every identifier marked as required for the client's country
+- an identifier your own country's invoicing law requires of this client on this invoice
 
 The message names what is missing and offers an **Edit client** button that opens the client's edit
 form. Nothing is lost: complete the client, come back to the invoice, and run the action again. A draft
 can always be saved, and a quote can always be sent, whatever the state of the client.
 
 :::info[Why the identifiers]
-Which identifiers an invoice must carry depends on the buyer's country, and the list is the same one
-the wizard marks as required. A client from a country with no required identifier only needs an
-address and a city.
+The identifiers checked here come from your own country's invoicing law, and depend on the client's
+type and country: a French company issuing to a French business client needs its SIREN, but never
+asks a private client for one. They can differ from what the wizard asks for, which follows the
+client's own country. For example, the VAT number of a business client in another EU country is not
+required to save the client, yet a French invoice to it must carry it. The draft's PDF marks each
+missing one, see [Identifiers on the PDF](billing/invoices.md#identifiers-on-the-pdf).
 :::
 
 Picking a country fills in **Currency** with that country's usual currency, and, for a new client,

@@ -34,8 +34,11 @@ import {
   assertValidRevenueBasisDefaultFact,
 } from '../../country-policy/schema';
 import {
+  assertFormRequiresInvoiceIdentifiers,
   assertPatternIsExplainable,
   assertValidEinvoiceFacts,
+  assertValidRequiredFor,
+  assertValidInvoiceRequirement,
   assertValidProvenance as assertValidIdentifierProvenance,
 } from '../../country-identifiers/schema';
 import { assertValidCorrectionRouteFact } from '../../correction-routes/schema';
@@ -54,6 +57,9 @@ import { assertValidB2gRoutingFact } from '../../b2g-routing/schema';
 import { assertValidCompanyLookupFacts } from '../../../company-lookup/coverage/schema';
 import { byCodeUnit } from '@/lib/compare';
 import { assertValidPaymentTerms } from '../../payment-terms/schema';
+import { assertValidEinvoiceCodes } from '../../einvoice-codes/schema';
+import { assertValidCompanyLawSection } from '../../company-law/schema';
+import { assertProfileConditionIsDeclared, assertValidCompanyProfile } from '../../company-profile/schema';
 
 const COUNTRY_FILE_PATTERN = /^[a-z]{2}\.json$/;
 
@@ -144,7 +150,12 @@ function validateIdentifiersSection(
     assertValidIdentifierProvenance(fact, `${filePath}#identifiers`);
     assertPatternIsExplainable(fact, `${filePath}#identifiers`);
     assertValidEinvoiceFacts(fact, `${filePath}#identifiers`);
+    assertValidRequiredFor(fact, `${filePath}#identifiers`);
   }
+  for (const rule of identifiers.invoiceRequirements ?? []) {
+    assertValidInvoiceRequirement(rule, `${filePath}#identifiers`);
+  }
+  assertFormRequiresInvoiceIdentifiers(identifiers, `${filePath}#identifiers`);
 }
 
 function validateCorrectionRoutesSection(
@@ -193,6 +204,7 @@ function validateVatCurrencySection(
 
 function validateChannelPolicySection(
   channelPolicy: ComposedCountryView['channelPolicy'],
+  companyProfile: ComposedCountryView['companyProfile'],
   ctx: LoadContext,
   filePath: string,
 ): void {
@@ -200,7 +212,24 @@ function validateChannelPolicySection(
   assertSectionCountryCode(channelPolicy, 'channelPolicy', ctx);
   for (const fact of channelPolicy.facts) {
     assertValidChannelPolicyFact(fact, `${filePath}#channelPolicy`);
+    if (fact.scope?.seller) {
+      assertProfileConditionIsDeclared(
+        fact.scope.seller,
+        companyProfile,
+        `${filePath}#channelPolicy: fact "${fact.providerId}"`,
+      );
+    }
   }
+}
+
+function validateCompanyProfileSection(
+  companyProfile: ComposedCountryView['companyProfile'],
+  ctx: LoadContext,
+  filePath: string,
+): void {
+  if (!companyProfile) return;
+  assertSectionCountryCode(companyProfile, 'companyProfile', ctx);
+  assertValidCompanyProfile(companyProfile, `${filePath}#companyProfile`);
 }
 
 function validateRetentionSection(
@@ -313,6 +342,26 @@ function validatePaymentTermsSection(
   assertValidPaymentTerms(paymentTerms, `${filePath}#paymentTerms`);
 }
 
+function validateEinvoiceCodesSection(
+  einvoiceCodes: ComposedCountryView['einvoiceCodes'],
+  ctx: LoadContext,
+  filePath: string,
+): void {
+  if (!einvoiceCodes) return;
+  assertSectionCountryCode(einvoiceCodes, 'einvoiceCodes', ctx);
+  assertValidEinvoiceCodes(einvoiceCodes, `${filePath}#einvoiceCodes`);
+}
+
+function validateCompanyLawSection(
+  companyLaw: ComposedCountryView['companyLaw'],
+  ctx: LoadContext,
+  filePath: string,
+): void {
+  if (!companyLaw) return;
+  assertSectionCountryCode(companyLaw, 'companyLaw', ctx);
+  assertValidCompanyLawSection(companyLaw, `${filePath}#companyLaw`);
+}
+
 function loadCountryFile(dir: string, code: string): ComposedCountryView {
   const path = join(dir, `${code}.json`);
   const raw = readFileSync(path, 'utf-8');
@@ -331,7 +380,8 @@ function loadCountryFile(dir: string, code: string): ComposedCountryView {
   validateVatRatesSection(parsed.vatRates, ctx, filePath);
   validateTaxSystemSection(parsed.taxSystem, ctx, filePath);
   validateVatCurrencySection(parsed.vatCurrency, ctx, filePath);
-  validateChannelPolicySection(parsed.channelPolicy, ctx, filePath);
+  validateCompanyProfileSection(parsed.companyProfile, ctx, filePath);
+  validateChannelPolicySection(parsed.channelPolicy, parsed.companyProfile, ctx, filePath);
   validateRetentionSection(parsed.retention, ctx, filePath);
   validateMentionsSection(parsed.mentions, ctx, filePath);
   validateLocalizedMentionsSection(parsed.localizedMentions, ctx, filePath);
@@ -342,6 +392,8 @@ function loadCountryFile(dir: string, code: string): ComposedCountryView {
   validateB2gRoutingSection(parsed.b2gRouting, ctx, filePath);
   validateCompanyLookupSection(parsed.companyLookup, ctx, filePath);
   validatePaymentTermsSection(parsed.paymentTerms, ctx, filePath);
+  validateEinvoiceCodesSection(parsed.einvoiceCodes, ctx, filePath);
+  validateCompanyLawSection(parsed.companyLaw, ctx, filePath);
 
   return parsed;
 }
@@ -349,7 +401,12 @@ function loadCountryFile(dir: string, code: string): ComposedCountryView {
 /** Discovers and validates every `<cc>.json` file in `dir` - parameterized so a test can point this
  *  at an isolated directory instead of the real one, which other specs read concurrently. */
 export function loadComposedCountryFilesFrom(dir: string): ComposedCountryView[] {
-  return discoverCountryCodes(dir).map((code) => loadCountryFile(dir, code));
+  const codes = discoverCountryCodes(dir);
+  // Every boot reseed mirrors this list into the database, so an empty one would delete every country.
+  if (codes.length === 0) {
+    throw new Error(`${dir} holds no country file (<cc>.json): refusing to load an empty country catalogue`);
+  }
+  return codes.map((code) => loadCountryFile(dir, code));
 }
 
 /** One validated composed view per country with a `countries/data/<cc>.json` file - see this

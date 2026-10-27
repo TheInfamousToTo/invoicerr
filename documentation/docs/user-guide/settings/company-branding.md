@@ -9,9 +9,9 @@ sidebar_position: 1
 Your business identity — this information appears on every document you issue.
 
 - **Name** (required)
-- **VAT Number** (optional)
-- **Legal ID / SIRET** (optional) — the identifiers offered here depend on your country; see
-  [Country support](../../developer-guide/country-support/index.md)
+- **VAT Number** and **Legal ID**: the identifiers offered here, and the ones you must fill in to
+  save, depend on your country (a SIRET in France, a Partita IVA in Italy, a NIP in Poland, a NIF in
+  Portugal); see [Country support](../../developer-guide/country-support/index.md)
 - **Address** — Street, Address Line 2, Postal Code, City, State / Province, Country
 - **Email** and **Phone**
 - **Currency** — default currency for new documents
@@ -26,6 +26,57 @@ Your country matters more than it looks: it decides which identifiers you are as
 rates you can pick, how an invoice may be corrected, and whether the law forces a particular delivery
 channel. The [country compliance matrix](../../developer-guide/country-support/index.md) shows what is
 established for each supported country, and says plainly where nothing has been established.
+
+### Company-law details
+
+When your country's company law asks for more than identifiers, a **Company-law details** group
+appears under them. Pick your **legal form** first: the fields that follow are the ones that form must
+show on your documents, for example in France the share capital and the city of the RCS registry for
+an SAS or an SARL, in Germany the register court and the managing directors of a GmbH, in Italy the
+companies register office, registration number and paid-up capital of an S.r.l. A field marked
+required is one the law asks of your form; the others are printed only when you fill them in.
+
+A sole trader, or any form with no share capital, is never asked for one, and no capital line is
+printed. The group does not appear at all for a country that has nothing declared. What you enter is
+printed under your company name on the PDF, in the document's language (see
+[Company-law mentions on the PDF](../billing/invoices.md#company-law-mentions-on-the-pdf)). Changing
+country keeps what you entered, so switching back loses nothing.
+
+:::info[Amounts]
+Type the share capital as a plain amount, with a dot or a comma for decimals, and pick its currency.
+It is printed like every other amount of the PDF, for example `1000.00 EUR`.
+:::
+
+### Company profile
+
+Some rules of your country depend on facts about your company that only you can declare. When your
+country asks for any, the company settings show a **Company profile** card with one choice per
+question. A country that asks nothing shows no card.
+
+France asks one question today, the **Company size category**: large enterprise, intermediate-sized
+enterprise (ETI), small or medium-sized enterprise (PME) or micro-enterprise, the categories of the
+loi de modernisation de l'économie (art. 51), assessed on 1 January 2025 from your last closed
+financial year. It decides from when your invoices to French business clients must go through an
+accredited platform (PDP):
+
+| Size category | Accredited platform required for invoices issued from |
+| --- | --- |
+| Large enterprise, ETI | 1 September 2026 |
+| PME, micro-enterprise | 1 September 2027 |
+| Not declared | 1 September 2026 |
+
+:::warning[Not declared means the earliest date]
+Until you declare a category, Invoicerr applies the earliest date. A PME or micro-enterprise without
+a connected platform cannot validate an invoice to a French business client until it declares its
+category.
+:::
+
+"Micro-enterprise" is the statistical category, not the micro-entrepreneur tax regime, although most
+micro-entrepreneurs belong to it. A company that is a member of a VAT group (assujetti unique) follows
+the large-company calendar whatever its size: do not declare PME or micro-enterprise for it.
+
+Receiving invoices through a platform is required of every company from 1 September 2026, whatever
+its size.
 
 ### Invoice PDF format
 
@@ -124,11 +175,53 @@ its source, and a period where nothing was cashed still shows as zero rather tha
 Export the whole thing as a CSV for your own records; the view and the export both say plainly that
 this is an aid, never your official declaration.
 
+## Branding
+
+The **Branding** settings tab personalizes every PDF your company issues (quotes, invoices, credit
+notes and the other document types) with three things:
+
+- **Logo** (PNG, JPEG or WebP, 10 MB at most), printed at the top left of the first page.
+- **Accent color**, used for the rule under the header and for the small section labels.
+- **Font**: Inter, Source Serif 4, IBM Plex Sans, DM Sans or Lora, or the default system font.
+
+Four **Presets** (Classic, Modern, Minimal, Bold) set an accent color and a font in one click. The
+**Preview** renders a sample invoice with your current settings, through the same renderer as a real
+document.
+
+## PDF layout
+
+The layout itself is the same for every company and cannot be edited: it has to carry the legal
+mentions and identifiers each country requires, and one fixed layout is what keeps that reliable. A
+document reads, from top to bottom:
+
+1. **Header**: your logo on the left; the document type, its number and its date on the right.
+2. **Parties**: your company, its company-law mentions and its address on the left, the client (or the supplier, on a purchase
+   order or a received invoice) and its address on the right, each followed by the identifiers filled
+   in for it (see [Identifiers on the PDF](../billing/invoices.md#identifiers-on-the-pdf)).
+3. **Details**: the short fields of the document (issue date, due date, currency, client reference,
+   and so on) in one compact grid. An optional field left empty, such as the origin document of an
+   invoice, is not printed.
+4. **Lines**: the line table (on a credit note linked to an invoice, the corrected lines). On a
+   document longer than a page, its header row is repeated at the top of every page and a line is
+   never cut in two.
+5. **Totals**: right under the last line, on the same page as it.
+6. **Notes**, then the payment block (SEPA QR code and payment methods side by side), the legal
+   mentions, and your custom fields.
+
+:::info[Page breaks]
+The layout is designed so that a short document (a few lines, ordinary notes, the usual legal
+mentions and payment details) fits on one A4 page; long notes, many custom fields or a long list of
+mentions can still push the end of the document onto a second page. When the lines run over a page,
+the break falls between two lines, and the totals move with at least the last line rather than
+starting a page on their own. Only the totals and lines are kept together: notes, payment details
+and mentions flow onto the next page as needed.
+:::
+
 ## What this page used to describe, and does not any more
 
-This page previously documented a **Logo** upload, a **Website** field, an **Exempt VAT** toggle, a
-per-type **Number Format / Starting Number** block, and a whole **PDF Templates** section (typography,
-colours, spacing, label overrides, live preview).
+This page previously documented a **Website** field, an **Exempt VAT** toggle, a per-type **Number
+Format / Starting Number** block, and a whole **PDF Templates** section (colours, spacing, label
+overrides). The logo, accent color, font and preview now live in **Branding**, described above.
 
 Those descriptions did not match the application, so they have been removed rather than left in place:
 the fields either do not exist, are not stored, or are not read by anything that produces a document.

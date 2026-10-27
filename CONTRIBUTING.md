@@ -7,13 +7,24 @@ feature, set up the project locally, and get a pull request merged.
 
 ### Bug reports
 
-Open a [bug report issue](https://github.com/invoicerr-app/invoicerr/issues/new?template=bug_report.md).
-The template asks for reproduction steps, expected behaviour, and your installation method and
-version — fill in what applies; the more precise the repro, the faster it gets fixed.
+Open a [bug report issue](https://github.com/invoicerr-app/invoicerr/issues/new?template=bug_report.yml).
+The form asks where it happened (hosted, beta, demo or self-hosted), the version, the seller and
+client countries, the document type, the steps and the logs. Only a few fields are required; the
+more precise the repro, the faster it gets fixed.
+
+### Country rules
+
+A missing or wrong legal or tax rule of a country (a VAT rate, a mandatory mention, a retention
+period, an e-invoicing mandate) goes through the
+[country rule form](https://github.com/invoicerr-app/invoicerr/issues/new?template=country_rule.yml).
+Every rule lives in `backend/src/modules/documents/countries/data/<cc>.json` with its source, so the
+form asks for the section of that file, the rule in plain words, who it concerns, and the official
+source: legal reference, the quoted sentence in its original language, URL, date read and date in
+force. A request without an official source cannot become a rule.
 
 ### Feature requests
 
-Open a [feature request issue](https://github.com/invoicerr-app/invoicerr/issues/new?template=feature_request.md)
+Open a [feature request issue](https://github.com/invoicerr-app/invoicerr/issues/new?template=feature_request.yml)
 for something small and self-contained. For anything larger — a new module, a new document type, a
 new country's catalogues — start a
 [discussion](https://github.com/invoicerr-app/invoicerr/discussions) first. Invoicerr's country
@@ -145,6 +156,12 @@ nothing stood between writing it into a file and pushing it.
 
   CI runs `biome ci .` (no writes) — run `lint` locally before opening a pull request.
 
+- **No floating promises.** Biome's `noFloatingPromises` fails lint on a promise that is neither
+  awaited nor handled. Await it, or handle its rejection where the failure means something. Use
+  `void` only when the promise cannot reject, and say why in one line; react-router's `navigate` is
+  the one exception that needs no comment. The backend `logger` methods return nothing and are never
+  awaited, except `logger.audit()`, awaited where the row must exist before the caller continues.
+
 - **Backend layering: Controller → Service → Prisma.** Controllers never touch Prisma directly and
   never use `any`; they declare Swagger metadata and delegate to a service. There is no global
   `ValidationPipe` — DTOs are Swagger-only interfaces, and validation happens explicitly in the
@@ -175,6 +192,8 @@ nothing stood between writing it into a file and pushing it.
   changing country coverage is usually a data change, not a code change — read
   [`documentation/docs/developer-guide/adding-a-country.md`](./documentation/docs/developer-guide/adding-a-country.md)
   before starting one; it covers what provenance is required and the schema each catalogue expects.
+  To report a rule rather than write it, use the
+  [country rule form](https://github.com/invoicerr-app/invoicerr/issues/new?template=country_rule.yml).
 
 ## Pull requests
 

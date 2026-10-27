@@ -137,7 +137,7 @@ function ImportDocumentButton({ descriptor }: DocumentCustomSlotProps) {
       }
       setFormDialogOpen(false)
       resetAll()
-      navigate(`/documents/${result.typeId}/${result.id}`)
+      void navigate(`/documents/${result.typeId}/${result.id}`)
     } catch (error) {
       toast.error(
         error instanceof ApiError ? error.message : t("documents.custom.importDocument.importError"),
@@ -151,9 +151,10 @@ function ImportDocumentButton({ descriptor }: DocumentCustomSlotProps) {
         type="button"
         variant="outline"
         onClick={() => setUploadDialogOpen(true)}
+        aria-label={t("documents.custom.importDocument.button")}
         dataCy={`import-document-button-${descriptor.id}`}
       >
-        <Upload className="h-4 w-4 me-0 md:me-2" />
+        <Upload className="h-4 w-4 me-0 md:me-2" aria-hidden="true" />
         <span className="hidden md:inline-flex">{t("documents.custom.importDocument.button")}</span>
       </Button>
 

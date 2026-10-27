@@ -129,6 +129,15 @@ Cypress.Commands.add('waitForDocumentStatus', (url: string, targetStatuses: stri
     return poll(20);
 });
 
+// The onboarding wizard awaits this search before advancing, so a slow live register would stall it.
+Cypress.Commands.add('stubCompanyLookup', () => {
+    // `pathname` is exact: a glob would also catch `/api/company-lookup/capabilities/:cc`.
+    cy.intercept(
+        { method: 'GET', pathname: '/api/company-lookup' },
+        { statusCode: 200, body: { found: false, company: null } },
+    ).as('companyLookupStub');
+});
+
 Cypress.Commands.add('selectCountry', (dataCy: string, countryName: string) => {
     cy.get(`[data-cy="${dataCy}"] button`).first().click({ force: true });
     cy.wait(500);
@@ -460,7 +469,26 @@ Cypress.Commands.add('openSelect', (triggerSelector: string, optionSelector: str
     // closed has a chance to detach its stale listener before this trigger's click can race it.
     cy.wait(50);
     openWithRetries(1);
+    const isExpanded = () =>
+        cy.get(triggerSelector, { log: false }).then(($trigger) => {
+            const box = $trigger.is('[aria-expanded]') ? $trigger : $trigger.find('[aria-expanded]');
+            return box.attr('aria-expanded') === 'true';
+        });
+    const pollForClose = (elapsedMs: number): Cypress.Chainable<boolean> =>
+        isExpanded().then((expanded) => {
+            if (!expanded || elapsedMs >= 1500) return cy.wrap(!expanded, { log: false });
+            cy.wait(OPEN_POLL_MS, { log: false });
+            return pollForClose(elapsedMs + OPEN_POLL_MS);
+        });
     cy.get(optionSelector, { timeout: 10000 }).should('be.visible').click();
+    // A scripted press ends before the content mounts, so Radix still treats the next release within
+    // 10px of the press point as the end of the opening press and ignores it.
+    pollForClose(0).then((closed) => {
+        if (closed) return;
+        Cypress.log({ name: 'openSelect', message: 'option click taken as the opening press release -- clicking again' });
+        cy.get(optionSelector).click();
+    });
+    cy.get(triggerSelector).should('have.attr', 'aria-expanded', 'false');
 });
 
 /**
@@ -891,6 +919,11 @@ Cypress.Commands.add('resetAndSeed', () => {
                 { scheme: 'LEGAL_ID', value: '73282932000074' },
                 { scheme: 'VAT', value: 'FR44732829320' },
             ],
+            // The legal form, share capital and RCS city French law requires on its invoices.
+            companyLaw: {
+                legalForm: 'FR_SAS',
+                values: { shareCapital: { amount: '1000', currency: 'EUR' }, registerCity: 'Paris' },
+            },
         },
         failOnStatusCode: false,
     }).then((res) => {

@@ -62,7 +62,7 @@ function buildCreateSchema(t: (key: string) => string) {
     .superRefine((val, ctx) => {
       if (val.kind === "select" && val.options.length === 0) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           path: ["options"],
           message: t("settings.customFields.form.validation.optionsRequired"),
         })

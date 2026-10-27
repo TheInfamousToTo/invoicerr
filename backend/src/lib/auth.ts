@@ -42,11 +42,13 @@ import { NO_FREE_SEAT_CODE, NoFreeSeatError, withSeatReservation } from '../modu
 import { syncCompanyMemberOnMembershipChange } from '../modules/billing/member-sync';
 import { syncPolarMemberEmailForUser } from '../modules/billing/member-email-sync';
 import { MailService } from '../mail/mail.service';
+import { servedOverHttps } from './app-url-scheme';
 import { deleteOrphanedUserAfterSeatRefusal, isNoFreeSeatRefusal } from './seat-refusal-cleanup';
 import { createPendingSignupStore, createRedisClientForPendingSignups } from './pending-signup-store';
 import { CLIENT_IP_HEADER } from './client-ip-header';
 import { devOnlyOrigins } from './dev-origins';
 import { normalizeSignupLocale } from '../modules/auth-extended/signup-locale';
+import { sessionCache } from './session-cache';
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 
@@ -358,6 +360,10 @@ const userAfterCreateHook = async (user, context) => {
   return user;
 };
 
+// An expiry refresh only lengthens the session; a cached copy keeps the earlier expiry, so it is safe.
+const SESSION_REFRESH_FIELDS = new Set(['expiresAt', 'updatedAt']);
+const sessionUpdatesToInvalidate = new WeakSet<object>();
+
 export const auth = betterAuth({
   baseURL: process.env.APP_URL || 'http://localhost:3000',
   // Fall back to JWT_SECRET so existing deployments that only set it keep working
@@ -370,20 +376,10 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: 'postgresql',
   }),
-  // Without this, better-auth's own default (`dist/cookies/index.mjs`) derives `secure` from whether
-  // `baseURL` (i.e. `APP_URL`) STARTS WITH `https://` — not from `NODE_ENV`. A deployment that
-  // terminates TLS somewhere other than this container's own bundled nginx (another reverse proxy in
-  // front of it) and leaves `APP_URL` on an internal `http://` address would then mint session cookies
-  // with no `Secure` attribute at all: they would be sent over any accidental plain-HTTP hop. Tying it
-  // to `NODE_ENV === 'production'` instead makes the decision explicit and independent of how `APP_URL`
-  // happens to be spelled. This line — `sameSite: 'lax'`, the default `emit` also documents explicitly
-  // here rather than leaving it an unstated library default — is the ONLY thing standing between every
-  // Nest route (`/api/*` outside `/api/auth`, which better-auth's own origin check already covers) and
-  // CSRF: there is no separate application-level CSRF token anywhere in this codebase. `httpOnly: true`
-  // is better-auth's own default already; restated here so all three attributes this guarantee depends
-  // on are visible in one place instead of two of them being implicit.
+  // `sameSite: 'lax'` is the only CSRF defence of the Nest routes outside `/api/auth`: there is no
+  // application-level CSRF token. `Secure` follows APP_URL's scheme (`app-url-scheme.ts`).
   advanced: {
-    useSecureCookies: process.env.NODE_ENV === 'production',
+    useSecureCookies: servedOverHttps(appUrl()),
     defaultCookieAttributes: { sameSite: 'lax', httpOnly: true },
     // Per-client rate limiting fix, proven live 2026-09-22 (150 concurrent `GET /api/auth/get-session`
     // from 150 distinct client addresses served/refused the exact same 100/50 split as the same 150
@@ -586,7 +582,33 @@ export const auth = betterAuth({
       // mode this hook must avoid.
       update: {
         after: async (user) => {
+          await sessionCache.invalidateUsers([user.id]);
           await syncPolarMemberEmailForUser(user.id, user.email, user.name || null);
+        },
+      },
+      delete: {
+        after: async (user) => {
+          await sessionCache.invalidateUsers([user.id]);
+        },
+      },
+    },
+    // Sign-out, revocations, password changes and expiry all reach the session row through these.
+    session: {
+      update: {
+        before: async (data, context) => {
+          if (context && Object.keys(data).some((field) => !SESSION_REFRESH_FIELDS.has(field))) {
+            sessionUpdatesToInvalidate.add(context);
+          }
+        },
+        after: async (session, context) => {
+          if (session && (!context || sessionUpdatesToInvalidate.has(context))) {
+            await sessionCache.invalidateUsers([session.userId]);
+          }
+        },
+      },
+      delete: {
+        after: async (session) => {
+          await sessionCache.invalidateUsers([session.userId]);
         },
       },
     },
@@ -657,3 +679,7 @@ export const auth = betterAuth({
     }),
   ],
 });
+
+export async function sessionCookieName(): Promise<string> {
+  return (await auth.$context).authCookies.sessionToken.name;
+}

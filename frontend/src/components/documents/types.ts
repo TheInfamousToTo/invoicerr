@@ -28,6 +28,11 @@ export interface DocumentFieldDescriptor {
    *  "screen convenience only" posture. */
   requiredIfAbsent?: string
   helpText?: string
+  /** Translation key for `label` when the text depends on data (a country overlay); otherwise the key
+   *  is derived from the type id and field path (lib/descriptor-i18n.ts). */
+  labelKey?: string
+  /** Same as `labelKey`, for `helpText`. */
+  helpTextKey?: string
   /** Mirrors the backend's `DocumentFieldDescriptor.hideWhenEmpty` (descriptors/types.ts) — skips this
    *  field entirely (no label, no "—" placeholder) wherever a consumer honors the hint and its value
    *  is unset on this instance, instead of the otherwise-universal "always show the row" rule every
@@ -301,7 +306,7 @@ export function numberingDisplayState(
 /** `statuses[].label` for `statusId`, falling back to the raw id when the descriptor names no
  *  lifecycle at all or this particular status isn't in it — the same "degrade honestly, never
  *  crash" rule the rest of this generic model already holds for a descriptor/data mismatch. */
-export function statusLabel(descriptor: DocumentTypeDescriptor, statusId: string): string {
+export function statusLabel(descriptor: Pick<DocumentTypeDescriptor, "statuses">, statusId: string): string {
   return descriptor.statuses?.find((s) => s.id === statusId)?.label ?? statusId
 }
 

@@ -1,5 +1,15 @@
-import { ArrowLeft, ChevronDown, Download, FileCode, FileDown, Link2, Repeat, UserCheck } from "lucide-react"
-import { useState } from "react"
+import {
+  ArrowLeft,
+  ChevronDown,
+  Download,
+  Eye,
+  FileCode,
+  FileDown,
+  Link2,
+  Repeat,
+  UserCheck,
+} from "lucide-react"
+import { type ReactNode, useState } from "react"
 import { Link, useNavigate } from "react-router"
 import { useTranslation } from "react-i18next"
 
@@ -10,9 +20,8 @@ import "@/components/documents/custom-registrations"
 import {
   extraActionGates,
   findSaveAction,
-  pickPrimaryAction,
+  presentActions,
   saveDraftLockNotice,
-  secondaryActions,
   transitionHint,
 } from "@/components/documents/action-presentation"
 import { CreateRecurrenceDialog } from "@/components/documents/create-recurrence-dialog"
@@ -28,6 +37,7 @@ import {
   downloadDocumentOriginal,
   downloadDocumentPdf,
   downloadDocumentXml,
+  previewDocumentPdf,
 } from "@/components/documents/document-downloads"
 import {
   DocumentActionButton,
@@ -40,6 +50,8 @@ import { DocumentReconciliationSection } from "@/components/documents/document-r
 import {
   DocumentSettlementBadge,
   DocumentSettlementSection,
+  SettledMark,
+  useBalanceSettled,
 } from "@/components/documents/document-settlement"
 import { DocumentStatusBadge } from "@/components/documents/document-status-badge"
 import { DocumentTaxWarningsSection } from "@/components/documents/document-tax-warnings"
@@ -68,6 +80,7 @@ import type {
 import { isActionAvailable, numberingDisplayState, statusLabel } from "@/components/documents/types"
 import { type DocumentFormState, useDocumentForm } from "@/components/documents/use-document-form"
 import { useUnsavedChanges } from "@/components/documents/use-unsaved-changes"
+import { ProseHelp } from "@/components/ui/prose-help"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -142,7 +155,7 @@ export function DocumentDetail({ descriptor, instance }: DocumentDetailProps) {
       // result to ITS own page — `result.typeId`/`result.id` come off the action's own response;
       // nothing here names which types or actions might do this.
       if (result.typeId !== descriptor.id || result.id !== instance.id) {
-        navigate(`/documents/${result.typeId}/${result.id}`)
+        void navigate(`/documents/${result.typeId}/${result.id}`)
         return
       }
       // Same record: adopt the persisted data as the new baseline — UNLESS the user has unsaved
@@ -201,8 +214,8 @@ function DocumentDetailBody({ descriptor, instance, state, baseline, onDiscard }
   // from also being a button a human could click a second time mid-flight and race the queue.
   const isProcessing = currentStatus === "sending"
   const actions = isProcessing ? [] : availableActions
-  const primary = pickPrimaryAction(actions, currentStatus, isDirty)
-  const secondary = secondaryActions(actions, primary)
+  const balanceSettled = useBalanceSettled(descriptor.id, instance.id, showSettlement)
+  const { primary, secondary, settled } = presentActions(actions, currentStatus, isDirty, balanceSettled)
   const saveAction = findSaveAction(actions, currentStatus)
   // Issue #468 (and the pre-existing France invoice case) - see `saveDraftLockNotice`'s own header:
   // reads the FULL descriptor, not `availableActions`, since the whole point is to explain why
@@ -224,6 +237,7 @@ function DocumentDetailBody({ descriptor, instance, state, baseline, onDiscard }
           state={state}
           primary={primary}
           secondary={secondary}
+          settled={settled}
           isProcessing={isProcessing}
         />
       </DocumentDetailHeader>
@@ -255,9 +269,14 @@ function DocumentDetailBody({ descriptor, instance, state, baseline, onDiscard }
         // an invoice never passed through the SdI is "not issued" in law) - never hidden, never a
         // one-time toast a reload would lose. See `hasImportTransmissionEvidence`'s own header for
         // exactly what counts as evidence.
-        <Alert variant="warning" data-cy="document-import-not-transmitted">
-          <AlertDescription>{t("documents.detail.importNotTransmitted")}</AlertDescription>
-        </Alert>
+        <ProseHelp
+          tone="warning"
+          title={t("documents.detail.importNotTransmittedTitle")}
+          dataCy="document-import-not-transmitted"
+          className="text-sm"
+        >
+          {t("documents.detail.importNotTransmitted")}
+        </ProseHelp>
       )}
 
       {liveInstance.lastArchiveError && (
@@ -369,9 +388,7 @@ function DocumentDetailBody({ descriptor, instance, state, baseline, onDiscard }
                   loading={state.runner.isRunning && state.runner.pendingAction === undefined}
                   disabled={!!saveAction.policyBlockedReason}
                   tooltip={
-                    saveAction.policyBlockedReason
-                      ? t("documents.form.actionBlockedByPolicy", { reason: saveAction.policyBlockedReason })
-                      : undefined
+                    saveAction.policyBlockedReason ? t("documents.form.actionBlockedTitle") : undefined
                   }
                   onClick={() => state.runner.handleAction(saveAction)}
                   dataCy="document-unsaved-save"
@@ -594,6 +611,8 @@ interface DocumentDetailActionsProps {
   state: DocumentFormState
   primary: DocumentActionDescriptor | undefined
   secondary: DocumentActionDescriptor[]
+  /** The primary slot shows the settled mark (see `presentActions`). */
+  settled: boolean
   isProcessing: boolean
 }
 
@@ -610,6 +629,7 @@ function DocumentDetailActions({
   state,
   primary,
   secondary,
+  settled,
   isProcessing,
 }: DocumentDetailActionsProps) {
   const { t } = useTranslation()
@@ -627,6 +647,31 @@ function DocumentDetailActions({
     !acceptManuallyAction.policyBlockedReason &&
     isActionAvailable(acceptManuallyAction, instance.status)
 
+  let primarySlot: ReactNode = null
+  if (isProcessing) {
+    primarySlot = (
+      <span className="px-2 text-sm text-muted-foreground" data-cy="document-detail-processing">
+        {t("documents.list.processing")}
+      </span>
+    )
+  } else if (settled) {
+    primarySlot = <SettledMark dataCy="document-detail-settled" className="size-9" />
+  } else if (primary) {
+    primarySlot = (
+      // `captions`: the "Draft → Sending" line under the one highlighted button is what tells a
+      // reader what that click commits them to, before they click — the same caption every
+      // secondary entry carries inside the menu.
+      <DocumentActionButton
+        descriptor={descriptor}
+        action={primary}
+        state={state}
+        variant="default"
+        captions
+        className="flex flex-col items-end text-end"
+      />
+    )
+  }
+
   return (
     <>
       {/* Keyed by the component's own function name, not the array index — see document-list.tsx's
@@ -635,7 +680,7 @@ function DocumentDetailActions({
         <CustomExtra key={CustomExtra.name} descriptor={descriptor} instance={instance} />
       ))}
 
-      {/* Always present: the PDF download alone earns the menu its place on every saved record. */}
+      {/* Always present: the PDF actions alone earn the menu its place on every saved record. */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button type="button" variant="outline" dataCy="document-actions-menu">
@@ -646,13 +691,11 @@ function DocumentDetailActions({
         <DropdownMenuContent align="end" className="min-w-56" data-cy="document-actions-menu-content">
           {secondary.map((action) => {
             const hint = transitionHint(t, descriptor, action, state.currentStatus)
-            const blocked = action.policyBlockedReason
-              ? t("documents.form.actionBlockedByPolicy", { reason: action.policyBlockedReason })
-              : undefined
+            const blocked = !!action.policyBlockedReason
             return (
               <DropdownMenuItem
                 key={action.id}
-                disabled={!!blocked}
+                disabled={blocked}
                 onSelect={() => state.runner.handleAction(action)}
                 data-cy={`document-action-${action.id}`}
               >
@@ -671,7 +714,7 @@ function DocumentDetailActions({
                       className="max-w-xs text-xs text-muted-foreground"
                       data-cy={`document-blocked-reason-${action.id}`}
                     >
-                      {blocked}
+                      {t("documents.form.actionBlockedTitle")}
                     </span>
                   )}
                 </div>
@@ -681,8 +724,15 @@ function DocumentDetailActions({
           {secondary.length > 0 && <DropdownMenuSeparator />}
 
           <DropdownMenuItem
-            onSelect={() => void downloadDocumentPdf(descriptor.id, instance.id, t)}
+            onSelect={() => void previewDocumentPdf(descriptor.id, instance.id, t)}
             data-cy="document-pdf-button"
+          >
+            <Eye aria-hidden="true" />
+            {t("documents.list.previewPdf")}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => void downloadDocumentPdf(descriptor, instance, t)}
+            data-cy="document-pdf-download-button"
           >
             <Download aria-hidden="true" />
             {t("documents.list.downloadPdf")}
@@ -757,25 +807,7 @@ function DocumentDetailActions({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {isProcessing ? (
-        <span className="px-2 text-sm text-muted-foreground" data-cy="document-detail-processing">
-          {t("documents.list.processing")}
-        </span>
-      ) : (
-        primary && (
-          // `captions`: the "Draft → Sending" line under the one highlighted button is what tells a
-          // reader what that click commits them to, before they click — the same caption every
-          // secondary entry carries inside the menu.
-          <DocumentActionButton
-            descriptor={descriptor}
-            action={primary}
-            state={state}
-            variant="default"
-            captions
-            className="flex flex-col items-end text-end"
-          />
-        )
-      )}
+      {primarySlot}
 
       {gates.recurrence && recurrenceOpen && (
         <CreateRecurrenceDialog

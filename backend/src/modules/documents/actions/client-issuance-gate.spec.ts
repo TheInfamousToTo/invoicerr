@@ -4,28 +4,26 @@ import prisma from '@/prisma/prisma.service';
 
 import {
   ISSUABLE_CLIENT_FIELDS,
+  ISSUABLE_FRENCH_SELLER_FIELDS,
   NAME_ONLY_CLIENT_FIELDS,
   createTestCompany,
 } from '../__tests__/issuable-client';
-import * as b2gRouting from '../b2g-routing/b2g-routing';
+import {
+  draftInvoiceContext,
+  invoiceActionRegistry,
+  issuanceDocument,
+  rejection,
+  stubIssuanceCollaborators,
+} from '../__tests__/invoice-action-harness';
 import { seedCountryIdentifierRequirements } from '../country-identifiers/seed';
-import * as countryPolicy from '../country-policy/country-policy';
 import { buildQuoteDescriptor } from '../descriptors/quote.descriptor';
 import { DocumentTypeRegistry } from '../descriptors/type-registry';
 import * as takeNumber from '../numbering/take-number';
 import * as persistence from '../persistence';
 import { EntityReferenceRegistry } from '../references/reference-registry';
-import * as taxLoadAndResolve from '../tax/load-and-resolve';
-import * as mandate from '../transports/channel-policy/mandate';
-import * as companyTransport from '../transports/company-transport';
-import { TransportRegistry } from '../transports/transport-registry';
-import * as atcudIssuance from './atcud-issuance';
 import { ActionRegistry } from './action-registry';
-import { CLIENT_INCOMPLETE_CODE, findMissingClientFields } from './client-issuance-readiness';
-import { registerInvoiceActions } from './invoice-actions';
+import { CLIENT_INCOMPLETE_CODE, findMissingClientAddress } from './client-issuance-readiness';
 import { registerQuoteActions } from './quote-actions';
-import * as vatCurrencyIssuance from '../vat-currency/vat-currency-issuance';
-import * as applyStockOnIssuance from '../stock/apply-stock-on-issuance';
 
 vi.mock('../tax/load-and-resolve');
 vi.mock('../numbering/take-number');
@@ -35,59 +33,10 @@ vi.mock('../country-policy/country-policy');
 vi.mock('../transports/company-transport');
 vi.mock('../persistence');
 
-function documentFor(clientId: string, typeId: 'invoice' | 'quote', status: string) {
-  return {
-    id: 'doc-1',
-    typeId,
-    status,
-    data: documentData(clientId),
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    number: status === 'draft' ? undefined : 1,
-    displayNumber: status === 'draft' ? undefined : 'INV-2026-0001',
-  };
-}
-
-function documentData(clientId: string) {
-  return {
-    client: clientId,
-    issueDate: '2026-09-15',
-    dueDate: '2026-09-30',
-    currency: 'EUR',
-    lines: [{ description: 'Consulting', quantity: 1, unit: 'unit', unitPrice: 100, vatRate: '20' }],
-  };
-}
-
-function ctxFor(clientId: string, currentStatus = 'draft') {
-  return {
-    companyId: companyId(),
-    typeId: 'invoice',
-    documentId: 'doc-1',
-    data: documentData(clientId),
-    params: {},
-    currentStatus,
-  };
-}
-
 let seededCompanyId = '';
 const companyId = () => seededCompanyId;
-
-function invoiceRegistry() {
-  const transportRegistry = new TransportRegistry();
-  transportRegistry.register('email', 'Email', { send: vi.fn().mockResolvedValue({ message: 'queued' }) });
-  const registry = new ActionRegistry();
-  registerInvoiceActions(registry, { transportRegistry, queueDispatcher: { enqueueAction: vi.fn() } });
-  return registry;
-}
-
-async function rejection(promise: Promise<unknown>): Promise<{ message: string; response: any }> {
-  try {
-    await promise;
-  } catch (error) {
-    return error as { message: string; response: any };
-  }
-  throw new Error('expected the action to be refused');
-}
+const documentFor = issuanceDocument;
+const ctxFor = (clientId: string) => draftInvoiceContext(companyId(), clientId);
 
 describe('issuing an invoice requires a complete client; a quote does not', () => {
   let incompleteId = '';
@@ -97,6 +46,7 @@ describe('issuing an invoice requires a complete client; a quote does not', () =
     await seedCountryIdentifierRequirements(prisma);
     const company = await createTestCompany('Issuance Gate Co');
     seededCompanyId = company.id;
+    await prisma.company.update({ where: { id: company.id }, data: ISSUABLE_FRENCH_SELLER_FIELDS });
     const incomplete = await prisma.client.create({
       data: { companyId: company.id, name: 'Name Only SARL', ...NAME_ONLY_CLIENT_FIELDS },
     });
@@ -113,26 +63,11 @@ describe('issuing an invoice requires a complete client; a quote does not', () =
 
   afterEach(() => vi.resetAllMocks());
 
-  beforeEach(() => {
-    vi.mocked(countryPolicy.resolveCompanyCountryCode).mockResolvedValue('DE');
-    vi.mocked(mandate.activeChannelMandateForOperation).mockReturnValue(undefined);
-    vi.mocked(companyTransport.getCompanyInvoiceTransportId).mockResolvedValue('email');
-    vi.mocked(taxLoadAndResolve.resolveInvoiceCrossBorderTaxForCompany).mockImplementation(
-      async (_companyId, data) => ({ data, crossBorder: false, warnings: [] }) as never,
-    );
-    vi.mocked(b2gRouting.resolveClientB2gRouting).mockResolvedValue({ applies: false } as never);
-    for (const [module, name] of [
-      [atcudIssuance, 'attachAtcudToNumberedDocument'],
-      [vatCurrencyIssuance, 'attachVatNationalCurrencyToNumberedDocument'],
-      [applyStockOnIssuance, 'applyStockOnIssuance'],
-    ] as const) {
-      vi.spyOn(module, name as never).mockResolvedValue(undefined as never);
-    }
-  });
+  beforeEach(() => stubIssuanceCollaborators());
 
   it('Validate is refused for a client with no address, city or catalog-required identifier, naming each', async () => {
     (persistence.findOwnedDocument as Mock).mockResolvedValue(documentFor(incompleteId, 'invoice', 'draft'));
-    const handler = invoiceRegistry().resolve('invoice', 'validate');
+    const handler = invoiceActionRegistry().resolve('invoice', 'validate');
 
     const error = await rejection(handler!(ctxFor(incompleteId)));
 
@@ -150,9 +85,24 @@ describe('issuing an invoice requires a complete client; a quote does not', () =
     expect(takeNumber.takeDocumentNumberForTransitionWithStatus).not.toHaveBeenCalled();
   });
 
+  it('a private client missing its address is asked for the address only, never a SIREN', async () => {
+    const individual = await prisma.client.create({
+      data: { companyId: companyId(), type: 'INDIVIDUAL', name: 'Jeanne Martin', ...NAME_ONLY_CLIENT_FIELDS },
+    });
+    (persistence.findOwnedDocument as Mock).mockResolvedValue(documentFor(individual.id, 'invoice', 'draft'));
+    const handler = invoiceActionRegistry().resolve('invoice', 'validate');
+
+    const error = await rejection(handler!(ctxFor(individual.id)));
+
+    expect(error.response).toMatchObject({
+      code: CLIENT_INCOMPLETE_CODE,
+      params: { address: ['address', 'city'], identifiers: [] },
+    });
+  });
+
   it('Send is refused the same way, before any number is taken', async () => {
     (persistence.findOwnedDocument as Mock).mockResolvedValue(documentFor(incompleteId, 'invoice', 'draft'));
-    const handler = invoiceRegistry().resolve('invoice', 'send');
+    const handler = invoiceActionRegistry().resolve('invoice', 'send');
 
     const error = await rejection(handler!(ctxFor(incompleteId)));
 
@@ -166,7 +116,7 @@ describe('issuing an invoice requires a complete client; a quote does not', () =
       document: documentFor(completeId, 'invoice', 'validated'),
       numbered: { number: 1, displayNumber: 'INV-2026-0001' },
     });
-    const handler = invoiceRegistry().resolve('invoice', 'validate');
+    const handler = invoiceActionRegistry().resolve('invoice', 'validate');
 
     const result = await handler!(ctxFor(completeId));
 
@@ -181,7 +131,7 @@ describe('issuing an invoice requires a complete client; a quote does not', () =
       document: documentFor(completeId, 'invoice', 'sending'),
       numbered: { number: 1, displayNumber: 'INV-2026-0001' },
     });
-    const handler = invoiceRegistry().resolve('invoice', 'send');
+    const handler = invoiceActionRegistry().resolve('invoice', 'send');
 
     const result = await handler!(ctxFor(completeId));
 
@@ -217,22 +167,12 @@ describe('issuing an invoice requires a complete client; a quote does not', () =
   });
 });
 
-describe('findMissingClientFields', () => {
-  const required = [{ scheme: 'LEGAL_ID', label: 'SIREN / SIRET' }];
-
+describe('findMissingClientAddress', () => {
   it('treats blank strings as missing', () => {
-    const missing = findMissingClientFields(
-      { address: '  ', city: '', partyIdentifiers: [{ scheme: 'LEGAL_ID', value: ' ' }] },
-      required,
-    );
-    expect(missing).toEqual({ address: ['address', 'city'], identifiers: required });
+    expect(findMissingClientAddress({ address: '  ', city: '' })).toEqual(['address', 'city']);
   });
 
-  it('reports nothing for a complete client', () => {
-    const missing = findMissingClientFields(
-      { address: '1 Rue', city: 'Paris', partyIdentifiers: [{ scheme: 'LEGAL_ID', value: '123456789' }] },
-      required,
-    );
-    expect(missing).toEqual({ address: [], identifiers: [] });
+  it('reports nothing for a complete address', () => {
+    expect(findMissingClientAddress({ address: '1 Rue', city: 'Paris' })).toEqual([]);
   });
 });

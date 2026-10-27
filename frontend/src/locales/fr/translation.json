@@ -264,7 +264,6 @@
                 "totalTTC": "Total TTC"
             },
             "tooltips": {
-                "viewPdf": "Voir le PDF",
                 "downloadPdf": "Télécharger le PDF",
                 "edit": "Modifier le devis",
                 "sendSignature": "Envoyer pour signature",
@@ -1728,6 +1727,12 @@
                         "maxLength": "Le numéro de TVA doit faire moins de 15 caractères",
                         "format": "Le format du numéro de TVA est invalide (ex: FR12345678901)"
                     }
+                },
+                "companyLaw": {
+                    "label": "Mentions de droit des sociétés",
+                    "description": "Ce que le droit des sociétés de votre pays exige sur vos documents : forme juridique, capital social, registre du commerce. Imprimé sous le nom de votre entreprise. Les champs dépendent de la forme juridique choisie.",
+                    "legalFormPlaceholder": "Choisissez votre forme juridique",
+                    "amountPlaceholder": "Montant"
                 }
             },
             "messages": {
@@ -2332,7 +2337,6 @@
                 "totalTTC": "Total (TTC)"
             },
             "tooltips": {
-                "viewPdf": "Voir le PDF",
                 "downloadPdf": "Télécharger le PDF",
                 "edit": "Modifier le paiement",
                 "sendToClient": "Envoyer au client",
@@ -3238,7 +3242,11 @@
                 "clientIncomplete": "Il manque {{fields}} pour {{client}}. Complétez le client avant de valider ou d'envoyer cette facture.",
                 "clientIncompleteAction": "Modifier le client",
                 "clientIncompleteField_address": "l'adresse",
-                "clientIncompleteField_city": "la ville"
+                "clientIncompleteField_city": "la ville",
+                "invoiceIdentifiersMissing": "Ajoutez {{fields}} avant de valider ou d'envoyer cette facture.",
+                "invoiceIdentifierMissingSeller": "{{label}} (votre entreprise)",
+                "invoiceIdentifierMissingBuyer": "{{label}} (client)",
+                "invoiceIdentifiersEditCompany": "Modifier l'entreprise"
             }
         }
     }

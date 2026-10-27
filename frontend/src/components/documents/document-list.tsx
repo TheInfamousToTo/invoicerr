@@ -1,6 +1,7 @@
 import {
   Download,
   Ellipsis,
+  Eye,
   FileCode,
   FileDown,
   FileStack,
@@ -30,8 +31,8 @@ import {
   createBlockedReasons,
   extraActionGates,
   isOfferedOnRecord,
-  pickPrimaryAction,
-  secondaryActions,
+  presentActions,
+  RECORD_PAYMENT_ACTION_ID,
   transitionHint,
 } from "@/components/documents/action-presentation"
 import { ConfirmationDialog } from "@/components/confirmation-dialog"
@@ -43,22 +44,23 @@ import {
   downloadDocumentOriginal,
   downloadDocumentPdf,
   downloadDocumentXml,
+  previewDocumentPdf,
 } from "@/components/documents/document-downloads"
 import { ShareLinkDialog } from "@/components/documents/share-link-dialog"
 import { DocumentFieldValue } from "@/components/documents/field-value"
 import { DocumentConformityListIndicator } from "@/components/documents/document-conformity-section"
-import { DocumentSettlementBadge } from "@/components/documents/document-settlement"
+import {
+  DocumentSettlementBadge,
+  SettledMark,
+  useBalanceSettled,
+} from "@/components/documents/document-settlement"
 import { DocumentStatusBadge } from "@/components/documents/document-status-badge"
 import { formatTotal } from "@/components/documents/document-totals"
 import { LtrValue } from "@/components/ui/ltr-value"
 import { type RowAmount, resolveRowAmount } from "@/components/documents/list-amount"
 import { isEmptyFieldValue, resolveListFields } from "@/components/documents/list-fields"
 import { findCurrencyField } from "@/components/documents/totals-shape"
-import type {
-  DocumentActionDescriptor,
-  DocumentInstance,
-  DocumentTypeDescriptor,
-} from "@/components/documents/types"
+import type { DocumentInstance, DocumentTypeDescriptor } from "@/components/documents/types"
 import { isActionAvailable, numberingDisplayState, statusLabel } from "@/components/documents/types"
 import { useDocumentActionRunner } from "@/components/documents/use-document-action-runner"
 import { DatePicker } from "@/components/date-picker"
@@ -80,6 +82,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { EmptyState } from "@/components/ui/empty-state"
+import { FieldLock } from "@/components/ui/field-help"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -325,42 +328,62 @@ function DocumentRowActions({ descriptor, instance, onActionSuccess, children }:
           isOfferedOnRecord(action, instance.displayNumber) &&
           isActionAvailable(action, instance.status),
       )
-  const primary = pickPrimaryAction(availableActions, instance.status, false)
-  const secondary = secondaryActions(availableActions, primary)
+  const balanceSettled = useBalanceSettled(
+    descriptor.id,
+    instance.id,
+    availableActions.some((action) => action.id === RECORD_PAYMENT_ACTION_ID),
+  )
+  const { primary, secondary, settled } = presentActions(
+    availableActions,
+    instance.status,
+    false,
+    balanceSettled,
+  )
   // A LIST, not a single component — more than one extension may register for the same
   // (type, slot); see custom-slots.ts's own header for why a single `Map.set` used to make the
   // second silently replace the first.
   const customRowExtras = getDocumentCustomComponents(descriptor.id, "list-row-extra")
 
-  const blockedLabel = (action: DocumentActionDescriptor) =>
-    action.policyBlockedReason
-      ? t("documents.form.actionBlockedByPolicy", { reason: action.policyBlockedReason })
-      : undefined
-
-  const primarySlot = isProcessing ? (
-    <span className="text-sm text-muted-foreground" data-cy={`document-row-processing-${instance.id}`}>
-      {t("documents.list.processing")}
-    </span>
-  ) : (
-    primary && (
+  let primarySlot: ReactNode = null
+  if (isProcessing) {
+    primarySlot = (
+      <span className="text-sm text-muted-foreground" data-cy={`document-row-processing-${instance.id}`}>
+        {t("documents.list.processing")}
+      </span>
+    )
+  } else if (settled) {
+    primarySlot = <SettledMark dataCy={`document-row-settled-${instance.id}`} />
+  } else if (primary) {
+    primarySlot = (
       // `outline`, never `default`: the page's one filled button is "New <type>" in the header. A
       // disabled primary still shows, carrying its reason in a tooltip — a rule reads as a rule,
       // an empty slot reads as a bug (the same call the detail page's header makes).
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="w-full sm:w-auto"
-        disabled={!!primary.policyBlockedReason}
-        tooltip={blockedLabel(primary)}
-        loading={isRunning && pendingAction === undefined}
-        onClick={() => handleAction(primary)}
-        dataCy={`document-row-action-${primary.id}-${instance.id}`}
-      >
-        {primary.label}
-      </Button>
+      <span className="flex w-full items-center gap-1.5 sm:w-auto">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="flex-1 sm:flex-none"
+          disabled={!!primary.policyBlockedReason}
+          loading={isRunning && pendingAction === undefined}
+          onClick={() => handleAction(primary)}
+          dataCy={`document-row-action-${primary.id}-${instance.id}`}
+        >
+          {primary.label}
+        </Button>
+        {primary.policyBlockedReason && (
+          <FieldLock
+            id={`document-row-${instance.id}-${primary.id}-lock`}
+            label={primary.label}
+            describeTrigger
+            dataCy={`document-row-blocked-reason-${primary.id}-${instance.id}`}
+          >
+            {t("documents.form.actionBlockedByPolicy", { reason: primary.policyBlockedReason })}
+          </FieldLock>
+        )}
+      </span>
     )
-  )
+  }
 
   const menuSlot = (
     <>
@@ -374,7 +397,7 @@ function DocumentRowActions({ descriptor, instance, onActionSuccess, children }:
         <CustomExtra key={CustomExtra.name} descriptor={descriptor} instance={instance} />
       ))}
 
-      {/* Always present: the PDF download alone earns the menu its place on every saved row.
+      {/* Always present: the PDF actions alone earn the menu its place on every saved row.
           `Tooltip` wraps the trigger from OUTSIDE (three nested `asChild` Slots onto one real
           <button>) rather than through `Button`'s own `tooltip` prop, which would wrap the DOM
           node in a component `DropdownMenuTrigger asChild` cannot clone — see sidebar.tsx's own
@@ -403,11 +426,11 @@ function DocumentRowActions({ descriptor, instance, onActionSuccess, children }:
         >
           {secondary.map((action) => {
             const hint = transitionHint(t, descriptor, action, instance.status)
-            const blocked = blockedLabel(action)
+            const blocked = !!action.policyBlockedReason
             return (
               <DropdownMenuItem
                 key={action.id}
-                disabled={!!blocked}
+                disabled={blocked}
                 onSelect={() => handleAction(action)}
                 data-cy={`document-row-action-${action.id}-${instance.id}`}
               >
@@ -419,7 +442,7 @@ function DocumentRowActions({ descriptor, instance, onActionSuccess, children }:
                       className="max-w-xs text-xs text-muted-foreground"
                       data-cy={`document-row-blocked-reason-${action.id}-${instance.id}`}
                     >
-                      {blocked}
+                      {t("documents.form.actionBlockedTitle")}
                     </span>
                   )}
                 </div>
@@ -429,8 +452,15 @@ function DocumentRowActions({ descriptor, instance, onActionSuccess, children }:
           {secondary.length > 0 && <DropdownMenuSeparator />}
 
           <DropdownMenuItem
-            onSelect={() => void downloadDocumentPdf(descriptor.id, instance.id, t)}
+            onSelect={() => void previewDocumentPdf(descriptor.id, instance.id, t)}
             data-cy={`document-pdf-button-${instance.id}`}
+          >
+            <Eye aria-hidden="true" />
+            {t("documents.list.previewPdf")}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => void downloadDocumentPdf(descriptor, instance, t)}
+            data-cy={`document-pdf-download-button-${instance.id}`}
           >
             <Download aria-hidden="true" />
             {t("documents.list.downloadPdf")}
@@ -604,7 +634,7 @@ function DocumentListRow({ descriptor, instance, amount, onOpen, onActionSuccess
                   label={descriptor.statuses?.find((s) => s.id === instance.status)?.label}
                 />
                 <DocumentCardNumber descriptor={descriptor} instance={instance} />
-                <h3
+                <h2
                   className="min-w-0 break-words font-medium text-foreground"
                   data-cy={`document-list-title-${instance.id}`}
                 >
@@ -617,7 +647,7 @@ function DocumentListRow({ descriptor, instance, amount, onOpen, onActionSuccess
                   >
                     <DocumentCardTitle descriptor={descriptor} instance={instance} />
                   </Link>
-                </h3>
+                </h2>
                 {showSettlementBadge && (
                   <DocumentSettlementBadge
                     typeId={descriptor.id}
@@ -1064,11 +1094,7 @@ export function DocumentList({
             variant="secondary"
             onClick={onCreate}
             disabled={!creatable}
-            tooltip={
-              !creatable && createBlockedReason
-                ? t("documents.form.actionBlockedByPolicy", { reason: createBlockedReason })
-                : undefined
-            }
+            tooltip={!creatable && createBlockedReason ? t("documents.form.actionBlockedTitle") : undefined}
             dataCy="document-create-button-empty"
           >
             <Plus aria-hidden="true" />
@@ -1131,15 +1157,23 @@ export function DocumentList({
                 aria-label={createLabel}
                 disabled={!creatable}
                 tooltip={
-                  !creatable && createBlockedReason
-                    ? t("documents.form.actionBlockedByPolicy", { reason: createBlockedReason })
-                    : undefined
+                  !creatable && createBlockedReason ? t("documents.form.actionBlockedTitle") : undefined
                 }
                 dataCy="document-create-button"
               >
                 <Plus aria-hidden="true" />
                 <span className="hidden md:inline">{createLabel}</span>
               </Button>
+              {!creatable && createBlockedReason && (
+                <FieldLock
+                  id="document-create-lock"
+                  label={createLabel}
+                  describeTrigger
+                  dataCy="document-create-blocked-reason"
+                >
+                  {t("documents.form.actionBlockedByPolicy", { reason: createBlockedReason })}
+                </FieldLock>
+              )}
             </div>
           </div>
 

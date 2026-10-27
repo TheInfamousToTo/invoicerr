@@ -558,6 +558,7 @@
         "appliesTo": "BOTH",
         "label": "NIF / NIPC (Número de Identificação Fiscal / Número de Identificação de Pessoa Coletiva)",
         "required": true,
+        "requiredFor": ["COMPANY"],
         "demoGenerator": { "id": "pt-nif" },
         "provenance": {
           "kind": "legal",
@@ -565,7 +566,7 @@
           "sourceCheckedAt": "2026-09-04"
         },
         "helpTextKey": "settings.identifiers.help.PT.LEGAL_ID",
-        "notes": "Código do IVA (CIVA), text as served by the Autoridade Tributária e Aduaneira (AT), art. 36.º n.º 5 alínea a) — PRIMARY TEXT, read directly on 2026-09-04 at https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva36.aspx (static HTML page served by the AT, direct curl with no JavaScript). FRONT-LINE CLAUSE for the SUPPLIER: the text imposes « os correspondentes números de identificação fiscal » on the « fornecedor de bens ou prestador de serviços » WITH NO CONDITION WHATSOEVER — the seller must ALWAYS carry their NIF/NIPC on the fatura, hence `required: true`. IMPORTANT NUANCE FOR THE BUYER, not to be lost if this fact is ever promoted to an unqualified `required: true`: the same sentence qualifies the recipient with « e do destinatário ou adquirente SUJEITO PASSIVO DO IMPOSTO » — the qualifier « sujeito passivo » (taxable person) applies GRAMMATICALLY to the recipient/buyer, not to the supplier, which means the BUYER's NIF is front-line mandatory ONLY when the buyer is themselves a taxable person for VAT (typically B2B). REINFORCED, read the same day on the same page, by n.º 16 of the same article: « A indicação na fatura do número de identificação fiscal do adquirente ou destinatário não sujeito passivo é sempre obrigatória quando este o solicite. » — for a NON-taxable buyer (a private individual), the NIF is mandatory on the fatura ONLY WHEN REQUESTED by that buyer. This catalog models `required: true` / `appliesTo: 'BOTH'` at the level AT WHICH this fact is consumed by this product (country-identifiers.ts's own resolveRequiredIdentifiers: 'does this country require this identifier for a party of this type', not literally 'must this identifier ALWAYS appear on THIS SPECIFIC invoice') — the NIF/NIPC is, in practice, universally held and communicated by every company AND every private individual in Portugal (a generalized administrative precondition), which the front-line clause above for the supplier confirms without reservation; the conditional nuance on the non-taxable buyer's side (n.º 16) is documented here honestly rather than passed over in silence. FORMAT — RE-VERIFIED 2026-09-16, PRIMARY TEXT NOW REACHED: curl alone still could not reach it (diariodarepublica.pt's SPA shell, confirmed again this session; the scanned 1979 original at https://files.diariodarepublica.pt/1s/1979/11/27700/30743078.pdf downloads fine via curl — HTTP 200 — but is a pure image scan with NO text layer, confirmed by `pdffonts` reporting zero embedded fonts, so pdftotext extracts nothing). The raw text used below was instead read from the SAME official page's live DOM (`document.body.innerText`, server-populated by diariodarepublica.pt's own screenservices API, not by any client-side rendering of ours) — verbatim, unsummarized, independently reproducible by any human visiting the same URL, never a model paraphrase. Decreto-Lei n.º 463/79, de 30 de novembro, Art. 2.º n.º 2, read this way at https://diariodarepublica.pt/dr/detalhe/decreto-lei/463-1979-367228: « O número fiscal das pessoas singulares é um número sequencial, cujo primeiro dígito deve ser diferente do adoptado para as pessoas colectivas e entidades equiparadas, sendo o último um dígito de contrôle da exactidão do número. » — confirms, from the founding 1979 text itself, that a check digit EXISTS and is the LAST digit, and that the FIRST digit distinguishes natural from legal persons — but not the exact digit count or the check-digit arithmetic. CRITICAL CORRECTION: that same page is stamped « Revogado » — DL 463/79 is REPEALED, by Decreto-Lei n.º 14/2013, de 28 de janeiro (Diário da República n.º 19, 1.ª série, de 2013-01-28; consolidated text read the same way at https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/2013-108043706): « ... procede à sistematização e harmonização da legislação referente ao Número de Identificação Fiscal e revoga o Decreto-Lei n.º 463/79, de 30 de novembro ». DL 14/2013 is therefore the CURRENT operative source, and its Artigo 4.º (Secção I, Das pessoas singulares), n.º 1, states: « O NIF a atribuir às pessoas singulares, sejam cidadãos nacionais ou estrangeiros, é um número composto por nove dígitos, sendo os oito primeiros sequenciais e o último um dígito de controlo. » — SETTLING the digit count (NINE) and the check digit's position (9th/last) for natural persons, as a currently-in-force legal fact; n.º 2 adds « O primeiro dígito da esquerda pode variar entre os algarismos 1 a 4. », and n.º 3 « Os algarismos iniciais «45» correspondem aos cidadãos não residentes que apenas obtenham em território português rendimentos sujeitos a retenção na fonte a título definitivo. » WHAT REMAINS UNCONFIRMED, HONESTLY: (1) the exact ARITHMETIC of the check digit (the mod-11 weighted-sum algorithm with weights 9..2 and a 'remainder < 2 → 0' rule commonly described in professional/vendor literature) is stated in NEITHER DL 463/79 NOR DL 14/2013 — a systematic search of DL 14/2013's full consolidated text (39,022 characters) for 'peso', 'multiplic', 'resto', 'divisão', 'algoritmo' and 'módulo' returned ZERO matches; the computation itself is therefore apparently an administrative/technical specification (consistent with DL 463/79's own Art. 1.º n.º 3, which delegated 'a implementação do sistema automático de processamento de dados' to the Instituto de Informática do Ministério das Finanças) never published as primary legal text, at least not found by this task — a widely-implemented industry convention, not a sourced legal fact. (2) for LEGAL PERSONS (pessoas coletivas), DL 14/2013's Artigo 11.º n.º 1 states the NIF/NIPC 'corresponde ao Número de Identificação de Pessoa Coletiva (NIPC) que for atribuído' by the RNPC (Registo Nacional de Pessoas Coletivas) — this same 9-digit/check-digit structure is NOT itself established by this text for companies, which are governed by the RNPC's own separate numbering regime, not read by this task. Because this catalog's `scheme: 'LEGAL_ID'` fact applies to `appliesTo: 'BOTH'` party types under one entry and only the NATURAL-PERSON structure is now sourced, no `pattern` field is added here — a regex covering only individuals would misrepresent companies, whose first-digit range was not verified, and the check-digit arithmetic itself (unsourced) could not be expressed as a static regex regardless."
+        "notes": "Código do IVA (CIVA), text as served by the Autoridade Tributária e Aduaneira (AT), art. 36.º n.º 5 alínea a) — PRIMARY TEXT, read directly on 2026-09-04 at https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva36.aspx (static HTML page served by the AT, direct curl with no JavaScript). FRONT-LINE CLAUSE for the SUPPLIER: the text imposes « os correspondentes números de identificação fiscal » on the « fornecedor de bens ou prestador de serviços » WITH NO CONDITION WHATSOEVER — the seller must ALWAYS carry their NIF/NIPC on the fatura, hence `required: true`. IMPORTANT NUANCE FOR THE BUYER, not to be lost if this fact is ever promoted to an unqualified `required: true`: the same sentence qualifies the recipient with « e do destinatário ou adquirente SUJEITO PASSIVO DO IMPOSTO » — the qualifier « sujeito passivo » (taxable person) applies GRAMMATICALLY to the recipient/buyer, not to the supplier, which means the BUYER's NIF is front-line mandatory ONLY when the buyer is themselves a taxable person for VAT (typically B2B). REINFORCED, read the same day on the same page, by n.º 16 of the same article: « A indicação na fatura do número de identificação fiscal do adquirente ou destinatário não sujeito passivo é sempre obrigatória quando este o solicite. » — for a NON-taxable buyer (a private individual), the NIF is mandatory on the fatura ONLY WHEN REQUESTED by that buyer. `requiredFor: ['COMPANY']` follows that reading (both clauses re-read on 2026-10-24 at the same page): a COMPANY-type party stands in for a taxable person and must give its NIF/NIPC, while a private client is offered the field and may leave it empty, its NIF being owed on the fatura only when it asks for it (n.º 16). FORMAT — RE-VERIFIED 2026-09-16, PRIMARY TEXT NOW REACHED: curl alone still could not reach it (diariodarepublica.pt's SPA shell, confirmed again this session; the scanned 1979 original at https://files.diariodarepublica.pt/1s/1979/11/27700/30743078.pdf downloads fine via curl — HTTP 200 — but is a pure image scan with NO text layer, confirmed by `pdffonts` reporting zero embedded fonts, so pdftotext extracts nothing). The raw text used below was instead read from the SAME official page's live DOM (`document.body.innerText`, server-populated by diariodarepublica.pt's own screenservices API, not by any client-side rendering of ours) — verbatim, unsummarized, independently reproducible by any human visiting the same URL, never a model paraphrase. Decreto-Lei n.º 463/79, de 30 de novembro, Art. 2.º n.º 2, read this way at https://diariodarepublica.pt/dr/detalhe/decreto-lei/463-1979-367228: « O número fiscal das pessoas singulares é um número sequencial, cujo primeiro dígito deve ser diferente do adoptado para as pessoas colectivas e entidades equiparadas, sendo o último um dígito de contrôle da exactidão do número. » — confirms, from the founding 1979 text itself, that a check digit EXISTS and is the LAST digit, and that the FIRST digit distinguishes natural from legal persons — but not the exact digit count or the check-digit arithmetic. CRITICAL CORRECTION: that same page is stamped « Revogado » — DL 463/79 is REPEALED, by Decreto-Lei n.º 14/2013, de 28 de janeiro (Diário da República n.º 19, 1.ª série, de 2013-01-28; consolidated text read the same way at https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/2013-108043706): « ... procede à sistematização e harmonização da legislação referente ao Número de Identificação Fiscal e revoga o Decreto-Lei n.º 463/79, de 30 de novembro ». DL 14/2013 is therefore the CURRENT operative source, and its Artigo 4.º (Secção I, Das pessoas singulares), n.º 1, states: « O NIF a atribuir às pessoas singulares, sejam cidadãos nacionais ou estrangeiros, é um número composto por nove dígitos, sendo os oito primeiros sequenciais e o último um dígito de controlo. » — SETTLING the digit count (NINE) and the check digit's position (9th/last) for natural persons, as a currently-in-force legal fact; n.º 2 adds « O primeiro dígito da esquerda pode variar entre os algarismos 1 a 4. », and n.º 3 « Os algarismos iniciais «45» correspondem aos cidadãos não residentes que apenas obtenham em território português rendimentos sujeitos a retenção na fonte a título definitivo. » WHAT REMAINS UNCONFIRMED, HONESTLY: (1) the exact ARITHMETIC of the check digit (the mod-11 weighted-sum algorithm with weights 9..2 and a 'remainder < 2 → 0' rule commonly described in professional/vendor literature) is stated in NEITHER DL 463/79 NOR DL 14/2013 — a systematic search of DL 14/2013's full consolidated text (39,022 characters) for 'peso', 'multiplic', 'resto', 'divisão', 'algoritmo' and 'módulo' returned ZERO matches; the computation itself is therefore apparently an administrative/technical specification (consistent with DL 463/79's own Art. 1.º n.º 3, which delegated 'a implementação do sistema automático de processamento de dados' to the Instituto de Informática do Ministério das Finanças) never published as primary legal text, at least not found by this task — a widely-implemented industry convention, not a sourced legal fact. (2) for LEGAL PERSONS (pessoas coletivas), DL 14/2013's Artigo 11.º n.º 1 states the NIF/NIPC 'corresponde ao Número de Identificação de Pessoa Coletiva (NIPC) que for atribuído' by the RNPC (Registo Nacional de Pessoas Coletivas) — this same 9-digit/check-digit structure is NOT itself established by this text for companies, which are governed by the RNPC's own separate numbering regime, not read by this task. Because this catalog's `scheme: 'LEGAL_ID'` fact applies to `appliesTo: 'BOTH'` party types under one entry and only the NATURAL-PERSON structure is now sourced, no `pattern` field is added here — a regex covering only individuals would misrepresent companies, whose first-digit range was not verified, and the check-digit arithmetic itself (unsourced) could not be expressed as a static regex regardless."
       },
       {
         "scheme": "VAT",
@@ -580,6 +581,32 @@
         },
         "helpTextKey": "settings.identifiers.help.PT.VAT",
         "notes": "Código do IVA (CIVA), art. 53.º n.º 1 (« Âmbito de aplicação no território nacional », heading amended by the Decreto-Lei n.º 35/2025, de 24 de março), PRIMARY TEXT read directly at https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/artigo-53-o-do-civa.aspx (same access method as LEGAL_ID above). A Portuguese taxable person whose previous calendar year's domestic turnover did NOT exceed €15,000 benefits from an ISENÇÃO (exemption), the same structural reasoning as fr.json/at.json/ee.json/hr.json for this same case: a company under this threshold is simply not registered for VAT in the full sense and therefore has no active VAT number to carry on its invoices, hence `required: false`. ADJACENT DATED FINDING, not modeled here (outside the scope of this specific fact but worth noting): the same art. 53.º, n.os 2 to 6, sets up a EUROPEAN exemption scheme (stemming from EU directive 2020/285, transposed by the Decreto-Lei n.º 35/2025 reform) allowing a taxable person established in ANOTHER Member State to benefit from this SAME Portuguese exemption if their annual EU-wide turnover does not exceed €100,000 and they have obtained, in their Member State of establishment, an individual identification number carrying the SUFFIX \"EX\", a recent scheme (2025) and distinct from the domestic clause above, not investigated further by this task. FORMAT (the equivalence to the NIF/NIPC prefixed \"PT\"): NOT CONFIRMED by a front-line clause equivalent to the Croatian čl. 77 st. 6 already established by this catalog (hr.json), no text read by this task (CIVA art. 27.º to 35.º-A reviewed for the registration regime) explicitly states that the Portuguese VAT number IS the prefixed NIF/NIPC. It is a convention widely used in professional tooling (VIES validators, etc.) but it remains HERE an unsourced INFERENCE, documented honestly rather than declared as a verified fact, no `pattern` is therefore declared, by the same discipline as for LEGAL_ID above. What would settle this: a provision of the CIVA (or of the Decreto-Lei n.º 463/79 on the NIF itself) explicitly stating this equivalence, read as primary source."
+      }
+    ],
+    "invoiceRequirements": [
+      {
+        "party": "SELLER",
+        "scheme": "LEGAL_ID",
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "Código do IVA, art. 36.º, n.º 5: «As faturas devem ser datadas, numeradas sequencialmente e conter os seguintes elementos: a) Os nomes, firmas ou denominações sociais e a sede ou domicílio do fornecedor de bens ou prestador de serviços e do destinatário ou adquirente sujeito passivo do imposto, bem como os correspondentes números de identificação fiscal;»",
+          "sourceCheckedAt": "2026-10-23"
+        },
+        "notes": "CIVA art. 36.º, n.º 5, alínea a). Read at https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva36.aspx (text served by the Autoridade Tributária)."
+      },
+      {
+        "party": "BUYER",
+        "scheme": "LEGAL_ID",
+        "when": {
+          "buyerType": ["COMPANY"],
+          "buyerEstablishment": ["DOMESTIC"]
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "Código do IVA, art. 36.º, n.º 5: «As faturas devem ser datadas, numeradas sequencialmente e conter os seguintes elementos: a) Os nomes, firmas ou denominações sociais e a sede ou domicílio do fornecedor de bens ou prestador de serviços e do destinatário ou adquirente sujeito passivo do imposto, bem como os correspondentes números de identificação fiscal;»",
+          "sourceCheckedAt": "2026-10-23"
+        },
+        "notes": "CIVA art. 36.º, n.º 5, alínea a). Read at https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva36.aspx (text served by the Autoridade Tributária). The client's number is owed when it is a taxable person (sujeito passivo); a COMPANY-type client stands in for one. A private client's NIF is owed only when it asks for it (n.º 16), so it is not required here. A business client established in another member state is not modelled: the RITI provisions on intra-Community invoices were not read."
       }
     ],
     "notes": "Portugal (2026-09-04). Two schemes, as with most countries in this catalog: the NIF/NIPC (LEGAL_ID, universal, front-line required for the seller) and the VAT number (VAT, not required below the €15,000/year exemption threshold). TWO PRIMARY/OFFICIAL SOURCES READ AS RAW TEXT (direct curl on the static HTML pages served by the Autoridade Tributária e Aduaneira — AT — at info.portaldasfinancas.gov.pt, never a fetch-summary): the Código do IVA (CIVA), art. 36.º (mandatory content of the fatura) and art. 53.º (small-business exemption regime, recently modernized by the Decreto-Lei n.º 35/2025). DISCIPLINE APPLIED HONESTLY, UPDATED 2026-09-16: the NIF/NIPC format was RE-INVESTIGATED and, for natural persons, SETTLED. diariodarepublica.pt's SPA still serves no text to a plain curl request, and the 1979 original PDF at files.diariodarepublica.pt is a pure image scan with no text layer (`pdffonts`: zero embedded fonts) — but the SAME official pages' live DOM (`document.body.innerText`, populated server-side by the site's own screenservices API) carries the full verbatim statute text, read this way for two diplomas. FIRST: Decreto-Lei n.º 463/79, de 30 de novembro — the founding statute — turns out to be REPEALED (its own page is stamped « Revogado »), by Decreto-Lei n.º 14/2013, de 28 de janeiro (Diário da República n.º 19, 1.ª série, de 2013-01-28), whose own title is « Sistematização e harmonização da legislação referente ao Número de Identificação Fiscal ». SECOND, and now the operative source: DL 14/2013's Artigo 4.º n.º 1 states « O NIF a atribuir às pessoas singulares [...] é um número composto por nove dígitos, sendo os oito primeiros sequenciais e o último um dígito de controlo. », n.º 2 « O primeiro dígito da esquerda pode variar entre os algarismos 1 a 4. » — settling, for NATURAL PERSONS, the digit count (nine) and the check digit's position (last). NOT settled by either text: the check digit's ARITHMETIC (the mod-11 weighted-sum algorithm widely cited in professional literature — a search of DL 14/2013's full text for 'peso'/'multiplic'/'resto'/'divisão'/'algoritmo'/'módulo' found none of them), and the LEGAL-PERSON structure (DL 14/2013 Art. 11.º defers the NIPC of « pessoas coletivas » to the RNPC's own separate numbering regime, not read by this task). See country-identifiers/data/pt.json's own LEGAL_ID scheme notes for the full citations. No `pattern` field is added for either scheme: VAT's NIF=\"PT\"-prefix equivalence remains unsourced as before, and LEGAL_ID's fact covers `appliesTo: 'BOTH'` while only the natural-person digit structure is now confirmed — a regex would either misstate companies or fabricate the unsourced check-digit arithmetic."
@@ -906,6 +933,7 @@
               "key": "supplyType",
               "kind": "select",
               "label": "Supply type",
+              "labelKey": "documents.countryFields.supplyType.label",
               "required": false,
               "options": [
                 {
@@ -917,7 +945,8 @@
                   "label": "Services"
                 }
               ],
-              "helpText": "Whether this line is a delivery of goods or a supply of services: it decides how a cross-border sale is taxed. Goods sold to a consumer in another EU member state are an intra-Community distance sale, taxed where they arrive once your EU-wide distance sales pass EUR 10 000 in a calendar year (Directive 2006/112/EC art. 33(a) and art. 59c); the same sale as a service stays taxable here (art. 45). Optional: a line that declares nothing is treated as a supply of services."
+              "helpText": "Whether this line is a delivery of goods or a supply of services: it decides how a cross-border sale is taxed. Goods sold to a consumer in another EU member state are an intra-Community distance sale, taxed where they arrive once your EU-wide distance sales pass EUR 10 000 in a calendar year (Directive 2006/112/EC art. 33(a) and art. 59c); the same sale as a service stays taxable here (art. 45). Optional: a line that declares nothing is treated as a supply of services.",
+              "helpTextKey": "documents.countryFields.supplyType.crossBorderTax.helpText"
             }
           }
         ]
@@ -932,6 +961,7 @@
               "key": "supplyType",
               "kind": "select",
               "label": "Supply type",
+              "labelKey": "documents.countryFields.supplyType.label",
               "required": false,
               "options": [
                 {
@@ -943,7 +973,8 @@
                   "label": "Services"
                 }
               ],
-              "helpText": "Whether this line is a delivery of goods or a supply of services: it decides how a cross-border sale is taxed. Goods sold to a consumer in another EU member state are an intra-Community distance sale, taxed where they arrive once your EU-wide distance sales pass EUR 10 000 in a calendar year (Directive 2006/112/EC art. 33(a) and art. 59c); the same sale as a service stays taxable here (art. 45). Optional: a line that declares nothing is treated as a supply of services."
+              "helpText": "Whether this line is a delivery of goods or a supply of services: it decides how a cross-border sale is taxed. Goods sold to a consumer in another EU member state are an intra-Community distance sale, taxed where they arrive once your EU-wide distance sales pass EUR 10 000 in a calendar year (Directive 2006/112/EC art. 33(a) and art. 59c); the same sale as a service stays taxable here (art. 45). Optional: a line that declares nothing is treated as a supply of services.",
+              "helpTextKey": "documents.countryFields.supplyType.crossBorderTax.helpText"
             }
           }
         ]
@@ -958,6 +989,7 @@
               "key": "supplyType",
               "kind": "select",
               "label": "Supply type",
+              "labelKey": "documents.countryFields.supplyType.label",
               "required": false,
               "options": [
                 {
@@ -969,7 +1001,8 @@
                   "label": "Services"
                 }
               ],
-              "helpText": "Whether this line is a delivery of goods or a supply of services: it decides how a cross-border sale is taxed. Goods sold to a consumer in another EU member state are an intra-Community distance sale, taxed where they arrive once your EU-wide distance sales pass EUR 10 000 in a calendar year (Directive 2006/112/EC art. 33(a) and art. 59c); the same sale as a service stays taxable here (art. 45). Optional: a line that declares nothing is treated as a supply of services."
+              "helpText": "Whether this line is a delivery of goods or a supply of services: it decides how a cross-border sale is taxed. Goods sold to a consumer in another EU member state are an intra-Community distance sale, taxed where they arrive once your EU-wide distance sales pass EUR 10 000 in a calendar year (Directive 2006/112/EC art. 33(a) and art. 59c); the same sale as a service stays taxable here (art. 45). Optional: a line that declares nothing is treated as a supply of services.",
+              "helpTextKey": "documents.countryFields.supplyType.crossBorderTax.helpText"
             }
           }
         ]
@@ -984,6 +1017,7 @@
               "key": "supplyType",
               "kind": "select",
               "label": "Supply type",
+              "labelKey": "documents.countryFields.supplyType.label",
               "required": false,
               "options": [
                 {
@@ -995,7 +1029,8 @@
                   "label": "Services"
                 }
               ],
-              "helpText": "Whether this line is a delivery of goods or a supply of services: it decides how a cross-border sale is taxed. Goods sold to a consumer in another EU member state are an intra-Community distance sale, taxed where they arrive once your EU-wide distance sales pass EUR 10 000 in a calendar year (Directive 2006/112/EC art. 33(a) and art. 59c); the same sale as a service stays taxable here (art. 45). Optional: a line that declares nothing is treated as a supply of services."
+              "helpText": "Whether this line is a delivery of goods or a supply of services: it decides how a cross-border sale is taxed. Goods sold to a consumer in another EU member state are an intra-Community distance sale, taxed where they arrive once your EU-wide distance sales pass EUR 10 000 in a calendar year (Directive 2006/112/EC art. 33(a) and art. 59c); the same sale as a service stays taxable here (art. 45). Optional: a line that declares nothing is treated as a supply of services.",
+              "helpTextKey": "documents.countryFields.supplyType.crossBorderTax.helpText"
             }
           }
         ]
@@ -1031,5 +1066,146 @@
       },
       "notes": "Read at pgdlisboa.pt (consolidated text). The statute says when late-payment interest is due if the contract sets no date or term: 30 days after the debtor receives the invoice; it sets no payment term. The application uses those 30 days as its fallback and counts them from the invoice date, not from receipt."
     }
+  },
+  "companyLaw": {
+    "countryCode": "PT",
+    "legalFormLabel": "Tipo de sociedade",
+    "legalForms": [
+      {
+        "code": "PT_LDA",
+        "name": "Sociedade por quotas",
+        "designation": "Sociedade por quotas"
+      },
+      {
+        "code": "PT_UNIPESSOAL_LDA",
+        "name": "Sociedade unipessoal por quotas",
+        "designation": "Sociedade unipessoal por quotas"
+      },
+      {
+        "code": "PT_SA",
+        "name": "Sociedade anónima",
+        "designation": "Sociedade anónima"
+      },
+      {
+        "code": "PT_SCA",
+        "name": "Sociedade em comandita por ações",
+        "designation": "Sociedade em comandita por ações"
+      },
+      {
+        "code": "PT_SCS",
+        "name": "Sociedade em comandita simples",
+        "designation": "Sociedade em comandita simples"
+      },
+      {
+        "code": "PT_SNC",
+        "name": "Sociedade em nome coletivo",
+        "designation": "Sociedade em nome coletivo"
+      },
+      {
+        "code": "PT_ENI",
+        "name": "Empresário em nome individual",
+        "designation": "Empresário em nome individual",
+        "notes": "No mention: artigo 171.º binds sociedades, not a sole trader."
+      },
+      {
+        "code": "PT_OTHER",
+        "name": "Outra forma",
+        "designation": "Outra forma",
+        "notes": "No mention is declared for a form this catalog does not list."
+      }
+    ],
+    "fields": [
+      {
+        "key": "registryOffice",
+        "kind": "text",
+        "label": "Conservatória do registo comercial"
+      },
+      {
+        "key": "shareCapital",
+        "kind": "money",
+        "label": "Capital social"
+      },
+      {
+        "key": "paidUpCapital",
+        "kind": "money",
+        "label": "Capital realizado (se diferente do capital social)"
+      }
+    ],
+    "mentions": [
+      {
+        "id": "pt-type-and-registration",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": ["PT_LDA", "PT_UNIPESSOAL_LDA", "PT_SA", "PT_SCA", "PT_SCS", "PT_SNC"],
+        "required": true,
+        "template": {
+          "en": "{legalForm}, registered at the {registryOffice} under registration and legal person number {identifier:LEGAL_ID}",
+          "fr": "{legalForm}, immatriculée à la {registryOffice} sous le numéro d'immatriculation et d'identification de personne morale {identifier:LEGAL_ID}",
+          "it": "{legalForm}, iscritta presso la {registryOffice} con numero di iscrizione e di identificazione di persona giuridica {identifier:LEGAL_ID}",
+          "pl": "{legalForm}, wpisana w {registryOffice} pod numerem rejestrowym i identyfikacyjnym osoby prawnej {identifier:LEGAL_ID}",
+          "de": "{legalForm}, eingetragen bei der {registryOffice} unter der Register- und Identifikationsnummer {identifier:LEGAL_ID}",
+          "pt": "{legalForm}, matriculada na {registryOffice} sob o número de matrícula e de identificação de pessoa coletiva {identifier:LEGAL_ID}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "Código das Sociedades Comerciais, artigo 171.º: \"1 - Sem prejuízo de outras menções exigidas por leis especiais, em todos os contratos, correspondência, publicações, anúncios, sítios na Internet e de um modo geral em toda a actividade externa, as sociedades devem indicar claramente, além da firma, o tipo, a sede, a conservatória do registo onde se encontrem matriculadas, o seu número de matrícula e de identificação de pessoa colectiva e, sendo caso disso, a menção de que a sociedade se encontra em liquidação. 2 - As sociedades por quotas, anónimas e em comandita por acções devem ainda indicar o capital social, o montante do capital realizado, se for diverso, e o montante do capital próprio segundo o último balanço aprovado, sempre que este for igual ou inferior a metade do capital social.\"",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "Artigo 171.º, n.º 1: one number, \"número de matrícula e de identificação de pessoa colectiva\", which is the LEGAL_ID identifier (NIPC). The sede is the company address printed above. Read at pgdlisboa.pt (DL n.º 262/86, 56.ª versão, DL n.º 171/2026), https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=524A0171&nid=524&tabela=leis."
+      },
+      {
+        "id": "pt-share-capital",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": ["PT_LDA", "PT_UNIPESSOAL_LDA", "PT_SA", "PT_SCA"],
+        "required": true,
+        "template": {
+          "en": "Share capital {shareCapital}",
+          "fr": "Capital social {shareCapital}",
+          "it": "Capitale sociale {shareCapital}",
+          "pl": "Kapitał zakładowy {shareCapital}",
+          "de": "Kapital {shareCapital}",
+          "pt": "Capital social {shareCapital}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "Código das Sociedades Comerciais, artigo 171.º: \"1 - Sem prejuízo de outras menções exigidas por leis especiais, em todos os contratos, correspondência, publicações, anúncios, sítios na Internet e de um modo geral em toda a actividade externa, as sociedades devem indicar claramente, além da firma, o tipo, a sede, a conservatória do registo onde se encontrem matriculadas, o seu número de matrícula e de identificação de pessoa colectiva e, sendo caso disso, a menção de que a sociedade se encontra em liquidação. 2 - As sociedades por quotas, anónimas e em comandita por acções devem ainda indicar o capital social, o montante do capital realizado, se for diverso, e o montante do capital próprio segundo o último balanço aprovado, sempre que este for igual ou inferior a metade do capital social.\"",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "Artigo 171.º, n.º 2. Read at pgdlisboa.pt (DL n.º 262/86, 56.ª versão, DL n.º 171/2026), https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=524A0171&nid=524&tabela=leis."
+      },
+      {
+        "id": "pt-paid-up-capital",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": ["PT_LDA", "PT_UNIPESSOAL_LDA", "PT_SA", "PT_SCA"],
+        "required": false,
+        "template": {
+          "en": "Paid-up capital {paidUpCapital}",
+          "fr": "Capital libéré {paidUpCapital}",
+          "it": "Capitale versato {paidUpCapital}",
+          "pl": "Kapitał wpłacony {paidUpCapital}",
+          "de": "Eingezahltes Kapital {paidUpCapital}",
+          "pt": "Capital realizado {paidUpCapital}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "Código das Sociedades Comerciais, artigo 171.º: \"1 - Sem prejuízo de outras menções exigidas por leis especiais, em todos os contratos, correspondência, publicações, anúncios, sítios na Internet e de um modo geral em toda a actividade externa, as sociedades devem indicar claramente, além da firma, o tipo, a sede, a conservatória do registo onde se encontrem matriculadas, o seu número de matrícula e de identificação de pessoa colectiva e, sendo caso disso, a menção de que a sociedade se encontra em liquidação. 2 - As sociedades por quotas, anónimas e em comandita por acções devem ainda indicar o capital social, o montante do capital realizado, se for diverso, e o montante do capital próprio segundo o último balanço aprovado, sempre que este for igual ou inferior a metade do capital social.\"",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "Artigo 171.º, n.º 2: only \"se for diverso\", which the settings cannot tell: printed when filled in, never asked for. Read at pgdlisboa.pt (DL n.º 262/86, 56.ª versão, DL n.º 171/2026), https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=524A0171&nid=524&tabela=leis."
+      }
+    ],
+    "demo": {
+      "legalFormByNameSuffix": {
+        "Lda": "PT_LDA",
+        "Unipessoal Lda": "PT_UNIPESSOAL_LDA"
+      },
+      "values": {
+        "registryOffice": "Conservatória do Registo Comercial de {city}",
+        "shareCapital": {
+          "amount": "5000",
+          "currency": "EUR"
+        }
+      }
+    },
+    "notes": "Not modelled: the capital próprio of artigo 171.º, n.º 2, owed only when it is at most half the share capital (a balance-sheet fact the settings do not carry), and companies in liquidation."
   }
 }

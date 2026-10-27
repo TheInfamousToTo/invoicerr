@@ -817,7 +817,7 @@ export function ImportStatementDialog({ onImported }: ImportStatementDialogProps
     () =>
       z.object({
         file: z.custom<File | null>((value) => value instanceof File, {
-          message: t("bankReconciliation.import.errors.fileRequired"),
+          error: t("bankReconciliation.import.errors.fileRequired"),
         }),
         currency: z.string().min(1, t("bankReconciliation.import.errors.currencyRequired")),
         dateColumn: z.string().min(1, t("bankReconciliation.import.errors.columnRequired")),
@@ -1002,8 +1002,13 @@ export function ImportStatementDialog({ onImported }: ImportStatementDialogProps
 
   return (
     <>
-      <Button type="button" onClick={() => setOpen(true)} dataCy="bank-reconciliation-import-button">
-        <Upload className="h-4 w-4 me-0 md:me-2" />
+      <Button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label={t("bankReconciliation.import.button")}
+        dataCy="bank-reconciliation-import-button"
+      >
+        <Upload className="h-4 w-4 me-0 md:me-2" aria-hidden="true" />
         <span className="hidden md:inline-flex">{t("bankReconciliation.import.button")}</span>
       </Button>
 

@@ -542,7 +542,10 @@
         "appliesTo": "BOTH",
         "label": "SIREN / SIRET",
         "required": true,
-        "demoGenerator": { "id": "siret" },
+        "requiredFor": ["COMPANY"],
+        "demoGenerator": {
+          "id": "siret"
+        },
         "pattern": "^\\d{9}(\\d{5})?$",
         "helpText": "9 digits (SIREN) or 14 digits (SIRET)",
         "helpTextKey": "settings.identifiers.help.FR.LEGAL_ID",
@@ -557,20 +560,90 @@
           "sourceText": "Code de commerce art. R.123-237 : « Toute personne immatriculée indique sur ses factures, notes de commande, tarifs et documents publicitaires ainsi que sur toutes correspondances et tous récépissés concernant son activité et signés par elle ou en son nom : 1° Le numéro unique d'identification de l'entreprise délivré conformément à l'article D. 123-235 ; 2° La mention RCS suivie du nom de la ville où se trouve le greffe où elle est immatriculée ; […]. » Art. D. 123-235, auquel il renvoie : « Le numéro unique d'identification qui seul peut être exigé d'une entreprise […] est le numéro d'identité qui lui est attribué lors de son inscription au répertoire des entreprises et de leurs établissements. » Art. R.123-221 : « Le numéro d'identification attribué à chaque unité légale est un numéro d'ordre composé de neuf chiffres. Le numéro d'identification attribué à chaque établissement est composé des neuf chiffres du numéro d'identification de l'unité légale inscrite qui y exerce son activité, suivis d'un numéro d'identification complémentaire de cinq chiffres propre à cet établissement. » — la première phrase est le SIREN (9 chiffres, unité légale), la seconde le SIRET (14 chiffres, établissement) ; D.123-235 renvoie à la première, donc R.123-237 exige le SIREN. CGI ann. II art. 242 nonies A, I, 1° : « le nom complet, le numéro d'identification mentionné au premier alinéa de l'article R. 123-221 du code de commerce et l'adresse de l'assujetti et de son client » — le premier alinéa de R.123-221 est précisément le numéro à neuf chiffres de l'unité légale, jamais le second alinéa (l'établissement).",
           "sourceCheckedAt": "2026-09-01"
         },
-        "notes": "SIRET vs SIREN on the invoice: both texts read require the SIREN (9 digits), not the SIRET (14 digits), see this entry's `provenance.sourceText`. The field accepts both lengths rather than enforcing the SIREN alone: a valid SIRET always contains the required SIREN in its first 9 digits (R.123-221, second paragraph), so accepting the longer value is a tolerance for an entry whose SIREN derives mechanically and without loss, not a departure from the text. `einvoiceReduction` reduces a 14-digit value to those first 9 digits in an e-invoice, so both entries produce the same XML (`formats/pitfalls.spec.ts`, `cross-border-formats.spec.ts`). `iso6523Scheme` 0002 is the SIRENE register's ISO 6523 ICD: AIFE, Chorus Pro EDI connection annex V4.20, S2.13: « Les codes de type identifiant valide sont définis par la liste ISO6523. Pour un SIRET le code est « 0002 » ». `electronicAddressScheme` 0225 (the French e-invoicing electronic address scheme in the Peppol EAS list, `formats/vendored/peppol/PEPPOL-EN16931-UBL.sch`) carries the SIREN as the electronic address a PDP accepted in a live deposit."
+        "notes": "SIRET vs SIREN on the invoice: both texts read require the SIREN (9 digits), not the SIRET (14 digits), see this entry's `provenance.sourceText`. The field accepts both lengths rather than enforcing the SIREN alone: a valid SIRET always contains the required SIREN in its first 9 digits (R.123-221, second paragraph), so accepting the longer value is a tolerance for an entry whose SIREN derives mechanically and without loss, not a departure from the text. `einvoiceReduction` reduces a 14-digit value to those first 9 digits in an e-invoice, so both entries produce the same XML (`formats/pitfalls.spec.ts`, `cross-border-formats.spec.ts`). `iso6523Scheme` 0002 is the SIRENE register's ISO 6523 ICD: AIFE, Chorus Pro EDI connection annex V4.20, S2.13: « Les codes de type identifiant valide sont définis par la liste ISO6523. Pour un SIRET le code est « 0002 » ». `electronicAddressScheme` 0225 (the French e-invoicing electronic address scheme in the Peppol EAS list, `formats/vendored/peppol/PEPPOL-EN16931-UBL.sch`) carries the SIREN as the electronic address a PDP accepted in a live deposit. `requiredFor: ['COMPANY']`: R.123-237 binds a « personne immatriculée », and the SIRENE register lists a natural person only when it trades, employs staff or is otherwise named there (R.123-220 of the same code, read 2026-10-24 at codes.droit.org, edition of 2026-10-01: « L'Institut national de la statistique et des études économiques est chargé de tenir un répertoire national incluant, lorsqu'ils relèvent du Registre national des entreprises, ou qu'ils emploient du personnel salarié, sont soumis aux obligations fiscales des entreprises ou sollicitent des transferts financiers publics : 1° Les personnes physiques exerçant de manière indépendante une profession non salariée [...] »), so a private client has no number to give. A private client who trades as a sole trader holds one and may still enter it. Whether an invoice must name the client's SIREN is `invoiceRequirements`' rule, not this one."
       },
       {
         "scheme": "VAT",
         "appliesTo": "COMPANY",
         "label": "N° TVA intracommunautaire",
         "required": false,
-        "demoGenerator": { "id": "fr-vat-from-siren", "source": "LEGAL_ID" },
+        "demoGenerator": {
+          "id": "fr-vat-from-siren",
+          "source": "LEGAL_ID"
+        },
         "provenance": {
           "kind": "legal",
           "sourceText": "Le numéro individuel d'identification attribué à l'assujetti en application de l'article 286 ter du code précité et sous lequel il a effectué la livraison de biens ou la prestation de services ; […] II. – Les factures dont le montant est inférieur ou égal à 150 € hors taxe ainsi que celles établies par les assujettis bénéficiant du régime de franchise en base prévu aux articles 293 B et 293 B ter du code général des impôts […] peuvent ne pas comporter les mentions énoncées aux 2° et 12° du I du présent article.",
           "sourceCheckedAt": "2026-09-01"
         },
         "notes": "CGI ann. II art. 242 nonies A, I, 2° and II. Read directly on 2026-09-01 at codes.droit.org (Légifrance mirror), https://codes.droit.org/PDF/Code%20g%C3%A9n%C3%A9ral%20des%20imp%C3%B4ts%2C%20annexe%20II.pdf — Légifrance itself continued to refuse any automated request. This text settles exactly the question left open on 2026-08-30: the VAT number (2°) is in principle a mandatory mention of the invoice (I), BUT II expressly exempts invoices issued by a taxable person under the small-business exemption scheme (art. 293 B and 293 B ter CGI, itself now sourced — see vat-rates/data/fr.json's own 'fr-exempt-293b' entry) as well as invoices ≤ €150 excl. tax. This is exactly why this field stays `required: false` at COUNTRY level rather than `true`: the obligation depends on the issuing company's own VAT regime, a datum this catalog does not carry per company — see this same reasoning already held, without the text at the time, in the resolutionNote removed by this promotion."
+      }
+    ],
+    "invoiceRequirements": [
+      {
+        "party": "SELLER",
+        "scheme": "LEGAL_ID",
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "CGI annexe II, art. 242 nonies A : « I. – Les mentions obligatoires qui doivent figurer sur les factures en application du II de l'article 289 du code général des impôts sont les suivantes : 1° Le nom complet, le numéro d'identification mentionné au premier alinéa de l'article R. 123-221 du code de commerce et l'adresse de l'assujetti et de son client ; »",
+          "sourceCheckedAt": "2026-10-23"
+        },
+        "notes": "CGI ann. II art. 242 nonies A, I, 1°. Read at codes.droit.org (Légifrance mirror, edition of 2026-10-15), https://codes.droit.org/PDF/Code%20g%C3%A9n%C3%A9ral%20des%20imp%C3%B4ts%2C%20annexe%20II.pdf, article in the wording of décret n° 2024-1195."
+      },
+      {
+        "party": "BUYER",
+        "scheme": "LEGAL_ID",
+        "when": {
+          "buyerType": ["COMPANY"],
+          "buyerEstablishment": ["DOMESTIC"]
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "CGI annexe II, art. 242 nonies A : « I. – Les mentions obligatoires qui doivent figurer sur les factures en application du II de l'article 289 du code général des impôts sont les suivantes : 1° Le nom complet, le numéro d'identification mentionné au premier alinéa de l'article R. 123-221 du code de commerce et l'adresse de l'assujetti et de son client ; »",
+          "sourceCheckedAt": "2026-10-23"
+        },
+        "notes": "CGI ann. II art. 242 nonies A, I, 1°. Read at codes.droit.org (Légifrance mirror, edition of 2026-10-15), https://codes.droit.org/PDF/Code%20g%C3%A9n%C3%A9ral%20des%20imp%C3%B4ts%2C%20annexe%20II.pdf, article in the wording of décret n° 2024-1195. The R. 123-221 number is the SIREN, which only a business registered in France holds: a foreign client has none, and a private individual is not registered. A COMPANY-type client stands in for a business client; an INDIVIDUAL-type client who trades as a sole trader also holds one but cannot be told apart here."
+      },
+      {
+        "party": "SELLER",
+        "scheme": "VAT",
+        "when": {
+          "sellerVatRegime": ["STANDARD"]
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "CGI annexe II, art. 242 nonies A : « I. – [...] 2° Le numéro individuel d'identification attribué à l'assujetti en application de l'article 286 ter du code précité et sous lequel il a effectué la livraison de biens ou la prestation de services ; [...] II. – Les factures dont le montant est inférieur ou égal à 150 € hors taxe ainsi que celles établies par les assujettis bénéficiant du régime de franchise en base prévu aux articles 293 B et 293 B ter du code général des impôts et celles mentionnées au 5 du I de l'article 289 du même code peuvent ne pas comporter les mentions énoncées aux 2° et 12° du I du présent article. »",
+          "sourceCheckedAt": "2026-10-23"
+        },
+        "notes": "CGI ann. II art. 242 nonies A, I, 2° and II. Read at codes.droit.org (Légifrance mirror, edition of 2026-10-15), https://codes.droit.org/PDF/Code%20g%C3%A9n%C3%A9ral%20des%20imp%C3%B4ts%2C%20annexe%20II.pdf, article in the wording of décret n° 2024-1195. The franchise en base exemption is the seller's own `exemptVat` setting. The invoice of 150 EUR or less that II also exempts is not modelled: it only allows leaving the number out, so printing one is never wrong."
+      },
+      {
+        "party": "SELLER",
+        "scheme": "VAT",
+        "when": {
+          "buyerType": ["COMPANY"],
+          "buyerEstablishment": ["OTHER_UNION_MEMBER"]
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "CGI annexe II, art. 242 nonies A : « I. – [...] 3° Les numéros d'identification à la taxe sur la valeur ajoutée du vendeur et de l'acquéreur pour les livraisons désignées au I de l'article 262 ter du code précité ; 4° Le numéro d'identification à la taxe sur la valeur ajoutée du prestataire ainsi que celui fourni par le preneur pour les prestations pour lesquelles le preneur est redevable de la taxe ; »",
+          "sourceCheckedAt": "2026-10-23"
+        },
+        "notes": "CGI ann. II art. 242 nonies A, I, 3° and 4°. Read at codes.droit.org (Légifrance mirror, edition of 2026-10-15), https://codes.droit.org/PDF/Code%20g%C3%A9n%C3%A9ral%20des%20imp%C3%B4ts%2C%20annexe%20II.pdf, article in the wording of décret n° 2024-1195. 3° (intra-Community supply of goods, exempt under 262 ter I) and 4° (services for which the buyer owes the tax, the general B2B rule for a business client in another member state) are not relaxed by II for a franchise seller: II only lifts 2° and 12°, and its b) excludes 262 ter I supplies outright."
+      },
+      {
+        "party": "BUYER",
+        "scheme": "VAT",
+        "when": {
+          "buyerType": ["COMPANY"],
+          "buyerEstablishment": ["OTHER_UNION_MEMBER"]
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "CGI annexe II, art. 242 nonies A : « I. – [...] 3° Les numéros d'identification à la taxe sur la valeur ajoutée du vendeur et de l'acquéreur pour les livraisons désignées au I de l'article 262 ter du code précité ; 4° Le numéro d'identification à la taxe sur la valeur ajoutée du prestataire ainsi que celui fourni par le preneur pour les prestations pour lesquelles le preneur est redevable de la taxe ; »",
+          "sourceCheckedAt": "2026-10-23"
+        },
+        "notes": "CGI ann. II art. 242 nonies A, I, 3° and 4°. Read at codes.droit.org (Légifrance mirror, edition of 2026-10-15), https://codes.droit.org/PDF/Code%20g%C3%A9n%C3%A9ral%20des%20imp%C3%B4ts%2C%20annexe%20II.pdf, article in the wording of décret n° 2024-1195. A domestic business client's VAT number is not among the mandatory mentions: 1° asks for its SIREN instead."
       }
     ]
   },
@@ -791,14 +864,37 @@
         "mandatedFrom": "2026-09-01",
         "equivalentProviderIds": ["billit", "iopole", "invopop"],
         "scope": {
-          "parties": "domestic"
+          "parties": "domestic",
+          "buyerType": ["COMPANY"],
+          "seller": {
+            "sizeCategory": ["LARGE", "MID"]
+          }
         },
         "provenance": {
           "kind": "legal",
-          "sourceText": "Pour l'application de l'article 289 et par dérogation au VI du même article 289, l'émission, la transmission et la réception des factures relatives aux opérations mentionnées aux a et d du 1 du I dudit article 289 ainsi qu'aux acomptes s'y rapportant s'opèrent sous une forme électronique, selon des normes de facturation électronique définies par arrêté du ministre chargé du budget, lorsque l'émetteur de la facture et son destinataire sont des assujettis qui sont établis ou ont leur domicile ou leur résidence habituelle en France. L'émission, la transmission et la réception des factures électroniques s'effectuent en recourant à une plateforme agréée.",
-          "sourceCheckedAt": "2026-09-24"
+          "sourceText": "CGI art. 289 bis, I: « Pour l'application de l'article 289 et par dérogation au VI du même article 289, l'émission, la transmission et la réception des factures relatives aux opérations mentionnées aux a et d du 1 du I dudit article 289 ainsi qu'aux acomptes s'y rapportant s'opèrent sous une forme électronique, selon des normes de facturation électronique définies par arrêté du ministre chargé du budget, lorsque l'émetteur de la facture et son destinataire sont des assujettis qui sont établis ou ont leur domicile ou leur résidence habituelle en France. L'émission, la transmission et la réception des factures électroniques s'effectuent en recourant à une plateforme agréée. » Loi n° 2022-1157 du 16 août 2022, art. 26, III, A, first paragraph: « Les 2° et 4° du I et le II s'appliquent aux factures émises à compter du 1er septembre 2026. Un décret peut fixer une date ultérieure, qui ne peut être postérieure au 1er décembre 2026. »",
+          "sourceCheckedAt": "2026-10-25"
         },
-        "notes": "CITATION REFRESHED 2026-09-24, and it is now the STATUTE itself rather than a ministerial website. `sourceText` above is CGI art. 289 bis, I, quoted verbatim from the consolidated text (Légifrance, article permalink LEGIARTI000053546660, page header « Version en vigueur depuis le 21 février 2026 », « Modifié par LOI n°2026-103 du 19 février 2026 - art. 123 (V) »). The same wording is already carried, word for word, by `country-policy/data/fr.json`'s own 'invoice.download-xml' note, read independently on 2026-09-12 from the Légifrance mirror codes.droit.org (Légifrance itself answers 403 to automated requests from this environment, so the two readings were obtained by different routes and agree). WHAT THE PREVIOUS CITATION GOT WRONG, and why this matters more than a tidier source: it quoted « Seule une plateforme agréée est habilitée à assurer toutes les fonctionnalités prévues » (impots.gouv.fr, consulted 2026-08-27), a sentence about WHICH platform is accredited - carrying nothing at all about WHO the obligation binds. The statute does: « lorsque l'émetteur de la facture et son destinataire sont des assujettis qui sont établis ou ont leur domicile ou leur résidence habituelle en France ». Note the criterion is wider than «établis en France» alone (domicile or habitual residence count too), which this catalog cannot express: `scope.parties: 'domestic'` compares the two parties' COUNTRY, the only establishment fact this product stores. - SCOPE: the `scope.parties: 'domestic'` above is that statutory restriction, and nothing more. Art. 289 bis V excludes two further sets of operations this file does NOT model - « Le présent article ne s'applique pas aux opérations mentionnées au 2° du II de l'article 289-0 ou au 1° du I de l'article 262 ter. » (intra-Community supplies exempt under 262 ter I 1°, and classified operations) - both of which are, by construction, already outside the domestic narrowing, so nothing is lost by not expressing them separately today. - WHAT THIS PRODUCT DOES NOT DO, and must not be read as doing: once the invoicing mandate falls away because the buyer is established elsewhere, the French seller still owes E-REPORTING on that transaction - CGI art. 290, I, 1°, same consolidated edition: « Les assujettis établis ou ayant domicile en France communiquent à l'administration sous forme électronique [...] les données relatives aux opérations suivantes [...] : 1° Les opérations réalisées au profit d'une personne assujettie suivantes : a) Les livraisons exonérées en application du I des articles 262 et 262 ter ; b) Les livraisons de biens dont le lieu d'imposition est en France selon l'article 258, lorsque le destinataire est assujetti non établi en France ; c) Les prestations de services non situées en France selon les articles 259 et 259 A ; d) Les prestations de services au profit de preneurs assujettis non établis en France et situées en France selon les articles 259 et 259 A ». That is a DECLARATION of data, never a routing of the invoice, and this repository performs none of it: `reporting/data/fr.json`'s two e-reporting facts (art. 290, 290 A) deliberately name an UNREGISTERED providerId placeholder so the obligation stays visible without pretending to run. A CAUTION for whoever revisits this: a page on impots.gouv.fr states that intra-Community supplies are excluded from e-reporting - that page addresses companies NOT established in France and does not govern a French seller; art. 290 I 1° a), quoted above, explicitly puts the 262 ter exemptions IN scope. - PENALTIES, carried over from the previous note and not re-verified on 2026-09-24: CGI art. 1737 III, 50 EUR per invoice capped at 15 000 EUR a year, and IV bis, 500 EUR then 1 000 EUR per quarter for persisting in not using an accredited platform. Treat these figures as the older reading they are. - COMING CHANGE, dated: this article is ABROGATED with effect 2027-01-01. Légifrance's own note under it reads « Conformément au 27° de l'article 9, à l'article 15 et à l'article 49 de l'ordonnance n° 2025-1247 du 17 décembre 2025, ces dispositions, à l'exception de celles mentionnées à la première colonne du tableau de l'article 15, sont abrogées à compter du 1er janvier 2027. », the obligation being recodified into the code des impositions sur les biens et services - the same note names « l'article L. 215-39 et [le] premier alinéa de l'article L. 216-44 » as the successor provisions for art. 289 bis, and « l'article L. 215-39, [le] second alinéa de l'article L. 216-56 et [le] dernier alinéa de l'article L. 216-55 » for art. 290. HONEST LIMIT: CIBS art. L. 216-55 and L. 216-56 were read directly (LEGIARTI000053106721 and LEGIARTI000053106723, both « Création Ordonnance n°2025-1247 du 17 décembre 2025 »); art. L. 216-44 was NOT - every permalink tried for it returned 404, so its number here rests on the cross-reference note under art. 289 bis, not on the article's own text. Do not restate L. 216-44's content on the strength of this file. Note also that the CIBS provisions enter into force on 2026-09-01 while the CGI articles are abrogated on 2027-01-01, so the two corpora overlap for four months; nothing in this catalog depends on which one is cited, since both carry the same domestic restriction and the same 2026-09-01 start. EQUIVALENT PROVIDERS ADDED 2026-09-28 (issue #527, settings screen): \"pdp\" as a transport-registry.ts id is literally only SuperPDP - since PR #528's operator catalogue (documents/operators/) this repository ALSO wires Billit, Iopole and Invopop as their OWN dedicated transport ids implementing this exact SAME legal channel (see each operator's own data/<id>.json offering, legalChannel \"pdp\"), each with LEGAL (not merely researched) provenance that it is itself DGFiP-registered: billit.json (\"also registered by the DGFiP as a French plateforme agreee\"), iopole.json (\"a French, DGFiP-registered transmission platform\"), invopop.json (\"registered by the DGFiP and self-serve in sandbox\"). Before this addition, connecting one of these three and choosing it as Company.invoiceTransportId was silently REFUSED by invoice-actions.ts's own mandate preflight the moment this mandate became active (a strict transportId === \"pdp\" match, this field previously absent) - a real defect surfaced by issue #527's own \"blocked by send\" verdict (channels.service.ts#computeBlockedBySend) showing Iopole as refused immediately after a fresh, successful connection. The OTHER PDP-catalogued operators (b2brouter, weinvoice, sovos-saphety, oneup, vosfactures) are deliberately NOT added here: each carries \"unverified\" provenance on its own pdp offering (no independent DGFiP-registration check, see each operator's own data file) - listing an unconfirmed accredited-platform candidate as satisfying a legal mandate would be exactly the kind of guess this catalog's own provenance discipline forbids."
+        "notes": "SELLER SIZE: the obligation to ISSUE through an accredited platform starts on 2026-09-01 for large companies and intermediate-sized companies (ETI), and on 2027-09-01 for SMEs and micro-enterprises that are not members of an assujetti unique (loi n° 2022-1157 art. 26, III, A, quoted in each fact's provenance). This file therefore carries two `pdp` facts, one per start date, each scoped by `scope.seller.sizeCategory`, an attribute of this file's `companyProfile`. A company that has not declared its size category is in scope of both, so it is bound from 2026-09-01: issuing outside an accredited platform when bound is a fine per invoice (CGI art. 1737) and an issued invoice cannot be taken back, whereas a refusal is visible and lifted by declaring the category once in the company settings. RECEPTION is not modelled here and is not deferred: every recipient must be able to receive from 2026-09-01, since the invoices of large companies and ETIs must already be issued electronically. LIMITS: (1) an SME or micro-enterprise that IS a member of an assujetti unique (CGI art. 256 C) is bound from 2026-09-01, which this profile cannot express; such a company must not declare SME or MICRO. (2) Each paragraph lets a decree set a later date (at the latest 2026-12-01 and 2027-12-01); no such decree was found (décret n° 2026-677 read in full on 2026-10-24), not re-checked since. (3) The thresholds of LME art. 51 and its decree were not re-read. SOURCES: Loi n° 2022-1157 du 16 août 2022, art. 26, version in force since 2026-02-21 (LEGIARTI000053546715, last amended by LOI n° 2026-103 du 19 février 2026, art. 123), read in the DILA LEGI open data archive of 2026-09-03; the archives published from 2026-09-04 to 2026-10-25 carry no newer version. CGI art. 289 bis, I re-read the same day on codes.droit.org (CGI edition of 2026-09-28). BUYER TYPE: `scope.buyerType: [\"COMPANY\"]` is the same sentence of art. 289 bis, I quoted above: the obligation binds only « lorsque l'émetteur de la facture et son destinataire sont des assujettis ». A private person (client type INDIVIDUAL) is not an assujetti, so an invoice to one is outside the PDP mandate; the sale falls under e-reporting instead (CGI art. 290 A, the `transactions: b2c` fact in this file's `reporting` section), a declaration this product does not transmit. Limit: a client recorded as COMPANY is taken to be an assujetti, which an association or a public body outside the scope of VAT may not be. - CITATION REFRESHED 2026-09-24, and it is now the STATUTE itself rather than a ministerial website. `sourceText` above is CGI art. 289 bis, I, quoted verbatim from the consolidated text (Légifrance, article permalink LEGIARTI000053546660, page header « Version en vigueur depuis le 21 février 2026 », « Modifié par LOI n°2026-103 du 19 février 2026 - art. 123 (V) »). The same wording is already carried, word for word, by `country-policy/data/fr.json`'s own 'invoice.download-xml' note, read independently on 2026-09-12 from the Légifrance mirror codes.droit.org (Légifrance itself answers 403 to automated requests from this environment, so the two readings were obtained by different routes and agree). WHAT THE PREVIOUS CITATION GOT WRONG, and why this matters more than a tidier source: it quoted « Seule une plateforme agréée est habilitée à assurer toutes les fonctionnalités prévues » (impots.gouv.fr, consulted 2026-08-27), a sentence about WHICH platform is accredited - carrying nothing at all about WHO the obligation binds. The statute does: « lorsque l'émetteur de la facture et son destinataire sont des assujettis qui sont établis ou ont leur domicile ou leur résidence habituelle en France ». Note the criterion is wider than «établis en France» alone (domicile or habitual residence count too), which this catalog cannot express: `scope.parties: 'domestic'` compares the two parties' COUNTRY, the only establishment fact this product stores. - SCOPE: the `scope.parties: 'domestic'` above is that statutory restriction, and nothing more. Art. 289 bis V excludes two further sets of operations this file does NOT model - « Le présent article ne s'applique pas aux opérations mentionnées au 2° du II de l'article 289-0 ou au 1° du I de l'article 262 ter. » (intra-Community supplies exempt under 262 ter I 1°, and classified operations) - both of which are, by construction, already outside the domestic narrowing, so nothing is lost by not expressing them separately today. - WHAT THIS PRODUCT DOES NOT DO, and must not be read as doing: once the invoicing mandate falls away because the buyer is established elsewhere, the French seller still owes E-REPORTING on that transaction - CGI art. 290, I, 1°, same consolidated edition: « Les assujettis établis ou ayant domicile en France communiquent à l'administration sous forme électronique [...] les données relatives aux opérations suivantes [...] : 1° Les opérations réalisées au profit d'une personne assujettie suivantes : a) Les livraisons exonérées en application du I des articles 262 et 262 ter ; b) Les livraisons de biens dont le lieu d'imposition est en France selon l'article 258, lorsque le destinataire est assujetti non établi en France ; c) Les prestations de services non situées en France selon les articles 259 et 259 A ; d) Les prestations de services au profit de preneurs assujettis non établis en France et situées en France selon les articles 259 et 259 A ». That is a DECLARATION of data, never a routing of the invoice, and this repository performs none of it: `reporting/data/fr.json`'s two e-reporting facts (art. 290, 290 A) deliberately name an UNREGISTERED providerId placeholder so the obligation stays visible without pretending to run. A CAUTION for whoever revisits this: a page on impots.gouv.fr states that intra-Community supplies are excluded from e-reporting - that page addresses companies NOT established in France and does not govern a French seller; art. 290 I 1° a), quoted above, explicitly puts the 262 ter exemptions IN scope. - PENALTIES, carried over from the previous note and not re-verified on 2026-09-24: CGI art. 1737 III, 50 EUR per invoice capped at 15 000 EUR a year, and IV bis, 500 EUR then 1 000 EUR per quarter for persisting in not using an accredited platform. Treat these figures as the older reading they are. - COMING CHANGE, dated: this article is ABROGATED with effect 2027-01-01. Légifrance's own note under it reads « Conformément au 27° de l'article 9, à l'article 15 et à l'article 49 de l'ordonnance n° 2025-1247 du 17 décembre 2025, ces dispositions, à l'exception de celles mentionnées à la première colonne du tableau de l'article 15, sont abrogées à compter du 1er janvier 2027. », the obligation being recodified into the code des impositions sur les biens et services - the same note names « l'article L. 215-39 et [le] premier alinéa de l'article L. 216-44 » as the successor provisions for art. 289 bis, and « l'article L. 215-39, [le] second alinéa de l'article L. 216-56 et [le] dernier alinéa de l'article L. 216-55 » for art. 290. HONEST LIMIT: CIBS art. L. 216-55 and L. 216-56 were read directly (LEGIARTI000053106721 and LEGIARTI000053106723, both « Création Ordonnance n°2025-1247 du 17 décembre 2025 »); art. L. 216-44 was NOT - every permalink tried for it returned 404, so its number here rests on the cross-reference note under art. 289 bis, not on the article's own text. Do not restate L. 216-44's content on the strength of this file. Note also that the CIBS provisions enter into force on 2026-09-01 while the CGI articles are abrogated on 2027-01-01, so the two corpora overlap for four months; nothing in this catalog depends on which one is cited, since both carry the same domestic restriction and the same 2026-09-01 start. EQUIVALENT PROVIDERS ADDED 2026-09-28 (issue #527, settings screen): \"pdp\" as a transport-registry.ts id is literally only SuperPDP - since PR #528's operator catalogue (documents/operators/) this repository ALSO wires Billit, Iopole and Invopop as their OWN dedicated transport ids implementing this exact SAME legal channel (see each operator's own data/<id>.json offering, legalChannel \"pdp\"), each with LEGAL (not merely researched) provenance that it is itself DGFiP-registered: billit.json (\"also registered by the DGFiP as a French plateforme agreee\"), iopole.json (\"a French, DGFiP-registered transmission platform\"), invopop.json (\"registered by the DGFiP and self-serve in sandbox\"). Before this addition, connecting one of these three and choosing it as Company.invoiceTransportId was silently REFUSED by invoice-actions.ts's own mandate preflight the moment this mandate became active (a strict transportId === \"pdp\" match, this field previously absent) - a real defect surfaced by issue #527's own \"blocked by send\" verdict (channels.service.ts#computeBlockedBySend) showing Iopole as refused immediately after a fresh, successful connection. The OTHER PDP-catalogued operators (b2brouter, weinvoice, sovos-saphety, oneup, vosfactures) are deliberately NOT added here: each carries \"unverified\" provenance on its own pdp offering (no independent DGFiP-registration check, see each operator's own data file) - listing an unconfirmed accredited-platform candidate as satisfying a legal mandate would be exactly the kind of guess this catalog's own provenance discipline forbids."
+      },
+      {
+        "providerId": "pdp",
+        "requirement": "mandated",
+        "mandatedFrom": "2027-09-01",
+        "equivalentProviderIds": ["billit", "iopole", "invopop"],
+        "scope": {
+          "parties": "domestic",
+          "buyerType": ["COMPANY"],
+          "seller": {
+            "sizeCategory": ["SME", "MICRO"]
+          }
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "CGI art. 289 bis, I: « Pour l'application de l'article 289 et par dérogation au VI du même article 289, l'émission, la transmission et la réception des factures relatives aux opérations mentionnées aux a et d du 1 du I dudit article 289 ainsi qu'aux acomptes s'y rapportant s'opèrent sous une forme électronique, selon des normes de facturation électronique définies par arrêté du ministre chargé du budget, lorsque l'émetteur de la facture et son destinataire sont des assujettis qui sont établis ou ont leur domicile ou leur résidence habituelle en France. L'émission, la transmission et la réception des factures électroniques s'effectuent en recourant à une plateforme agréée. » Loi n° 2022-1157 du 16 août 2022, art. 26, III, A, second paragraph: « Toutefois, pour les factures émises par les assujettis relevant des catégories des microentreprises et des petites et moyennes entreprises qui ne sont pas membres d'un assujetti unique mentionné à l'article 256 C du code général des impôts, les 2° et 4° du I et le II du présent article s'appliquent à compter du 1er septembre 2027. Un décret peut fixer une date ultérieure, qui ne peut être postérieure au 1er décembre 2027. »",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "The same mandate as the previous fact, for SMEs and micro-enterprises: see that fact's notes for the seller size, the undeclared case, the limits and the sources."
       }
     ]
   },
@@ -1031,6 +1127,7 @@
               "key": "supplyType",
               "kind": "select",
               "label": "Supply type",
+              "labelKey": "documents.countryFields.supplyType.label",
               "required": false,
               "options": [
                 {
@@ -1042,7 +1139,8 @@
                   "label": "Services"
                 }
               ],
-              "helpText": "Whether this line is a delivery of goods or a supply of services: used to derive BT-23 (\"cadre de facturation\") on a French invoice. Optional: leave unset if unsure."
+              "helpText": "Whether this line is a delivery of goods or a supply of services: used to derive BT-23 (\"cadre de facturation\") on a French invoice. Optional: leave unset if unsure.",
+              "helpTextKey": "documents.countryFields.supplyType.billingFramework.helpText"
             }
           }
         ]
@@ -1057,6 +1155,7 @@
               "key": "supplyType",
               "kind": "select",
               "label": "Supply type",
+              "labelKey": "documents.countryFields.supplyType.label",
               "required": false,
               "options": [
                 {
@@ -1068,7 +1167,8 @@
                   "label": "Services"
                 }
               ],
-              "helpText": "Whether this line is a delivery of goods or a supply of services: used to derive BT-23 (\"cadre de facturation\") on a French invoice. Optional: leave unset if unsure."
+              "helpText": "Whether this line is a delivery of goods or a supply of services: used to derive BT-23 (\"cadre de facturation\") on a French invoice. Optional: leave unset if unsure.",
+              "helpTextKey": "documents.countryFields.supplyType.billingFramework.helpText"
             }
           }
         ]
@@ -1083,6 +1183,7 @@
               "key": "supplyType",
               "kind": "select",
               "label": "Supply type",
+              "labelKey": "documents.countryFields.supplyType.label",
               "required": false,
               "options": [
                 {
@@ -1094,7 +1195,8 @@
                   "label": "Services"
                 }
               ],
-              "helpText": "Whether this line is a delivery of goods or a supply of services: used to derive BT-23 (\"cadre de facturation\") on a French invoice. Optional: leave unset if unsure."
+              "helpText": "Whether this line is a delivery of goods or a supply of services: used to derive BT-23 (\"cadre de facturation\") on a French invoice. Optional: leave unset if unsure.",
+              "helpTextKey": "documents.countryFields.supplyType.billingFramework.helpText"
             }
           }
         ]
@@ -1109,6 +1211,7 @@
               "key": "supplyType",
               "kind": "select",
               "label": "Supply type",
+              "labelKey": "documents.countryFields.supplyType.label",
               "required": false,
               "options": [
                 {
@@ -1120,7 +1223,8 @@
                   "label": "Services"
                 }
               ],
-              "helpText": "Whether this line is a delivery of goods or a supply of services: used to derive BT-23 (\"cadre de facturation\") on a French invoice. Optional: leave unset if unsure."
+              "helpText": "Whether this line is a delivery of goods or a supply of services: used to derive BT-23 (\"cadre de facturation\") on a French invoice. Optional: leave unset if unsure.",
+              "helpTextKey": "documents.countryFields.supplyType.billingFramework.helpText"
             }
           }
         ]
@@ -1194,5 +1298,221 @@
       "notes": "Read at codes.droit.org (Code de commerce PDF). The statute caps the payment period, when the terms of sale and the parties set nothing else, at thirty days after receipt of the goods or performance of the service; it sets no term of its own. The application uses those 30 days as its fallback and counts them from the invoice date, which only approximates the statutory starting point."
     },
     "notes": "Read directly at codes.droit.org (Code de commerce PDF, https://codes.droit.org/PDF/Code%20de%20commerce.pdf). Absent a contrary agreement the term cannot exceed thirty days after receipt of the goods or performance of the service (first paragraph of the same article). A periodic invoice (CGI art. 289, I, 3) is capped at forty-five days net, which this fact does not model."
+  },
+  "companyLaw": {
+    "countryCode": "FR",
+    "legalFormLabel": "Forme juridique",
+    "legalForms": [
+      {
+        "code": "FR_SAS",
+        "name": "Société par actions simplifiée (SAS, SASU)",
+        "designation": "SAS",
+        "notes": "A SASU is an SAS with a single partner; R. 123-238 names the form \"SAS\", which is what prints."
+      },
+      {
+        "code": "FR_SARL",
+        "name": "Société à responsabilité limitée (SARL, EURL)",
+        "designation": "SARL",
+        "notes": "An EURL is an SARL with a single partner; R. 123-238 names the form \"SARL\", which is what prints."
+      },
+      {
+        "code": "FR_SA",
+        "name": "Société anonyme",
+        "designation": "SA",
+        "notes": "R. 123-238 asks an SA with a directoire and a conseil de surveillance to say so in words; that variant is not modelled, such a company completes its name."
+      },
+      {
+        "code": "FR_SCA",
+        "name": "Société en commandite par actions",
+        "designation": "SCA"
+      },
+      {
+        "code": "FR_SE",
+        "name": "Société européenne",
+        "designation": "SE"
+      },
+      {
+        "code": "FR_SNC",
+        "name": "Société en nom collectif",
+        "designation": "SNC"
+      },
+      {
+        "code": "FR_SCS",
+        "name": "Société en commandite simple",
+        "designation": "SCS"
+      },
+      {
+        "code": "FR_EI",
+        "name": "Entrepreneur individuel (EI, micro-entrepreneur)",
+        "designation": "EI"
+      },
+      {
+        "code": "FR_OTHER",
+        "name": "Autre forme (société civile, association...)",
+        "designation": "Autre forme",
+        "notes": "No form-specific mention is declared; the RCS mention prints when filled in, for a person registered there."
+      }
+    ],
+    "fields": [
+      {
+        "key": "shareCapital",
+        "kind": "money",
+        "label": "Capital social"
+      },
+      {
+        "key": "registerCity",
+        "kind": "text",
+        "label": "Ville du greffe (RCS)"
+      }
+    ],
+    "mentions": [
+      {
+        "id": "fr-legal-form-and-capital",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": ["FR_SAS", "FR_SARL", "FR_SA", "FR_SCA", "FR_SE"],
+        "required": true,
+        "template": {
+          "en": "{legalForm} with a share capital of {shareCapital}",
+          "fr": "{legalForm} au capital de {shareCapital}",
+          "it": "{legalForm} con capitale sociale di {shareCapital}",
+          "pl": "{legalForm}, kapitał zakładowy {shareCapital}",
+          "de": "{legalForm} mit einem Kapital von {shareCapital}",
+          "pt": "{legalForm} com capital social de {shareCapital}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "Code de commerce art. R. 123-238 : « Les actes et documents émanant de la société et destinés aux tiers, notamment les lettres, factures, annonces et publications diverses, indiquent la dénomination sociale, précédée ou suivie immédiatement et lisiblement : 1° Pour les sociétés en nom collectif, des mots \" société en nom collectif \" ou des initiales \" SNC \" ; 2° Pour les sociétés en commandite simple, des mots \" société en commandite simple \" ou des initiales \" SCS \" ; 3° Pour les sociétés à responsabilité limitée, des mots \" société à responsabilité limitée \" ou des initiales \" SARL \" et de l'énonciation du montant du capital social ; 4° Pour les sociétés par action : a) Selon le cas, des mots : - \" société anonyme \" ou des initiales \" SA \". [...] - \" société par actions simplifiées \" ou des initiales \" SAS \" ; - \" société en commandite par action \" ou des initiales \" SCA \" ; - \" société européenne \" ou des initiales \" SE \" ; b) De l'énonciation du montant du capital social qui peut être arrondi à la valeur entière inférieure. [...] »",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "R. 123-238, 3° and 4°. Code de commerce, partie réglementaire, read at codes.droit.org (Légifrance mirror, edition of 2026-10-01), https://codes.droit.org/PDF/Code%20de%20commerce.pdf. The mention is printed directly under the company name, which R. 123-238 asks it to precede or follow. R. 123-238, 4° b) lets a société par actions round the amount down to the unit; the amount prints as entered."
+      },
+      {
+        "id": "fr-legal-form",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": ["FR_SNC", "FR_SCS"],
+        "required": true,
+        "template": {
+          "en": "{legalForm}",
+          "fr": "{legalForm}",
+          "it": "{legalForm}",
+          "pl": "{legalForm}",
+          "de": "{legalForm}",
+          "pt": "{legalForm}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "Code de commerce art. R. 123-238 : « Les actes et documents émanant de la société et destinés aux tiers, notamment les lettres, factures, annonces et publications diverses, indiquent la dénomination sociale, précédée ou suivie immédiatement et lisiblement : 1° Pour les sociétés en nom collectif, des mots \" société en nom collectif \" ou des initiales \" SNC \" ; 2° Pour les sociétés en commandite simple, des mots \" société en commandite simple \" ou des initiales \" SCS \" ; 3° Pour les sociétés à responsabilité limitée, des mots \" société à responsabilité limitée \" ou des initiales \" SARL \" et de l'énonciation du montant du capital social ; 4° Pour les sociétés par action : a) Selon le cas, des mots : - \" société anonyme \" ou des initiales \" SA \". [...] - \" société par actions simplifiées \" ou des initiales \" SAS \" ; - \" société en commandite par action \" ou des initiales \" SCA \" ; - \" société européenne \" ou des initiales \" SE \" ; b) De l'énonciation du montant du capital social qui peut être arrondi à la valeur entière inférieure. [...] »",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "R. 123-238, 1° and 2°: no share capital is required of these forms. Code de commerce, partie réglementaire, read at codes.droit.org (Légifrance mirror, edition of 2026-10-01), https://codes.droit.org/PDF/Code%20de%20commerce.pdf."
+      },
+      {
+        "id": "fr-individual-entrepreneur",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": ["FR_EI"],
+        "required": true,
+        "template": {
+          "en": "{legalForm}",
+          "fr": "{legalForm}",
+          "it": "{legalForm}",
+          "pl": "{legalForm}",
+          "de": "{legalForm}",
+          "pt": "{legalForm}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "Code de commerce art. R. 526-27 : « Pour l'exercice de l'activité professionnelle mentionnée au premier alinéa de l'article L. 526-22, et sans préjudice des articles D. 123-235 et D. 123-236, l'entrepreneur individuel utilise une dénomination incorporant son nom ou nom d'usage précédé ou suivi immédiatement des mots : \" entrepreneur individuel \" ou des initiales : \" EI \". La dénomination figure sur les documents et correspondances à usage professionnel de l'intéressé. [...] » Art. R. 123-237, 9° : « Si elle est un entrepreneur individuel relevant du statut défini à la section 3 du chapitre VI du titre II du livre V, la dénomination utilisée pour l'exercice de l'activité professionnelle incorporant son nom ou nom d'usage précédé ou suivi immédiatement des mots : \" entrepreneur individuel \" ou des initiales : \" EI \". »",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "R. 526-27 and R. 123-237, 9°. The designation prints under the company name; an individual entrepreneur has no share capital, so no capital line is printed. Code de commerce, partie réglementaire, read at codes.droit.org (Légifrance mirror, edition of 2026-10-01), https://codes.droit.org/PDF/Code%20de%20commerce.pdf."
+      },
+      {
+        "id": "fr-rcs",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": ["FR_SAS", "FR_SARL", "FR_SA", "FR_SCA", "FR_SE", "FR_SNC", "FR_SCS"],
+        "required": true,
+        "template": {
+          "en": "RCS {registerCity}",
+          "fr": "RCS {registerCity}",
+          "it": "RCS {registerCity}",
+          "pl": "RCS {registerCity}",
+          "de": "RCS {registerCity}",
+          "pt": "RCS {registerCity}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "Code de commerce art. R. 123-237 : « Toute personne immatriculée indique sur ses factures, notes de commande, tarifs et documents publicitaires ainsi que sur toutes correspondances et tous récépissés concernant son activité et signés par elle ou en son nom : 1° Le numéro unique d'identification de l'entreprise délivré conformément à l'article D. 123-235 ; 2° La mention RCS suivie du nom de la ville où se trouve le greffe où elle est immatriculée ; 3° Le lieu de son siège social ; [...] »",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "R. 123-237, 2°. The commercial companies listed here are registered at the RCS. The identification number of 1° is the LEGAL_ID identifier, printed with the other identifiers; the registered office of 3° is the company address printed above. Not modelled: 4° (liquidation), 5° (foreign companies), 6° (locataire-gérant), 7° (contrat d'appui), 8° (EIRL). Code de commerce, partie réglementaire, read at codes.droit.org (Légifrance mirror, edition of 2026-10-01), https://codes.droit.org/PDF/Code%20de%20commerce.pdf."
+      },
+      {
+        "id": "fr-rcs-when-registered",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": ["FR_EI", "FR_OTHER"],
+        "required": false,
+        "template": {
+          "en": "RCS {registerCity}",
+          "fr": "RCS {registerCity}",
+          "it": "RCS {registerCity}",
+          "pl": "RCS {registerCity}",
+          "de": "RCS {registerCity}",
+          "pt": "RCS {registerCity}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "Code de commerce art. R. 123-237 : « Toute personne immatriculée indique sur ses factures, notes de commande, tarifs et documents publicitaires ainsi que sur toutes correspondances et tous récépissés concernant son activité et signés par elle ou en son nom : 1° Le numéro unique d'identification de l'entreprise délivré conformément à l'article D. 123-235 ; 2° La mention RCS suivie du nom de la ville où se trouve le greffe où elle est immatriculée ; 3° Le lieu de son siège social ; [...] »",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "R. 123-237, 2° binds a person registered at the RCS. An individual entrepreneur or another form may or may not be, which the company settings cannot tell: the mention prints when the city is filled in and is never asked for. Code de commerce, partie réglementaire, read at codes.droit.org (Légifrance mirror, edition of 2026-10-01), https://codes.droit.org/PDF/Code%20de%20commerce.pdf."
+      }
+    ],
+    "demo": {
+      "legalFormByNameSuffix": {
+        "SARL": "FR_SARL",
+        "SAS": "FR_SAS"
+      },
+      "values": {
+        "shareCapital": {
+          "amount": "10000",
+          "currency": "EUR"
+        },
+        "registerCity": "{city}"
+      }
+    },
+    "notes": "Every mention reads the company-law texts of the Code de commerce, not the tax code. The seller's SIREN and VAT number are `identifiers`."
+  },
+  "companyProfile": {
+    "countryCode": "FR",
+    "attributes": [
+      {
+        "key": "sizeCategory",
+        "label": "Company size category",
+        "help": "The category of article 51 of the loi de modernisation de l'économie (loi n° 2008-776), assessed for each legal person on 2025-01-01 from the last financial year closed before that date. Micro-enterprise is that statistical category, not the micro-entrepreneur tax regime. A company that is a member of a VAT group (assujetti unique) follows the large-company calendar.",
+        "values": [
+          {
+            "value": "LARGE",
+            "label": "Large enterprise"
+          },
+          {
+            "value": "MID",
+            "label": "Intermediate-sized enterprise (ETI)"
+          },
+          {
+            "value": "SME",
+            "label": "Small or medium-sized enterprise (PME)"
+          },
+          {
+            "value": "MICRO",
+            "label": "Micro-enterprise"
+          }
+        ],
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "Loi n° 2022-1157 du 16 août 2022, art. 26, III, A, third paragraph: « Les catégories mentionnées au deuxième alinéa du présent A sont celles mentionnées à l'article 51 de la loi n° 2008-776 du 4 août 2008 de modernisation de l'économie. L'appartenance à une catégorie s'apprécie au niveau de chaque personne juridique au 1er janvier 2025, sur la base du dernier exercice clos avant cette date ou, en l'absence d'un tel exercice, sur celle du premier exercice clos à compter de cette date. »",
+          "sourceCheckedAt": "2026-10-25"
+        }
+      }
+    ]
   }
 }

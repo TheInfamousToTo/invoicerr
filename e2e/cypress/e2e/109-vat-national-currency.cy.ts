@@ -1,3 +1,5 @@
+import { POLISH_BUYER_IDENTIFIERS } from "../fixtures/identifiers";
+import { companyLawFor } from "../fixtures/company-law";
 export {}; // makes this spec a module, not a global script -- see tsconfig.json
 
 /**
@@ -49,6 +51,7 @@ function switchCompanyToPoland() {
 				name: "Acme Sp. z o.o.",
 				country: "Poland",
 				countryCode: "PL",
+				companyLaw: companyLawFor("PL"),
 				currency: "PLN",
 				invoiceTransportId: "email",
 				identifiers: [
@@ -77,6 +80,7 @@ function createPolishClient() {
 				postalCode: "00-001",
 				isActive: true,
 				type: "COMPANY",
+				identifiers: POLISH_BUYER_IDENTIFIERS,
 			},
 		})
 		.then((res) => {

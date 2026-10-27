@@ -71,8 +71,9 @@ An imported document gets its own status, **Imported**:
 - **You can still record a payment against it, send reminders on it, and issue a credit note against
   it.** A credit note against an imported invoice is priced from the invoice's own lines, exactly like
   against any other invoice, provided the import carried lines (the per-document form always does;
-  a CSV row does too, if you filled in its line columns). Without lines, only a free credit note citing
-  it is possible.
+  a CSV row does too, if you filled in its line columns). Without lines, there are no rows to credit, so
+  no credit note against it can be sent (a free credit note can be drafted, but not sent: see
+  [Credit notes](credit-notes.md)).
 - **It is excluded from the accounting export by default**: your previous tool's own export already
   has it; re-exporting it from Invoicerr would count it twice.
 
@@ -86,11 +87,11 @@ reset its five-year clock.
 
 ### Downloading the original
 
-An imported document's actions menu offers two separate downloads:
+An imported document's actions menu treats the rendered PDF and the original file separately:
 
-- **Download PDF** renders the document only when the original you attached was itself a PDF. When it
-  was not (the XML your previous tool produced), this action refuses and points you to **Download
-  original** instead.
+- **Preview PDF** and **Download PDF** render the document only when the original you attached was
+  itself a PDF. When it was not (the XML your previous tool produced), both refuse and point you to
+  **Download original** instead.
 - **Download original** serves the exact file you attached at import time, byte for byte, with its own
   file name and content type, whatever format it was issued in (PDF, XML, or an image). This is the
   only way to retrieve a non-PDF original, and it only ever appears on an imported document.

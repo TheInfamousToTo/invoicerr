@@ -1,4 +1,5 @@
 export {}; // makes this spec a module, not a global script -- see tsconfig.json
+import { companyLawFor } from "../fixtures/company-law";
 
 /**
  * Issue #603 (hardcode fix B) - ATCUD driven by the country's own `policy.documentValidationCode`
@@ -31,9 +32,13 @@ function switchSellerToPortugal() {
 			name: "Acme Corp",
 			country: "Portugal",
 			countryCode: "PT",
+			companyLaw: companyLawFor("PT"),
 			currency: "EUR",
 			invoiceTransportId: "email",
-			identifiers: [{ scheme: "VAT", value: "PT980405319" }],
+			identifiers: [
+				{ scheme: "LEGAL_ID", value: "980405319" },
+				{ scheme: "VAT", value: "PT980405319" },
+			],
 		},
 	})
 		.its("status")

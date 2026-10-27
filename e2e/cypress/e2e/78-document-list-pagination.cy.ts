@@ -93,6 +93,11 @@ describe("Document list — server-side pagination and filters", () => {
 
 		cy.visit("/documents/invoice");
 		cy.get('[data-cy^="document-list-row-"]', { timeout: 15000 }).should("have.length", 25);
+		cy.assertAccessible();
+		cy.viewport(390, 844);
+		cy.assertAccessible();
+		cy.assertAccessible({ rules: ["button-name", "heading-order"] });
+		cy.viewport(1000, 660);
 
 		cy.contains("a", "2").click();
 		cy.url().should("include", "page=2");
@@ -145,6 +150,17 @@ describe("Document list — server-side pagination and filters", () => {
 					expect(body.total, "l'API confirme le même total que l'écran").to.eq(5);
 				});
 		});
+	});
+
+	it("keystrokes spaced just past the search debounce are all kept", () => {
+		cy.visit("/documents/invoice");
+		cy.get('[data-cy^="document-list-row-"]', { timeout: 15000 }).should("have.length", 25);
+
+		// Each keystroke lands while the previous term's URL update is committing.
+		cy.get('[data-cy="document-list-search"]').type("Zzyzx", { delay: 320 });
+
+		cy.get('[data-cy="document-list-search"]').should("have.value", "Zzyzx");
+		cy.location("search", { timeout: 5000 }).should("include", "q=Zzyzx");
 	});
 
 	it("a search term matching only the second client's name narrows the list to its 5 invoices", () => {

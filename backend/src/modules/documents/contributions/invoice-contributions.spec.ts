@@ -322,6 +322,54 @@ describe('buildInvoiceDashboardWidgets', () => {
     expect(zero).not.toHaveProperty('previousValue');
   });
 
+  it('invoiced last month only: no "0 EUR, -100%" tile, the currency-less zero instead', async () => {
+    // System time is 2026-08-30: this month = 2026-08, last month = 2026-07.
+    seedDocuments([
+      invoice({
+        id: 'jul-only',
+        status: 'sent',
+        data: { currency: 'EUR', issueDate: '2026-07-11', lines: [{ quantity: 1, unitPrice: 250 }] },
+      }),
+    ]);
+
+    const widgets = await buildInvoiceDashboardWidgets({ companyId: 'c1' });
+
+    expect(widgets.find((w) => w.id === 'invoice:issued-this-month:EUR')).toBeUndefined();
+    const zero = widgets.find((w) => w.id === 'invoice:issued-this-month');
+    expect(zero).toMatchObject({ kind: 'metric', value: 0 });
+    expect(zero).not.toHaveProperty('unit');
+    expect(zero).not.toHaveProperty('previousValue');
+  });
+
+  it('a currency invoiced last month only gets no tile next to one invoiced this month', async () => {
+    seedDocuments([
+      invoice({
+        id: 'aug-eur',
+        status: 'sent',
+        data: { currency: 'EUR', issueDate: '2026-08-05', lines: [{ quantity: 1, unitPrice: 300 }] },
+      }),
+      invoice({
+        id: 'jul-eur',
+        status: 'sent',
+        data: { currency: 'EUR', issueDate: '2026-07-05', lines: [{ quantity: 1, unitPrice: 100 }] },
+      }),
+      invoice({
+        id: 'jul-usd',
+        status: 'sent',
+        data: { currency: 'USD', issueDate: '2026-07-20', lines: [{ quantity: 1, unitPrice: 400 }] },
+      }),
+    ]);
+
+    const widgets = await buildInvoiceDashboardWidgets({ companyId: 'c1' });
+
+    expect(widgets.find((w) => w.id === 'invoice:issued-this-month:EUR')).toMatchObject({
+      value: 300,
+      previousValue: 100,
+    });
+    expect(widgets.find((w) => w.id === 'invoice:issued-this-month:USD')).toBeUndefined();
+    expect(widgets.find((w) => w.id === 'invoice:issued-this-month')).toBeUndefined();
+  });
+
   it('excludes a "cancelled" invoice — a void invoice owes nothing and is never pending', async () => {
     seedDocuments([
       invoice({
@@ -648,6 +696,27 @@ describe('Collections - cash actually received (issue #417)', () => {
     };
   }
 
+  /** One sent invoice per row, issued in July, with the payments recorded against it. The collected
+   *  figure only reads the payments, so the invoice's own amount is the same for every row. */
+  function seedPaidInvoices(
+    rows: { id: string; currency: string; payments: { amountMinor: number; paidAt: string }[] }[],
+  ) {
+    seedDocuments(
+      rows.map(({ id, currency }) =>
+        invoice({
+          id,
+          status: 'sent',
+          data: { currency, issueDate: '2026-07-01', lines: [{ quantity: 1, unitPrice: 100 }] },
+        }),
+      ),
+    );
+    listPaymentsInRange.mockResolvedValue(
+      rows.flatMap(({ id, currency, payments }) =>
+        payments.map(({ amountMinor, paidAt }) => payment({ documentId: id, amountMinor, currency, paidAt })),
+      ),
+    );
+  }
+
   beforeEach(() => {
     vi.useFakeTimers().setSystemTime(new Date('2026-08-30')); // "this month" = 2026-08
     listAllDocuments.mockReset();
@@ -723,6 +792,43 @@ describe('Collections - cash actually received (issue #417)', () => {
     expect(widgets.find((w) => w.id === 'invoice:collected-this-month:EUR')).toMatchObject({ value: 100 });
     expect(widgets.find((w) => w.id === 'invoice:collected-this-month:USD')).toMatchObject({ value: 200 });
     expect(widgets.find((w) => w.id === 'invoice:collected-this-month')).toBeUndefined();
+  });
+
+  it('collected last month only: no "0, -100%" tile for that currency', async () => {
+    // EUR is collected in both months, USD in July only.
+    seedPaidInvoices([
+      {
+        id: 'eur-invoice',
+        currency: 'EUR',
+        payments: [
+          { amountMinor: 4000, paidAt: '2026-07-20' },
+          { amountMinor: 6000, paidAt: '2026-08-10' },
+        ],
+      },
+      { id: 'usd-invoice', currency: 'USD', payments: [{ amountMinor: 20000, paidAt: '2026-07-11' }] },
+    ]);
+
+    const widgets = await buildInvoiceDashboardWidgets({ companyId: 'c1' });
+
+    expect(widgets.find((w) => w.id === 'invoice:collected-this-month:EUR')).toMatchObject({
+      value: 60,
+      previousValue: 40,
+    });
+    expect(widgets.find((w) => w.id === 'invoice:collected-this-month:USD')).toBeUndefined();
+    expect(widgets.find((w) => w.id === 'invoice:collected-this-month')).toBeUndefined();
+  });
+
+  it('collected last month only, in every currency: ONE currency-less zero', async () => {
+    seedPaidInvoices([
+      { id: 'eur-invoice', currency: 'EUR', payments: [{ amountMinor: 10000, paidAt: '2026-07-20' }] },
+    ]);
+
+    const widgets = await buildInvoiceDashboardWidgets({ companyId: 'c1' });
+
+    expect(widgets.find((w) => w.id === 'invoice:collected-this-month:EUR')).toBeUndefined();
+    const zero = widgets.find((w) => w.id === 'invoice:collected-this-month');
+    expect(zero).toMatchObject({ kind: 'metric', value: 0 });
+    expect(zero).not.toHaveProperty('previousValue');
   });
 
   it('the default window (no period) is the current calendar month by PAYMENT date, same clock as "issued this month"', async () => {

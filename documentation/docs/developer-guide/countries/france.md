@@ -37,11 +37,74 @@ days after receipt of the goods or performance of the service (`basis: "maximumW
 application counts the 30 days from the invoice date, not from receipt of the goods or performance
 of the service.
 
+## Private clients and the SIREN
+
+The SIREN / SIRET scheme (`LEGAL_ID` in the `identifiers` section of `countries/data/fr.json`) is
+required of a company and optional for an individual (`requiredFor: ["COMPANY"]`). Code de commerce
+art. R.123-237 binds a registered person, and art. R.123-220 lists a natural person in the SIRENE
+register only when it trades, employs staff or is otherwise named there: a private person has no
+number to give. On the invoice, CGI annexe II art. 242 nonies A, I, 1° asks for the client's number,
+which `invoiceRequirements` requires of a domestic business client only. A private client can
+therefore be saved, and invoiced, without a SIREN. A sole trader entered as an individual may still
+enter one, and it is printed.
+
+## Private clients and the PDP mandate
+
+CGI art. 289 bis, I binds emission through an accredited platform only « lorsque l'émetteur de la
+facture et son destinataire sont des assujettis ». A private person is not an assujetti, so an
+invoice to a client of type Individual is outside the PDP mandate. The `pdp` fact in the
+`channelPolicy` section of `countries/data/fr.json` says so with `scope.buyerType: ["COMPANY"]`,
+next to `scope.parties: "domestic"`. Such an invoice is validated and sent like an invoice from a
+country with no mandate: no PDP is needed, and Validate only numbers and locks it.
+
+:::info[E-reporting is not transmitted]
+A sale to a private person falls under e-reporting (CGI art. 290 A), a separate obligation to
+declare the transaction data. Invoicerr records it in the `reporting` section of `fr.json` but does
+not transmit it.
+:::
+
+A client recorded as a company is treated as an assujetti. An association or a public body outside
+the scope of VAT may not be one; the data cannot tell them apart today.
+
+## Seller size and the PDP mandate
+
+The obligation to issue through an accredited platform does not start on the same day for every
+seller. Loi n° 2022-1157 art. 26, III, A (version in force since 2026-02-21) applies it to invoices
+issued from 2026-09-01, « Toutefois, pour les factures émises par les assujettis relevant des
+catégories des microentreprises et des petites et moyennes entreprises qui ne sont pas membres d'un
+assujetti unique [...], les 2° et 4° du I et le II du présent article s'appliquent à compter du 1er
+septembre 2027 ». The categories are those of LME art. 51, assessed on 2025-01-01.
+
+`countries/data/fr.json` carries this as data in two places:
+
+- the `companyProfile` section declares one attribute, `sizeCategory`, with the values `LARGE`,
+  `MID`, `SME` and `MICRO`. A company declares its value in the company settings
+  (`Company.reportingProfile`, see [Company settings](../../user-guide/settings/company-branding.md#company-profile));
+- the `channelPolicy` section holds two `pdp` facts: one mandated from 2026-09-01 with
+  `scope.seller: { "sizeCategory": ["LARGE", "MID"] }`, one mandated from 2027-09-01 with
+  `scope.seller: { "sizeCategory": ["SME", "MICRO"] }`. Both keep `parties: "domestic"` and
+  `buyerType: ["COMPANY"]`.
+
+A company that has not declared its size category is in scope of both facts, so it is bound from
+2026-09-01. Issuing outside an accredited platform when bound costs a fine per invoice (CGI art.
+1737) and an issued invoice cannot be taken back, whereas the refusal is visible and lifted by
+declaring the category once.
+
+The channels settings screen reads the same facts for the company's own category: a PME sees the PDP
+mandated from 2027-09-01, not yet in force.
+
+:::info[What the data cannot express]
+An SME or micro-enterprise that is a member of an assujetti unique (CGI art. 256 C) is bound from
+2026-09-01; the profile has no attribute for that membership. Each paragraph also lets a decree set a
+later date (at the latest 2026-12-01 and 2027-12-01); none was found. Reception is not modelled and is
+required of every company from 2026-09-01.
+:::
+
 ## Validate and the PDP mandate
 
 Invoicerr's **Validate** action normally only assigns an invoice's legal number and locks it, with
 no email or transmission of any kind (see the [user guide](../../user-guide/billing/invoices.md)).
-For a domestic French B2B invoice, that is not enough: CGI art. 289 bis I requires emission,
+For a domestic French invoice to a business client, that is not enough: CGI art. 289 bis I requires emission,
 transmission and reception to go through an accredited platform, so a numbered-and-locked invoice
 that never went through one is not yet lawfully issued. The owner's decision (2026-10-01, issue
 #581, revised after the pull request's own review) is that validating one of these invoices performs
@@ -78,3 +141,22 @@ files, and two pages already say it without anyone retyping it:
 To widen that coverage, or to add a country of your own, see [Adding a
 country](../adding-a-country.md): the catalogue files listed on every other page in this directory
 are the ones France already has.
+
+## Company-law mentions
+
+The `companyLaw` section of `countries/data/fr.json` prints, under the seller's name on invoices,
+quotes, credit notes and purchase orders:
+
+| Legal forms | Printed | Source |
+| --- | --- | --- |
+| SAS, SARL, SA, SCA, SE | "SAS au capital de 1000.00 EUR" | Code de commerce art. R. 123-238, 3° and 4° |
+| SNC, SCS | the legal form alone | R. 123-238, 1° and 2° |
+| EI | "EI" | R. 526-27 and R. 123-237, 9° |
+| every company above | "RCS Lyon" | R. 123-237, 2° |
+| EI, other forms | "RCS Lyon", only when the city is filled in | R. 123-237, 2° binds a person registered at the RCS |
+
+An SASU and an EURL are the SAS and SARL forms with one partner, and print as such. The SIREN of
+R. 123-237, 1° is the `LEGAL_ID` identifier, already printed with the identifiers; the registered
+office of 3° is the company address. Not modelled: liquidation (4°), foreign companies (5°),
+locataire-gérant (6°), contrat d'appui (7°), EIRL (8°), and the SA "à directoire et conseil de
+surveillance" wording. All texts were read at codes.droit.org, edition of 2026-10-01.

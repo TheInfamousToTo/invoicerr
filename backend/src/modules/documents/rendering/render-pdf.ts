@@ -20,9 +20,37 @@ import { escapeHtmlNode } from './render-html';
 
 /**
  * Shared browser instance — launched lazily on first call, never closed between renders.
- * Multiple pages are created per render and closed after PDF generation.
  */
 let browserInstance: Browser | null = null;
+
+/** Opening a page costs a renderer process; reusing one makes a render several times cheaper. */
+const MAX_RENDERS_PER_PAGE = 200;
+
+interface PooledPage {
+  page: Page;
+  renders: number;
+}
+
+let idlePages: PooledPage[] = [];
+let idlePagesBrowser: Browser | null = null;
+
+async function takePage(browser: Browser): Promise<PooledPage> {
+  if (idlePagesBrowser !== browser) {
+    idlePages = [];
+    idlePagesBrowser = browser;
+  }
+  let pooled = idlePages.pop();
+  while (pooled?.page.isClosed()) pooled = idlePages.pop();
+  if (pooled) return pooled;
+  // JavaScript off: no script, timer or global from one document can survive into the next one.
+  return { page: await browser.newPage({ javaScriptEnabled: false }), renders: 0 };
+}
+
+function tryReturnToPool(browser: Browser, pooled: PooledPage): boolean {
+  if (idlePagesBrowser !== browser || pooled.renders >= MAX_RENDERS_PER_PAGE) return false;
+  idlePages.push(pooled);
+  return true;
+}
 
 /**
  * The in-flight launch, while one is happening — the mutex that closes a real race: without it, two
@@ -192,7 +220,7 @@ function readMaxConcurrentRenders(): number {
 
 const MAX_CONCURRENT_RENDERS = readMaxConcurrentRenders();
 
-/** How many renders currently hold a slot (i.e. have an open page between `newPage()` and `close()`). */
+/** How many renders currently hold a slot (i.e. hold a page until their PDF is written). */
 let activeRenders = 0;
 /** FIFO of renders waiting for a slot — resolved one at a time as slots free up, in arrival order. */
 const renderQueue: Array<() => void> = [];
@@ -302,8 +330,8 @@ export interface RenderPdfOptions {
    * Plain text (never HTML) to repeat in a small footer on EVERY printed page — the mechanism this
    * product uses to satisfy Portugal's "o ATCUD deve constar em todas as páginas" (Portaria n.º
    * 195/2020, art. 4.º n.º 3, quoted in countries/data/pt.json (section "policy")) requirement. `render-html.ts`'s
-   * own CSS declares no `@page` rule and no page-break control at all — a repeating footer is not
-   * something the MAIN document HTML can produce on its own, however it happens to paginate. Chromium
+   * own CSS declares no `@page` rule, and its break rules only keep blocks together: a repeating
+   * footer is not something the MAIN document HTML can produce on its own, however it paginates. Chromium
    * itself CAN, natively, via `page.pdf()`'s own `displayHeaderFooter`/`footerTemplate`: those render a
    * SEPARATE, tiny HTML fragment Chromium repeats in the margin area of every page it lays out, driven
    * by print pagination rather than anything in the main document's own flow — exactly the "every
@@ -321,11 +349,14 @@ export interface RenderPdfOptions {
 export async function renderPdf(html: string, options: RenderPdfOptions = {}): Promise<Buffer> {
   await acquireRenderSlot();
 
-  let page: Page | null = null;
+  let browser: Browser | null = null;
+  let pooled: PooledPage | null = null;
+  let succeeded = false;
 
   try {
-    const browser = await getBrowser();
-    page = await browser.newPage();
+    browser = await getBrowser();
+    pooled = await takePage(browser);
+    const { page } = pooled;
 
     // Every document this renderer receives is fully self-contained HTML: `render-html.ts` inlines
     // all CSS directly, and the one embedded image (the SEPA payment QR, `sepa-qr.ts`) arrives as a
@@ -364,6 +395,8 @@ export async function renderPdf(html: string, options: RenderPdfOptions = {}): P
         : {}),
     });
 
+    pooled.renders++;
+    succeeded = true;
     return Buffer.from(pdfBuffer);
   } catch (error) {
     logger.error('PDF rendering failed', {
@@ -375,10 +408,11 @@ export async function renderPdf(html: string, options: RenderPdfOptions = {}): P
     }
     throw new Error(`PDF rendering failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   } finally {
-    // Always close the page, but never close the browser (shared instance)
-    if (page) {
+    // A page that failed mid-render is never handed to another document; the browser stays shared.
+    const pooledAgain = succeeded && browser !== null && pooled !== null && tryReturnToPool(browser, pooled);
+    if (pooled && !pooledAgain) {
       try {
-        await page.close();
+        await pooled.page.close();
       } catch (closeError) {
         logger.debug('Page close error (non-fatal)', {
           category: 'documents',

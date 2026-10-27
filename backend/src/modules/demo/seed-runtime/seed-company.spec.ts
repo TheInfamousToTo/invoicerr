@@ -6,6 +6,9 @@ import { ROW_ID_KEY } from '@/modules/documents/row-selection/row-selection';
 import { computeSettlement } from '@/modules/documents/settlement/compute-settlement';
 import { computeDocumentTotals } from '@/modules/documents/totals/compute-totals';
 
+import prisma from '@/prisma/prisma.service';
+import { companyLawMentions } from '@/modules/documents/company-law/company-law';
+
 import { createRng } from '../generators/rng';
 import { domesticCurrencyFor, seedCountryCompany } from './seed-company';
 
@@ -110,25 +113,44 @@ function fakeDocumentsService() {
   return { docs, payments, credits, service: { runAction, getSettlement } };
 }
 
+async function seedWithFake(countryCode: 'DE' | 'DZ' | 'FR' | 'IT' | 'PL' | 'PT' = 'DE') {
+  const fake = fakeDocumentsService();
+  let clientCount = 0;
+
+  await seedCountryCompany(
+    {
+      documentsService: fake.service as never,
+      articlesService: { create: vi.fn() } as never,
+      clientsService: { createClient: vi.fn(async () => ({ id: `client-${++clientCount}` })) } as never,
+    },
+    {
+      userId: 'user-1',
+      userEmail: 'demo@example.test',
+      countryCode,
+      rng: createRng('spec'),
+      now: new Date(),
+    },
+  );
+  return fake;
+}
+
+describe('seedCountryCompany: credit notes', () => {
+  it('seeds only credit notes that correct an invoice, so each one has a client to be sent to', async () => {
+    const fake = await seedWithFake();
+
+    const creditNotes = [...fake.docs.values()].filter((doc) => doc.typeId === 'credit-note');
+    expect(creditNotes.length).toBeGreaterThanOrEqual(2);
+    for (const note of creditNotes) {
+      const invoice = fake.docs.get(note.data.invoice as string);
+      expect(invoice?.typeId, `credit note ${note.id} corrects an invoice`).toBe('invoice');
+      expect(invoice?.data.client).toEqual(expect.any(String));
+    }
+  });
+});
+
 describe('seedCountryCompany: invoice balances', () => {
   it('leaves no invoice with an excess: one paid in full, one settled by a partial credit plus a payment', async () => {
-    const fake = fakeDocumentsService();
-    let clientCount = 0;
-
-    await seedCountryCompany(
-      {
-        documentsService: fake.service as never,
-        articlesService: { create: vi.fn() } as never,
-        clientsService: { createClient: vi.fn(async () => ({ id: `client-${++clientCount}` })) } as never,
-      },
-      {
-        userId: 'user-1',
-        userEmail: 'demo@example.test',
-        countryCode: 'DE',
-        rng: createRng('spec'),
-        now: new Date(),
-      },
-    );
+    const fake = await seedWithFake();
 
     const invoices = [...fake.docs.values()].filter((doc) => doc.typeId === 'invoice');
     const settlements = await Promise.all(
@@ -142,5 +164,35 @@ describe('seedCountryCompany: invoice balances', () => {
     expect(creditedAndPaid).toMatchObject({ settled: true, outstandingMinor: 0, excessMinor: 0 });
     const paidInFull = settlements.find((s) => s.creditedMinor === 0 && s.settled);
     expect(paidInFull).toMatchObject({ paidMinor: paidInFull?.totalGrossMinor, excessMinor: 0 });
+  });
+});
+
+describe('seedCountryCompany: company-law details', () => {
+  it.each([
+    'DE',
+    'DZ',
+    'FR',
+    'IT',
+    'PL',
+    'PT',
+  ] as const)('a %s demo company can issue an invoice: nothing its company law requires is missing', async (countryCode) => {
+    vi.mocked(prisma.company.create).mockClear();
+    vi.mocked(prisma.partyIdentifier.create).mockClear();
+    await seedWithFake(countryCode);
+
+    const created = vi.mocked(prisma.company.create).mock.calls[0][0].data;
+    const identifiers = vi
+      .mocked(prisma.partyIdentifier.create)
+      .mock.calls.map(([call]) => call.data as { scheme: string; value: string });
+    const mentions = companyLawMentions({
+      countryCode,
+      documentTypeId: 'invoice',
+      language: 'en',
+      details: created.companyLaw,
+      identifiers,
+    });
+
+    expect(mentions.missing).toEqual([]);
+    expect(mentions.lines.length).toBeGreaterThan(0);
   });
 });

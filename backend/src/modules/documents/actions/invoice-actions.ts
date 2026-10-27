@@ -10,7 +10,12 @@ import {
   resolveClientB2gRouting,
 } from '../b2g-routing/b2g-routing';
 import { loadRatesSafely } from '../../company/currency-rates/currency-rates.store';
-import { resolveClientCountryCode, resolveCompanyCountryCode } from '../country-policy/country-policy';
+import {
+  resolveClientCountryCode,
+  resolveClientType,
+  resolveCompanyCountryCode,
+  resolveCompanyProfile,
+} from '../country-policy/country-policy';
 import { resolveInvoiceValidationTransmission } from '../country-policy/invoice-validation-transmission';
 import { runDomesticInvoiceCurrencyPreflight } from '../country-policy/domestic-currency-issuance';
 import { buildInvoiceDescriptor } from '../descriptors/invoice.descriptor';
@@ -44,6 +49,7 @@ import { runAsyncSendAction } from './async-send';
 import { ActionContext, ActionRegistry, ActionResult } from './action-registry';
 import { attachAtcudToNumberedDocument, runAtcudPreflight } from './atcud-issuance';
 import { assertClientReadyForInvoice } from './client-issuance-readiness';
+import { assertInvoiceIdentifiersPresent } from './invoice-identifier-readiness';
 import { performSaveDraft, registerDeleteAction } from './generic-actions';
 
 export interface InvoiceActionDeps {
@@ -96,9 +102,13 @@ async function resolveActiveInvoiceMandate(
   const countryCode = await resolveCompanyCountryCode(companyId);
   if (!countryCode) return undefined;
   const buyerCountryCode = await resolveClientCountryCode(companyId, clientId);
+  const buyerType = await resolveClientType(companyId, clientId);
+  const sellerProfile = await resolveCompanyProfile(companyId);
   const mandate = activeChannelMandateForOperation({
     sellerCountryCode: countryCode,
     buyerCountryCode,
+    buyerType,
+    sellerProfile,
     issueDate,
   });
   return mandate ? { countryCode, mandate } : undefined;
@@ -528,6 +538,7 @@ async function runInvoiceIssuancePreflight(
   // First: it spends nothing, and a client that cannot be put on an issued invoice must refuse before
   // any of the number-adjacent checks below run.
   await assertClientReadyForInvoice(companyId, clientId);
+  await assertInvoiceIdentifiersPresent(companyId, clientId);
   // Portugal's ATCUD - see `runAtcudPreflight`'s own header. A no-op for every other
   // country; for Portugal, the LOAD-BEARING check (before a number below can ever spend
   // a sequence number this codebase can never hand back - numbering/sequence.ts's own header).

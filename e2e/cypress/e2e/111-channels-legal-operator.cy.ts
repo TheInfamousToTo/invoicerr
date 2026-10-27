@@ -1,4 +1,5 @@
 export {}; // makes this spec a module, not a global script - see tsconfig.json
+import { companyLawFor } from "../fixtures/company-law";
 
 /**
  * Issue #527 - the Channels settings screen redesigned as design C ("legal channel, then operator"),
@@ -33,7 +34,13 @@ function setCompanyCountry(country: string, countryCode: string, identifiers?: {
 	return cy.request({
 		method: "POST",
 		url: `${api}/api/company/info`,
-		body: { name: "Acme Corp", country, countryCode, ...(identifiers ? { identifiers } : {}) },
+		body: {
+			name: "Acme Corp",
+			country,
+			countryCode,
+			companyLaw: companyLawFor(countryCode),
+			...(identifiers ? { identifiers } : {}),
+		},
 	});
 }
 
@@ -58,7 +65,7 @@ describe("Channels settings - legal channel, then operator (issue #527)", () => 
 
 		// Owner review of #527, fix #2 - the banner is ONE plain sentence in the UI language, normal
 		// warning weight (never `variant="destructive"` - this is not an error the user caused), with
-		// the full statute quote collapsed behind a "Read the source" toggle, never dumped open.
+		// the full statute quote behind the source's help button, never dumped open.
 		cy.get('[data-cy="channels-banner"]', { timeout: 15000 })
 			.should("contain.text", "France")
 			.and(
@@ -67,15 +74,12 @@ describe("Channels settings - legal channel, then operator (issue #527)", () => 
 			)
 			.and("not.have.class", "text-destructive")
 			.and("have.class", "bg-warning");
-		// Asserted on the native `<details>` element's own `open` attribute, never CSS visibility -
-		// headless Firefox does not apply the UA stylesheet rule that hides a closed `<details>`'s
-		// content (confirmed live: `display` stays "block" either way), so a visibility-based
-		// assertion would pass here even if the collapse broke; the `open` attribute is what the
-		// browser's real collapse behavior is driven by, in every browser, headless or not.
-		cy.get('[data-cy="channels-banner-source"]').should("not.have.attr", "open");
-		cy.get('[data-cy="channels-banner-source"] summary').click();
-		cy.get('[data-cy="channels-banner-source"]').should("have.attr", "open");
-		cy.get('[data-cy="channels-banner-source"]').should("contain.text", "plateforme agréée");
+		cy.get('[data-cy="channels-banner-source-help-content"]').should("not.exist");
+		cy.get('[data-cy="channels-banner-source-help-trigger"]').click();
+		cy.get('[data-cy="channels-banner-source-help-content"]')
+			.should("be.visible")
+			.and("contain.text", "plateforme agréée");
+		cy.get('[data-cy="channels-banner-source-help-trigger"]').click();
 
 		cy.get('[data-cy="channel-nav-pdp"]').should("exist").click();
 		cy.get('[data-cy="channel-nav-pdp-badge"]').should("contain.text", "Mandatory from 2026-09-01");

@@ -1,3 +1,4 @@
+import { companyLawFor } from "../../fixtures/company-law";
 import { SCENARIOS, Scenario } from "../../fixtures/scenarios";
 
 /**
@@ -228,14 +229,13 @@ const EURO_SLUG = "euro-(€)";
  *    already cites as checksum-valid, not invented here). `pl-de`'s "PL5260001246" is the same
  *    well-known KSeF sandbox test NIP `31-national-channels.cy.ts` already uses, checksum-valid per
  *    `validateNip`'s own weighted sum (verified by hand: weights [6,5,7,2,3,4,5,6,7] over 5,2,6,0,0,0,
- *    1,2,4 sum to 127, 127 mod 11 = 6, matching the check digit). `it-it` (Italy again, domestic-only)
- *    gets no VAT number: that leg's own branch below never reaches the cross-border BT-31 gate, so
- *    there is nothing for one to unblock there.
+ *    1,2,4 sum to 127, 127 mod 11 = 6, matching the check digit). `it-it` carries the same Partita IVA:
+ *    Italian law requires the seller's on every invoice, so Validate and Send refuse without it.
  */
 const SELLER_IDENTIFIERS: Record<string, { legalId?: string; vat?: string }> = {
 	"fr-pl": { legalId: "73282932000074", vat: "FR44732829320" },
 	"de-fr": { vat: "DE136695976" },
-	"it-it": { legalId: "12345678901" },
+	"it-it": { legalId: "12345678901", vat: "IT01234567897" },
 	"pt-de": { legalId: "509442661", vat: "PT509442661" },
 	"it-pt": { legalId: "11223344554", vat: "IT01234567897" },
 	"pl-de": { legalId: "PL7010018991", vat: "PL5260001246" },
@@ -251,8 +251,8 @@ const SELLER_IDENTIFIERS: Record<string, { legalId?: string; vat?: string }> = {
  *    `31-national-channels.cy.ts` already uses — checksum-valid per `validateNip`'s own weighted sum).
  *  - FR (`de-fr`): LEGAL_ID (SIREN, `^\d{9}(\d{5})?$`) required; VAT offered — deliberately the
  *    fixture's OWN "FR12345678901" (checksum-INVALID, see header) to observe the real B2C/OSS path.
- *  - IT (`it-it`, domestic): no file — created via the SCREEN with no identifier at all (nothing to
- *    fill, nothing blocks the save).
+ *  - IT (`it-it`, domestic): created via the screen with its Partita IVA, which Italian law requires
+ *    of a domestic business buyer.
  *  - DE (`pt-de`): VAT offered, not required; "DE812000006" is checksum-VALID (verified by hand
  *    against `validateDeVat`'s ISO 7064 Mod 11,10 in this file's own header).
  *  - PT (`it-pt`): LEGAL_ID (NIF) required; "501442600" is `client.vat`'s own "PT501442600" with the
@@ -288,9 +288,8 @@ const BUYER_IDENTIFIERS: Record<string, BuyerIdentifiers> = {
 	// narrower and more accurate reason than "this country has no file".
 	"fr-pl": { vat: "PL5260001246", formOffers: ["LEGAL_ID"], expectedVatStatus: "VALID" },
 	"de-fr": { legalId: "552100554", vat: "FR12345678901", formOffers: ["LEGAL_ID", "VAT"], expectedVatStatus: "INVALID" },
-	// Italy ships VAT + LEGAL_ID (`countries/data/it.json (section "identifiers")`, 2026-09-13). Both inputs render;
-	// neither is typed here, which is correct — both schemes are `required: false`.
-	"it-it": { formOffers: ["VAT", "LEGAL_ID"] },
+	// Italian law requires a domestic business buyer's Partita IVA on the invoice.
+	"it-it": { vat: "IT01057861005", formOffers: ["VAT", "LEGAL_ID"], expectedVatStatus: "VALID" },
 	"pt-de": { vat: "DE812000006", formOffers: ["VAT", "LEGAL_ID"], expectedVatStatus: "VALID" },
 	"it-pt": { legalId: "501442600", vat: "PT501442600", formOffers: ["LEGAL_ID", "VAT"], expectedVatStatus: "VALID" },
 	"pl-de": { formOffers: ["VAT", "LEGAL_ID"] },
@@ -565,13 +564,8 @@ describe(`Full lifecycle — ${scenarioId}`, () => {
 		// wl-api.mf.gov.pl was slow enough, on those two runs, to still be in flight when Cypress gave
 		// up. Stubbed here, unconditionally, for every leg: `fr-pl`'s seller reaches the identical
 		// live-network code path through France's own register and could fail the exact same way, just
-		// not yet observed. `pathname` matches the exact path only: a bare `/api/company-lookup` glob
-		// also caught `/api/company-lookup/capabilities/:cc`, whose body has no `found` key at all,
-		// the same trap `18-onboarding-wizard.cy.ts`'s own comment documents.
-		cy.intercept(
-			{ method: "GET", pathname: "/api/company-lookup" },
-			{ statusCode: 200, body: { found: false, company: null } },
-		).as("companyLookupStub");
+		// not yet observed.
+		cy.stubCompanyLookup();
 
 		const seller = SELLER_IDENTIFIERS[scenarioId];
 		cy.visit("/");
@@ -654,7 +648,7 @@ describe(`Full lifecycle — ${scenarioId}`, () => {
 		cy.request({
 			method: "POST",
 			url: `${api}/api/company/info`,
-			body: { invoiceTransportId: "email" },
+			body: { invoiceTransportId: "email", companyLaw: companyLawFor(s.company.country) },
 			failOnStatusCode: false,
 		}).then((res) => {
 			expect(res.status, "baseline email transport configured").to.be.oneOf([200, 201]);
@@ -1318,7 +1312,11 @@ describe(`Full lifecycle — ${scenarioId}`, () => {
 				"Not established",
 			);
 			cy.get('[data-cy="document-correction-route-CANCEL_AND_REPLACE-button"]').should("be.disabled");
-			cy.get('[data-cy="document-correction-route-CANCEL_AND_REPLACE-reason"]').should("exist");
+			cy.get('[data-cy="document-correction-route-CANCEL_AND_REPLACE-label-help-trigger"]').click();
+			cy.get('[data-cy="document-correction-route-CANCEL_AND_REPLACE-label-help-content"]').should(
+				"contain.text",
+				"Not established for this country",
+			);
 		} else if (scenarioId === "pl-de") {
 			// Poland — CANCEL_AND_REPLACE is "required" by Poland's own law (choosable at the UI level —
 			// `isChoosable` only looks at status) but `cancel-policy.ts`'s own whitelist deliberately

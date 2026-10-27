@@ -4,16 +4,41 @@ sidebar_position: 2
 
 # Dashboard
 
-The **Dashboard** is the first page you see after signing in. It gives you a snapshot of your business at a glance.
+The **Dashboard** is the first page you see after signing in. It is a grid of tiles, each answering
+one question about your business: what you invoiced, what came in, what clients still owe, and what
+is waiting for you.
 
-## What you see
+## Choosing a period
 
-- **Welcome back** greeting with your name
-- **Revenue**: earnings for the current month and year, converted into your reference currency
-  where you invoice in more than one. A month or year that has already closed keeps the rate it
-  converted at when it closed; entering a new exchange rate later never revises it
-- **Summary cards** — total quotes, invoices, and clients with counts
-- **Recent activity** — the 5 most recent quotes and invoices
+The **Period** selector at the top decides what the tiles cover: **All time** (the default), **This
+month**, **This year**, **Last 30 days** or a **Custom range** with a start and an end date. The line
+next to it says which dates are shown. The period is part of the page address, so a bookmark or a
+shared link opens the same view.
+
+With **All time**, the invoicing, collection and expense tiles show **this month**, compared with
+last month. With any other period they show the total **in that period**, with no comparison.
+
+## The tiles
+
+- **Invoiced this month** (or **Invoiced in period**): what you invoiced, by issue date.
+- **Collected this month** (or **Collected in period**): the payments you actually received, by
+  payment date. An invoice issued months ago counts here in the month its payment arrived.
+- **Pending invoices total**: what your clients still owe on the invoices you sent.
+- **Overdue invoices total**: the part of that whose due date has passed.
+- **Expenses this month** (or **Expenses in period**).
+- **Open quotes**: how many quotes are still a draft or are sent and waiting for an answer.
+- **Received invoices pending review**: how many supplier invoices are waiting for you, and
+  **Received invoices pending** for their amount.
+- **Pending invoices**: the invoices still owed, the earliest due date first.
+- **Draft quotes**: your five most recent draft quotes.
+- **Invoices issued**: a chart of how many invoices you issued per month, over the last six months,
+  or over each month of the selected period.
+
+Amounts are shown per currency, one tile for each: amounts in different currencies are never added
+up. A currency gets a "this month" tile only when something happened in it this month. Last month's
+figure is then the comparison under the tile, for example **+12%**. A currency used last month but
+not this month gets no tile at all, never a "0" next to a "-100%". When nothing at all happened this
+month, a single tile shows 0.
 
 ## Which amount each figure shows
 
@@ -28,10 +53,22 @@ The **Dashboard** is the first page you see after signing in. It gives you a sna
 
 The invoice tiles and the pending list say "incl. VAT" or "excl. VAT" under their title.
 
-## Usage
+## Opening the list behind a tile
 
-Each summary card and recent item is clickable — click a quote to open it, or click a count to go to the full list.
+A tile with an arrow in its corner opens the list of exactly the documents it counts, filtered on
+the same period. The **Collected** tiles have no arrow: there is no list of payments to open.
+
+## Several currencies
+
+Set a **Reference currency** in the **Multi-currency** card of your
+[company settings](settings/company-branding.md#multi-currency) and the dashboard adds one converted
+total next to the per-currency tiles, for pending invoices, collected payments, expenses and received
+invoices. A converted total starts with "≈" and says "(converted)". If a rate is missing for one of
+the currencies, the per-currency tiles say so instead of showing a converted total. A period that has
+already closed keeps the converted total it showed when it closed.
 
 ## No data yet
 
-If you're just starting, the dashboard shows empty-state messages guiding you to your first actions. See [Overview](overview.md) for the recommended getting-started order.
+On a new company every tile shows 0 and the lists say **Nothing to show.** They fill in as you send
+invoices, record payments and add expenses. See [Overview](overview.md) for the recommended
+getting-started order.

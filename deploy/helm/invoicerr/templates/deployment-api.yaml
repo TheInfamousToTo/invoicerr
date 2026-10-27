@@ -26,6 +26,7 @@ spec:
       {{- end }}
     spec:
       serviceAccountName: {{ include "invoicerr.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automount }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -54,7 +55,7 @@ spec:
               echo "redis is reachable. Starting the api container.";
       containers:
         - name: invoicerr
-          image: "{{ .Values.image.repository }}{{ if .Values.image.tag }}:{{ .Values.image.tag }}{{ end }}"
+          image: {{ include "invoicerr.appImage" . | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
@@ -76,6 +77,8 @@ spec:
             # default (2) differs from the backend's own single-container default (1).
             - name: TRUST_PROXY_HOPS
               value: {{ .Values.app.trustProxyHops | quote }}
+            - name: SESSION_CACHE_TTL_MS
+              value: {{ .Values.app.sessionCacheTtlMs | quote }}
             # Instance-operator allowlist (backend/src/lib/instance-operators.ts) — API-role only,
             # like the rest of this file's env: the instance-reset routes it gates live on
             # InstanceController (HTTP), never on the worker.

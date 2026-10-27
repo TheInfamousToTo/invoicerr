@@ -38,6 +38,7 @@ import {
   useSetReconciliationSettings,
 } from "@/hooks/queries"
 import { currencyForCountry } from "@/lib/reference/countries"
+import { typeErrors } from "@/lib/zod-messages"
 import { useGet, usePost } from "@/hooks/use-fetch"
 import { useMutationWithToast } from "@/hooks/use-mutation-with-toast"
 import { type LookupScheme, useCompanyLookup } from "@/hooks/use-company-lookup"
@@ -49,6 +50,8 @@ import {
 import type { Company, ResolvedRevenueSettings } from "@/types"
 
 import { NumberFormatsSection } from "./number-formats.section"
+import { CompanyLawSection } from "./company-law.section"
+import { toCompanyLawForm, toCompanyLawPayload } from "@/lib/company-law"
 import { DeclareLastNumberSection } from "./declare-last-number.section"
 
 /** Mirrors the backend's `reconciliation-settings.ts#DEFAULT_TOLERANCE_PERCENT` — shown the first
@@ -65,6 +68,7 @@ const UNDECLARED_DISTANCE_SALES_REGIME = "__undeclared__"
  *  legitimately empty ("use the computed per-country default"), not merely a loading placeholder. */
 const USE_DEFAULT_REVENUE_BASIS = "__default_basis__"
 const USE_DEFAULT_REVENUE_PERIOD = "__default_period__"
+const UNDECLARED_PROFILE_VALUE = "__undeclared__"
 
 export default function CompanySettings() {
   const { t, i18n } = useTranslation()
@@ -82,7 +86,7 @@ export default function CompanySettings() {
   const companySchema = z.object({
     name: z
       .string({
-        required_error: t("settings.company.form.company.errors.required"),
+        error: typeErrors({ required: t("settings.company.form.company.errors.required") }),
       })
       .min(1, t("settings.company.form.company.errors.empty"))
       .max(100, t("settings.company.form.company.errors.maxLength")),
@@ -92,7 +96,7 @@ export default function CompanySettings() {
       .refine((date) => date <= new Date(), t("settings.company.form.foundedAt.errors.future")),
     currency: z
       .string({
-        required_error: t("settings.company.form.currency.errors.required"),
+        error: typeErrors({ required: t("settings.company.form.currency.errors.required") }),
       })
       .min(1, t("settings.company.form.currency.errors.select")),
     address: z.string().min(1, t("settings.company.form.address.errors.empty")),
@@ -114,11 +118,10 @@ export default function CompanySettings() {
         return /^[+]?[0-9\s\-()]{8,20}$/.test(val)
       }, t("settings.company.form.phone.errors.format")),
     email: z
-      .string()
       .email()
       .min(1, t("settings.company.form.email.errors.required"))
       .refine((val) => {
-        return z.string().email().safeParse(val).success
+        return z.email().safeParse(val).success
       }, t("settings.company.form.email.errors.format")),
     // BT-84 (Payment account identifier) — optional; the backend never fabricates one (see
     // Company.iban's own schema.prisma comment). Format checked loosely here (ISO 13616 shape); the
@@ -149,7 +152,15 @@ export default function CompanySettings() {
     // backend's Company.distanceSalesRegime comment). Same "empty stays empty, the backend decides
     // what that blocks" shape as invoiceTransportId below.
     distanceSalesRegime: z.string().optional(),
+    reportingProfile: z.record(z.string(), z.string().optional()).optional(),
     identifiers: z.array(z.object({ scheme: z.string(), value: z.string() })).optional(),
+    companyLaw: z.object({
+      legalForm: z.string(),
+      values: z.record(
+        z.string(),
+        z.union([z.string(), z.object({ amount: z.string(), currency: z.string() })]).optional(),
+      ),
+    }),
     // Peppol / electronic routing (stored as PEPPOL_ENDPOINT party identifier)
     peppolSchemeId: z.string().optional(),
     peppolEndpointId: z.string().optional(),
@@ -190,6 +201,7 @@ export default function CompanySettings() {
   })
 
   const { data } = useGet<Company>("/api/company/info")
+  const profileAttributes = data?.companyProfileAttributes ?? []
   // Issue #516 - the RESOLVED basis/period (this company's own explicit choice, or the computed
   // per-country default) plus whether each is explicit, so the select below can show "using the
   // default (<reason>)" without duplicating the backend's own per-country table client-side.
@@ -217,6 +229,7 @@ export default function CompanySettings() {
       description: "",
       exemptVat: false,
       distanceSalesRegime: "",
+      reportingProfile: {},
       foundedAt: new Date(),
       currency: "",
       address: "",
@@ -232,6 +245,7 @@ export default function CompanySettings() {
       iban: "",
       invoicePDFFormat: "",
       identifiers: [],
+      companyLaw: { legalForm: "", values: {} },
       peppolSchemeId: "0088",
       peppolEndpointId: "",
       invoiceTransportId: "",
@@ -277,6 +291,7 @@ export default function CompanySettings() {
         foundedAt: fromCalendarDate(data.foundedAt) ?? new Date(data.foundedAt),
         exemptVat: !!data.exemptVat,
         distanceSalesRegime: data.distanceSalesRegime ?? "",
+        reportingProfile: data.reportingProfile ?? {},
         remindersEnabled: !!data.remindersEnabled,
         iban: data.iban ?? "",
         invoiceTransportId: data.invoiceTransportId ?? "",
@@ -297,6 +312,7 @@ export default function CompanySettings() {
           })),
         peppolSchemeId: parsedPeppolSchemeId,
         peppolEndpointId: parsedPeppolEndpointId,
+        companyLaw: toCompanyLawForm(data.companyLaw),
       }
 
       // This snapshot can resolve AFTER the user has already touched the form — `/api/company/info`
@@ -477,10 +493,24 @@ export default function CompanySettings() {
       peppolEndpointId: _pe,
       approvalThreshold,
       reconciliationTolerancePercent,
+      reportingProfile,
       ...valuesWithoutPeppol
     } = values
+    // The attributes on screen belong to the saved country; after a country change the backend
+    // drops what the new country does not ask for, so nothing is sent until the next visit.
+    const sameCountry =
+      (values.countryCode || "") === (data?.countryCode || "") && values.country === data?.country
     const payload = {
       ...valuesWithoutPeppol,
+      reportingProfile:
+        sameCountry && profileAttributes.length > 0
+          ? Object.fromEntries(
+              profileAttributes.map((attribute) => [
+                attribute.key,
+                reportingProfile?.[attribute.key] || null,
+              ]),
+            )
+          : undefined,
       identifiers: [
         ...(values.identifiers || []).filter((i) => i.value.trim() !== ""),
         ...(peppolEntry ? [peppolEntry] : []),
@@ -492,6 +522,7 @@ export default function CompanySettings() {
       // `DateTime` column (`company.service.ts#editCompanyInfo` passes it through untouched), and
       // Prisma refuses a bare calendar date there.
       foundedAt: toCalendarDateInstant(values.foundedAt),
+      companyLaw: toCompanyLawPayload(values.companyLaw),
       // "" means "no reference currency chosen" in the form; stored as null, not an empty string.
       referenceCurrency: values.referenceCurrency?.trim() ? values.referenceCurrency : null,
       // Same "empty means use the computed default, stored as null" convention as referenceCurrency
@@ -749,16 +780,19 @@ export default function CompanySettings() {
               </SettingsFieldGroup>
             ) : null}
 
+            <CompanyLawSection countryCode={countryCodeValue || undefined} />
+
             {orphanedIdentifiers.length > 0 && (
               // Identifiers this company already has ON FILE whose scheme the currently-selected
               // country no longer asks for — see the sync effect above for why these are kept
               // instead of silently deleted. Shown explicitly, with a deliberate removal action, so
               // the user decides their fate instead of an unattended effect.
               <SettingsFieldGroup
+                dataCy="company-identifiers-on-file-group"
                 legend={t("settings.company.form.identifiers.onFile.label", "Other identifiers on file")}
-                description={t(
+                help={t(
                   "settings.company.form.identifiers.onFile.description",
-                  "Saved on this company before, but not requested by the currently selected country. Kept as-is rather than removed automatically — remove one only if you're sure it's no longer needed.",
+                  "Saved on this company before, but not requested by the currently selected country. Kept as-is rather than removed automatically: remove one only if you're sure it's no longer needed.",
                 )}
               >
                 <SettingsList dataCy="company-identifiers-on-file">
@@ -1294,9 +1328,63 @@ export default function CompanySettings() {
             />
           </SettingsSection>
 
+          {profileAttributes.length > 0 && (
+            <SettingsSection
+              title={t("settings.company.profile.title")}
+              description={t("settings.company.profile.description")}
+              contentClassName="grid gap-5 sm:grid-cols-2"
+            >
+              {profileAttributes.map((attribute) => (
+                <FormField
+                  key={attribute.key}
+                  control={form.control}
+                  name={`reportingProfile.${attribute.key}`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel description={attribute.help}>{attribute.label}</FormLabel>
+                      <Select
+                        value={field.value ? field.value : UNDECLARED_PROFILE_VALUE}
+                        // Radix fires a spurious "" when the stored value arrives after mount; a
+                        // real pick is never "", so it is dropped (same as invoiceTransportId).
+                        onValueChange={(value) => {
+                          if (value) field.onChange(value === UNDECLARED_PROFILE_VALUE ? "" : value)
+                        }}
+                      >
+                        <FormControl>
+                          <SelectTrigger
+                            className="w-full"
+                            data-cy={`company-profile-${attribute.key}-select`}
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value={UNDECLARED_PROFILE_VALUE}>
+                            {t("settings.company.profile.notDeclared")}
+                          </SelectItem>
+                          {attribute.values.map((option) => (
+                            <SelectItem
+                              key={option.value}
+                              value={option.value}
+                              data-cy={`company-profile-${attribute.key}-option-${option.value}`}
+                            >
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ))}
+            </SettingsSection>
+          )}
+
           <SettingsSection
             title={t("settings.company.approval.title")}
-            description={t("settings.company.approval.description")}
+            help={t("settings.company.approval.description")}
+            dataCy="company-approval-section"
             contentClassName="grid gap-5"
           >
             <FormField
@@ -1329,7 +1417,8 @@ export default function CompanySettings() {
 
           <SettingsSection
             title={t("settings.company.reconciliation.title")}
-            description={t("settings.company.reconciliation.description")}
+            help={t("settings.company.reconciliation.description")}
+            dataCy="company-reconciliation-section"
             contentClassName="grid gap-5"
           >
             <FormField
@@ -1421,10 +1510,11 @@ export default function CompanySettings() {
 
           <SettingsSection
             title={t("settings.company.revenueBasis.title", "Revenue basis")}
-            description={t(
+            help={t(
               "settings.company.revenueBasis.description",
               "Which figure this company declares as its own revenue, and over which period. Defaulted from your country where a clear regime exists, always overridable. This is an aid, not tax advice - verify against your own accounting records.",
             )}
+            dataCy="company-revenue-basis-section"
             contentClassName="grid gap-5 sm:grid-cols-2"
           >
             <FormField

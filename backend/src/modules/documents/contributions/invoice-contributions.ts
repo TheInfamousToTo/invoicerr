@@ -388,6 +388,10 @@ export const buildInvoiceDashboardWidgets: ContributionHandler = async ({ compan
     const thisMonthKey = months[months.length - 1].key;
     const lastMonthKey = months[months.length - 2].key;
     const issuedByCurrency = new Map<string, { thisMonth: number; lastMonth: number }>();
+    // Only a currency invoiced THIS month gets a tile, as in expense-contributions.ts: last month's
+    // total is the `previousValue` next to a current figure, never a tile of its own. A currency
+    // invoiced last month only would otherwise read "0" next to a "-100%" badge.
+    const invoicedThisMonth = new Set<string>();
     for (const invoice of invoices) {
       if (invoice.status !== 'sent' && invoice.status !== 'imported') continue;
       const data = (invoice.data ?? {}) as Record<string, unknown>;
@@ -395,10 +399,17 @@ export const buildInvoiceDashboardWidgets: ContributionHandler = async ({ compan
       if (key !== thisMonthKey && key !== lastMonthKey) continue;
       const currency = currencyOf(data);
       const bucket = issuedByCurrency.get(currency) ?? { thisMonth: 0, lastMonth: 0 };
-      if (key === thisMonthKey) bucket.thisMonth += invoiceNetMinor(data);
-      else bucket.lastMonth += invoiceNetMinor(data);
+      if (key === thisMonthKey) {
+        bucket.thisMonth += invoiceNetMinor(data);
+        invoicedThisMonth.add(currency);
+      } else {
+        bucket.lastMonth += invoiceNetMinor(data);
+      }
       issuedByCurrency.set(currency, bucket);
     }
+    const issuedThisMonth = [...issuedByCurrency.entries()].filter(([currency]) =>
+      invoicedThisMonth.has(currency),
+    );
     // Same month boundaries the figure itself buckets by (`monthKey`/`monthRange`), so the tile's own
     // link never drifts from the number it decorates.
     const issuedLink: MetricWidgetLink = {
@@ -407,7 +418,7 @@ export const buildInvoiceDashboardWidgets: ContributionHandler = async ({ compan
       ...monthRange(thisMonthKey),
     };
     issuedWidgets =
-      issuedByCurrency.size === 0
+      issuedThisMonth.length === 0
         ? [
             {
               id: 'invoice:issued-this-month',
@@ -418,8 +429,8 @@ export const buildInvoiceDashboardWidgets: ContributionHandler = async ({ compan
               link: issuedLink,
             },
           ]
-        : [...issuedByCurrency.entries()]
-            .sort(([currencyA], [currencyB]) => currencyA.localeCompare(currencyB))
+        : issuedThisMonth
+            .toSorted(([currencyA], [currencyB]) => currencyA.localeCompare(currencyB))
             .map(([currency, { thisMonth, lastMonth }]) => ({
               id: `invoice:issued-this-month:${currency}`,
               kind: 'metric',
@@ -525,20 +536,29 @@ export const buildInvoiceDashboardWidgets: ContributionHandler = async ({ compan
     const windowTo = new Date(`${monthRange(thisMonthKey).dateTo}T23:59:59.999Z`);
     const paymentsInWindow = await listPaymentsInRange(companyId, windowFrom, windowTo);
     const collectedByCurrency = new Map<string, { thisMonth: number; lastMonth: number }>();
+    // Same rule as "Invoiced this month" above: only a currency collected THIS month gets a tile.
+    const collectedThisMonthCurrencies = new Set<string>();
     for (const payment of paymentsInWindow) {
       if (!issuedInvoiceIds.has(payment.documentId)) continue;
       const key = monthKey(payment.paidAt.toISOString());
       if (key !== thisMonthKey && key !== lastMonthKey) continue;
       const bucket = collectedByCurrency.get(payment.currency) ?? { thisMonth: 0, lastMonth: 0 };
-      if (key === thisMonthKey) bucket.thisMonth += payment.amountMinor;
-      else bucket.lastMonth += payment.amountMinor;
+      if (key === thisMonthKey) {
+        bucket.thisMonth += payment.amountMinor;
+        collectedThisMonthCurrencies.add(payment.currency);
+      } else {
+        bucket.lastMonth += payment.amountMinor;
+      }
       collectedByCurrency.set(payment.currency, bucket);
     }
+    const collectedThisMonth = [...collectedByCurrency.entries()].filter(([currency]) =>
+      collectedThisMonthCurrencies.has(currency),
+    );
     collectedWidgets =
-      collectedByCurrency.size === 0
+      collectedThisMonth.length === 0
         ? [{ id: 'invoice:collected-this-month', kind: 'metric', label: 'Collected this month', value: 0 }]
-        : [...collectedByCurrency.entries()]
-            .sort(([currencyA], [currencyB]) => currencyA.localeCompare(currencyB))
+        : collectedThisMonth
+            .toSorted(([currencyA], [currencyB]) => currencyA.localeCompare(currencyB))
             .map(([currency, { thisMonth, lastMonth }]) => ({
               id: `invoice:collected-this-month:${currency}`,
               kind: 'metric',

@@ -90,12 +90,21 @@ function createClientThroughScreen(opts: {
 	city: string;
 	vat: VatFieldExpectation;
 	email: string;
+	/** A private person, named by first and last name; `name` is then their full name. */
+	individual?: { firstname: string; lastname: string };
 }) {
 	cy.visit("/clients");
 	cy.contains("button", /add|new|créer|ajouter/i, { timeout: 10000 }).click();
 	cy.get('[data-cy="client-dialog"]', { timeout: 5000 }).should("be.visible");
 
-	cy.get('[name="name"]').clear().type(opts.name);
+	if (opts.individual) {
+		cy.get('[data-cy="client-type-select"]').click();
+		cy.get('[data-cy="client-type-individual"]').click();
+		cy.get('[name="contactFirstname"]').clear().type(opts.individual.firstname);
+		cy.get('[name="contactLastname"]').clear().type(opts.individual.lastname);
+	} else {
+		cy.get('[name="name"]').clear().type(opts.name);
+	}
 	cy.continueSteppedDialog("client-dialog");
 
 	cy.selectCountry("client-country-select", opts.countryLabel);
@@ -475,6 +484,9 @@ describe("The cross-border case, through the screen", () => {
 			city: "Berlin",
 			vat: { kind: "offered-empty" },
 			email: "privatkunde@ohne-ustidnr.example",
+			// A business client would owe its VAT number on a French intra-EU invoice; a private
+			// person owes none, which is what B2C means here.
+			individual: { firstname: "Privatkunde", lastname: "Ohne USt-IdNr" },
 		});
 
 		// The invoice — a GOODS line (not SERVICES) so the engine actually reaches the OSS branch

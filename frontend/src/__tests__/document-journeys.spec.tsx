@@ -131,6 +131,12 @@ afterEach(() => {
   vi.clearAllMocks()
 })
 
+// Opens a ProseHelp's `?` and returns the popover, so an assertion reads the text a user actually sees.
+function openHelp(dataCy: string): HTMLElement {
+  fireEvent.click(screen.getByTestId(`${dataCy}-help-trigger`))
+  return screen.getByTestId(`${dataCy}-help-content`)
+}
+
 describe("Issuance — draft sent, the screen follows without reload (SSE mechanism)", () => {
   it("shows 'Sending' the moment send is clicked, then 'Sent' once the SSE nudge arrives", async () => {
     const descriptor: DocumentTypeDescriptor = {
@@ -424,10 +430,10 @@ describe("Correction — what the screen REALLY offers today (not a dedicated sc
 
     // The one action this record offers is blocked — it still takes the page's primary slot (a
     // visibly disabled rule rather than an empty header — see action-presentation.ts's
-    // `pickPrimaryAction`), its reason printed right under it.
+    // `pickPrimaryAction`), its reason behind the status line's help button.
     const saveDraftButton = await screen.findByTestId("document-action-save-draft")
     expect(saveDraftButton).toBeDisabled()
-    expect(screen.getByTestId("document-blocked-reason-save-draft")).toHaveTextContent("CGI art. 289, I.5")
+    expect(openHelp("document-blocked-reason-save-draft")).toHaveTextContent("CGI art. 289, I.5")
   })
   // MUTATION (proven, reverted): document-form.tsx — `disabled={!!action.policyBlockedReason}`
   // (the action button's own render) -> `disabled={false}`. RED: "document-action-save-draft" is no
@@ -613,6 +619,115 @@ describe("Credit note — the mandatory reference, the locked currency, the cred
   // never renders even though the settlement response still carries the credit note — the ONE thing
   // this journey exists to prove (a credit note is visible at the invoice's own settlement) silently
   // disappears from the screen. Reverted; suite green again.
+})
+
+describe("Settlement - a settled invoice no longer offers Record payment", () => {
+  const descriptor: DocumentTypeDescriptor = {
+    id: "invoice",
+    label: "Invoice",
+    statuses: [{ id: "sent", label: "Sent" }],
+    initialStatus: "draft",
+    numbering: { onEnterStatus: "sent" },
+    fields: [{ key: "issueDate", kind: "date", label: "Date", required: true }],
+    actions: [
+      { id: "record-payment", label: "Record payment", availableWhen: ["sent"] },
+      { id: "export-accounting", label: "Export to accounting", availableWhen: ["sent"] },
+    ],
+  }
+
+  function sentInvoice(id: string, number: string): DocumentInstance {
+    return {
+      id,
+      typeId: "invoice",
+      status: "sent",
+      data: { issueDate: "2026-08-01T00:00:00.000Z" },
+      createdAt: "2026-08-01T00:00:00.000Z",
+      updatedAt: "2026-08-01T00:00:00.000Z",
+      displayNumber: number,
+      lastActionError: null,
+    }
+  }
+
+  function settlementOf(paidMinor: number, outstandingMinor: number) {
+    return {
+      totals: { currency: "EUR", grossMinor: 24000 },
+      payments: [],
+      credits: [],
+      warnings: [],
+      settlement: {
+        totalGrossMinor: 24000,
+        paidMinor,
+        creditedMinor: 0,
+        outstandingMinor,
+        excessMinor: 0,
+        settled: outstandingMinor === 0,
+      },
+    }
+  }
+
+  const unpaid = sentInvoice("inv-unpaid", "INV-2026-0001")
+  const partial = sentInvoice("inv-partial", "INV-2026-0002")
+  const paid = sentInvoice("inv-paid", "INV-2026-0003")
+
+  function installSettlementMock() {
+    installFetchMock({
+      "GET /api/documents/types/invoice": () => descriptor,
+      "GET /api/documents": () => documentsPage([unpaid, partial, paid]),
+      "GET /api/documents/inv-paid": () => paid,
+      "GET /api/documents/inv-paid/authority-events": () => [],
+      "GET /api/documents/inv-paid/archives": () => [],
+      "GET /api/documents/inv-unpaid/settlement": () => settlementOf(0, 24000),
+      "GET /api/documents/inv-partial/settlement": () => settlementOf(10000, 14000),
+      "GET /api/documents/inv-paid/settlement": () => settlementOf(24000, 0),
+    })
+  }
+
+  function openMenu(trigger: HTMLElement) {
+    fireEvent.keyDown(trigger, { key: "Enter" })
+  }
+
+  it("unpaid and partially paid rows keep Record payment, the settled row shows the settled check", async () => {
+    installSettlementMock()
+    renderDocumentTypeScreen("invoice")
+
+    expect(await screen.findByTestId("document-row-settled-inv-paid")).toHaveAccessibleName("Settled")
+    expect(screen.queryByTestId("document-row-action-record-payment-inv-paid")).not.toBeInTheDocument()
+    // The next action down the descriptor is not promoted into the freed slot.
+    expect(screen.queryByTestId("document-row-action-export-accounting-inv-paid")).not.toBeInTheDocument()
+
+    expect(screen.getByTestId("document-row-action-record-payment-inv-unpaid")).toBeInTheDocument()
+    expect(screen.getByTestId("document-row-action-record-payment-inv-partial")).toBeInTheDocument()
+    expect(screen.queryByTestId("document-row-settled-inv-unpaid")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("document-row-settled-inv-partial")).not.toBeInTheDocument()
+  })
+
+  it("the settled row's menu keeps its other actions but not Record payment", async () => {
+    installSettlementMock()
+    renderDocumentTypeScreen("invoice")
+
+    await screen.findByTestId("document-row-settled-inv-paid")
+    openMenu(screen.getByTestId("document-row-menu-inv-paid"))
+    const menu = await screen.findByTestId("document-row-menu-content-inv-paid")
+    expect(within(menu).getByTestId("document-row-action-export-accounting-inv-paid")).toBeInTheDocument()
+    expect(within(menu).queryByTestId("document-row-action-record-payment-inv-paid")).not.toBeInTheDocument()
+  })
+
+  it("the settled invoice's own page shows the settled check instead of Record payment", async () => {
+    installSettlementMock()
+    renderDocumentTypeScreen("invoice")
+
+    fireEvent.click(await screen.findByTestId("document-open-link-inv-paid"))
+    expect(await screen.findByTestId("document-detail-settled")).toHaveAccessibleName("Settled")
+    expect(screen.queryByTestId("document-action-record-payment")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("document-action-export-accounting")).not.toBeInTheDocument()
+    // Settled, the balance stays on the page.
+    expect(screen.getByTestId("document-settlement-outstanding")).toHaveTextContent("0.00 EUR")
+
+    openMenu(screen.getByTestId("document-actions-menu"))
+    const menu = await screen.findByTestId("document-actions-menu-content")
+    expect(within(menu).getByTestId("document-action-export-accounting")).toBeInTheDocument()
+    expect(within(menu).queryByTestId("document-action-record-payment")).not.toBeInTheDocument()
+  })
 })
 
 describe("Cancellation — the journey as it exists (GAP logged: no dedicated screen)", () => {
@@ -814,7 +929,8 @@ describe("Correct — correction routes, by seller country", () => {
 
     // Issue #554: the header is the curated, translated explanation, never the backend's own raw
     // developer note sent as `limitation`.
-    const limitationParagraph = await screen.findByTestId("document-correction-limitation")
+    await screen.findByTestId("document-correction-limitation")
+    const limitationParagraph = openHelp("document-correction-limitation")
     expect(limitationParagraph).toHaveTextContent(translatedLimitationHeader)
     expect(limitationParagraph).not.toHaveTextContent(limitationText)
 
@@ -824,9 +940,7 @@ describe("Correct — correction routes, by seller country", () => {
     ).toHaveTextContent("Required by law")
     // Issue #554: the row shows the curated, translated explanation, never the catalog's own raw
     // `provenance.sourceText` (`frCitation`, mixed French/legal-quote research notes).
-    const requiredRowLabel = within(requiredRow).getByTestId(
-      "document-correction-route-INTERNAL_CREDIT_NOTE-label",
-    )
+    const requiredRowLabel = openHelp("document-correction-route-INTERNAL_CREDIT_NOTE-label")
     expect(requiredRowLabel).toHaveTextContent(frInternalCreditNoteExplanation)
     expect(requiredRowLabel).not.toHaveTextContent(frCitation)
     const chooseButton = within(requiredRow).getByTestId(
@@ -997,7 +1111,7 @@ describe("Correct — correction routes, by seller country", () => {
     const confirmPanel = await screen.findByTestId("document-correction-confirm-cancel")
     expect(confirmPanel).toHaveTextContent("cannot be undone")
     // Issue #554: same curated explanation here too, never the raw citation even on this screen.
-    const confirmCancelLabel = screen.getByTestId("document-correction-confirm-cancel-label")
+    const confirmCancelLabel = openHelp("document-correction-confirm-cancel-label")
     expect(confirmCancelLabel).toHaveTextContent(frCancelAndReplaceExplanation)
     expect(confirmCancelLabel).not.toHaveTextContent(cancelCitation)
     expect(ranCancel, "no cancel ran yet — only the confirmation panel opened").toBe(false)
@@ -1147,6 +1261,36 @@ describe("Server-side pagination and filters — GET /documents's own query stri
     await waitFor(() => expect(calls.some((params) => params.get("q") === "acme")).toBe(true))
   })
 
+  it("a keystroke landing while the debounced URL update is still committing is never lost", async () => {
+    const calls: URLSearchParams[] = []
+    installFetchMock({
+      "GET /api/documents/types/invoice": () => invoiceDescriptor,
+      "GET /api/documents": (url) => {
+        calls.push(url.searchParams)
+        return documentsPage([invoiceInstance("inv-1")])
+      },
+    })
+
+    renderDocumentTypeScreen("invoice")
+    await screen.findByTestId("document-list-row-inv-1")
+    const search = screen.getByTestId("document-list-search")
+
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] })
+    try {
+      fireEvent.change(search, { target: { value: "Z" } })
+      // The debounce fires and pushes `q=Z`, and the next keystroke arrives before React commits it.
+      vi.advanceTimersByTime(300)
+      fireEvent.change(search, { target: { value: "Zz" } })
+      expect(search).toHaveValue("Zz")
+      vi.advanceTimersByTime(300)
+    } finally {
+      vi.useRealTimers()
+    }
+
+    await waitFor(() => expect(calls.at(-1)?.get("q")).toBe("Zz"))
+    expect(screen.getByTestId("document-list-search")).toHaveValue("Zz")
+  })
+
   it("the client and date filters render for a client/date-bearing type, and neither renders for one with neither field", async () => {
     installFetchMock({
       "GET /api/documents/types/invoice": () => invoiceDescriptor,
@@ -1192,5 +1336,24 @@ describe("Server-side pagination and filters — GET /documents's own query stri
 
     await screen.findByTestId("document-list-row-inv-1")
     expect(calls.at(-1)?.getAll("status")).toEqual([])
+  })
+
+  it('"Clear filters" empties a search box whose term was already applied to the URL', async () => {
+    installFetchMock({
+      "GET /api/documents/types/invoice": () => invoiceDescriptor,
+      "GET /api/documents": (url) =>
+        documentsPage(url.searchParams.get("q") ? [] : [invoiceInstance("inv-1")]),
+    })
+
+    renderDocumentTypeScreen("invoice")
+    await screen.findByTestId("document-list-row-inv-1")
+
+    fireEvent.change(screen.getByTestId("document-list-search"), { target: { value: "acme" } })
+    await screen.findByTestId("document-list-empty", {}, { timeout: 2000 })
+
+    fireEvent.click(screen.getByTestId("document-list-clear-filters"))
+
+    await screen.findByTestId("document-list-row-inv-1")
+    expect(screen.getByTestId("document-list-search")).toHaveValue("")
   })
 })

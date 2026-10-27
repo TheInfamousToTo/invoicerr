@@ -1,6 +1,21 @@
 
 declare namespace Cypress {
+    interface AssertAccessibleOptions {
+        /** What to audit instead of the whole document: a selector, or `{ include, exclude }`. */
+        context?: import("axe-core").ElementContext
+        /** Run only these axe rules, at every impact level, instead of the default blocking set. */
+        rules?: string[]
+    }
+
     interface Chainable {
+        /**
+         * Runs axe-core on the current page and fails on any serious or critical violation, printing
+         * each one (rule, impact, element) to the runner's stdout.
+         * @example cy.assertAccessible()
+         * @example cy.assertAccessible({ context: '[role="dialog"]' })
+         */
+        assertAccessible(options?: AssertAccessibleOptions): Chainable<void>
+
         /**
          * Custom command to log in
          * @example cy.login()
@@ -42,6 +57,13 @@ declare namespace Cypress {
          * @example cy.waitForDocumentStatus(`${api}/api/documents/${id}?typeId=invoice`, ['sent', 'send_failed'])
          */
         waitForDocumentStatus(url: string, targetStatuses: string[]): Chainable<any>
+
+        /**
+         * Answers the company register search (`GET /api/company-lookup`) with "not found", so a
+         * spec driving the onboarding wizard never depends on a live register.
+         * @example cy.stubCompanyLookup()
+         */
+        stubCompanyLookup(): Chainable<void>
 
         /**
          * Custom command to pick a country from a CountrySelect component

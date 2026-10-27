@@ -481,6 +481,11 @@ model Company {
 
   dateFormat String @default("dd/MM/yyyy") // Date format for quotes and invoices
 
+  // Legal form and the company-law values its country's `companyLaw` section asks for, e.g.
+  // `{ "legalForm": "SAS", "values": { "registerCity": "Lyon" } }`. Read through
+  // documents/company-law/company-law.ts#readCompanyLawDetails, which ignores any entry of the wrong shape.
+  companyLaw Json?
+
   // Multi-currency consolidation. Null — the default, and the only state every
   // company was already in before this column existed — means NO consolidation happens anywhere:
   // every dashboard/statistics aggregate stays grouped BY CURRENCY, exactly as
@@ -516,6 +521,10 @@ model Company {
   // granularities for every other regime, which a reader can always re-aggregate into quarters by
   // hand but never the reverse - see `resolve-revenue-basis.ts`'s own header).
   revenuePeriod String?
+
+  // The values this company declared for the attributes its country's `companyProfile` section asks
+  // for (documents/company-profile/), e.g. { "sizeCategory": "SME" }. An absent key is undeclared.
+  reportingProfile Json?
 
   // Default due date for new quotes and invoices, one pair per document type: a day count and a mode
   // ("net": issue date + N days; "endOfMonth": issue date + N days, then that month's last day).
@@ -3022,7 +3031,7 @@ model DocumentCountryActionRule {
 // country allows; this one says which national identifier SCHEMES (SIRET, EIN, VAT…) a party of a
 // given type must supply — neither reads the other.
 model CountryIdentifierRequirement {
-  id          String  @id @default(cuid())
+  id          String   @id @default(cuid())
   countryCode String // ISO 3166-1 alpha-2, uppercase — matches the source file's own countryCode
   scheme      String // a stable, cross-country key the FRONTEND switches on — e.g. "LEGAL_ID", "VAT"
   // (see client-upsert.tsx's `data-cy={`client-identifier-${req.scheme}`}` and
@@ -3031,6 +3040,7 @@ model CountryIdentifierRequirement {
   appliesTo   String // 'COMPANY' | 'INDIVIDUAL' | 'BOTH'
   label       String // country-specific display text for this scheme, e.g. "SIRET" (FR), "EIN" (US)
   required    Boolean
+  requiredFor String[] @default([]) // the party types `required` binds, resolved from the file at seed time
   pattern     String? // optional validation regex — a legal CLAIM like `required`, covered by the
   // same provenance below, never a UI-invented default
   helpText    String?

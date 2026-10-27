@@ -359,6 +359,21 @@ export class DocumentsController {
     return this.documentsService.listRequiredIdentifiers(countryCode, partyType);
   }
 
+  @Get('company-law')
+  @RequiresDocumentTypeScope('read', 'every-type')
+  @ApiOperation({
+    summary: 'The company-law values a country asks of a seller, per legal form',
+    description:
+      "Each legal form the country's `companyLaw` section declares and the fields its mentions quote, " +
+      'with whether a mention requires them. `legalForms` is empty for a country that declares none. ' +
+      'Not scoped by @ActiveCompany(): the country is the one picked in the company settings form.',
+  })
+  @ApiQuery({ name: 'countryCode', required: true, type: String })
+  @ApiResponse({ status: 200, description: 'Legal forms and their fields (possibly none)' })
+  listCompanyLawSettings(@Query('countryCode') countryCode: string) {
+    return this.documentsService.listCompanyLawSettings(countryCode);
+  }
+
   @Get('b2g-routing')
   @RequiresDocumentTypeScope('read', 'every-type')
   @ApiOperation({

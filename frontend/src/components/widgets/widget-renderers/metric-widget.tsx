@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 
 import { buildMetricLinkHref } from "@/components/widgets/metric-link"
+import { useWidgetReloading, WidgetValue } from "@/components/widgets/widget-value"
 import { AmountBasisCaption } from "./amount-basis"
 import type { MetricWidget } from "@/components/widgets/types"
 import type { WidgetRendererProps } from "./registry"
@@ -109,14 +110,15 @@ function VariationChip({ value, previousValue, unit }: VariationChipProps) {
  *  When the contribution supplied `link`, the whole tile opens the filtered list behind the figure
  *  (`short-list-widget.tsx`'s own `Link`-wrapped row is the precedent this follows): a visible hover
  *  affordance (border/background shift, a chevron that appears), a focus-visible ring for keyboard
- *  navigation, and an `aria-label` naming what the click does, since the tile's own visible text is
- *  only the number and its label, never "open the list". A metric with no `link` renders exactly as
+ *  navigation, and a screen-reader-only "open the list" after the visible text, which stays the
+ *  start of the link's name (WCAG 2.5.3). A metric with no `link` renders exactly as
  *  it did before this existed: a plain, non-interactive `Card`. */
 export function MetricWidgetRenderer({ widget }: WidgetRendererProps) {
   const { t } = useTranslation()
   // Safe: this component is only ever registered for, and therefore only ever looked up under,
   // kind "metric" — see registry.ts's own comment on this trust boundary.
   const metric = widget as MetricWidget
+  const reloading = useWidgetReloading()
   const tone = metricTone(metric.id, metric.label)
 
   const cardBody = (
@@ -140,44 +142,49 @@ export function MetricWidgetRenderer({ widget }: WidgetRendererProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="px-4">
-        <p className="amount text-2xl font-semibold text-foreground sm:text-3xl">
-          {metric.approx ? "≈ " : ""}
-          {metric.value.toLocaleString()}
-          {metric.unit ? (
-            <span className="ms-1 text-sm font-normal text-muted-foreground">{metric.unit}</span>
-          ) : null}
-        </p>
-        {metric.previousValue !== undefined && (
-          <div className="mt-1.5">
-            <VariationChip value={metric.value} previousValue={metric.previousValue} unit={metric.unit} />
+        <WidgetValue>
+          <p className="amount text-2xl font-semibold text-foreground sm:text-3xl">
+            {metric.approx ? "≈ " : ""}
+            {metric.value.toLocaleString()}
+            {metric.unit ? (
+              <span className="ms-1 text-sm font-normal text-muted-foreground">{metric.unit}</span>
+            ) : null}
+          </p>
+          {/* The chip's row is always reserved, so a tile without a chip is as tall as one with it.
+              A current value of 0 never gets a chip: "0" next to "-100%" reads as a
+              contradiction, whatever the contribution sends. */}
+          <div className="mt-1.5 min-h-4" data-cy={`widget-${metric.id}-trend`}>
+            {metric.previousValue !== undefined && metric.value !== 0 && (
+              <VariationChip value={metric.value} previousValue={metric.previousValue} unit={metric.unit} />
+            )}
           </div>
-        )}
-        {metric.warnings?.length ? (
-          <ul className="mt-2 space-y-0.5" data-cy={`widget-${metric.id}-warnings`}>
-            {metric.warnings.map((warning) => (
-              <li key={warning} className="text-xs text-muted-foreground">
-                {warning}
-              </li>
-            ))}
-          </ul>
-        ) : null}
+          {metric.warnings?.length ? (
+            <ul className="mt-2 space-y-0.5" data-cy={`widget-${metric.id}-warnings`}>
+              {metric.warnings.map((warning) => (
+                <li key={warning} className="text-xs text-muted-foreground">
+                  {warning}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </WidgetValue>
       </CardContent>
     </>
   )
 
-  if (metric.link) {
+  // A tile reloading for another period must not open the list of the previous one.
+  if (metric.link && !reloading) {
     return (
       <Link
         to={buildMetricLinkHref(metric.link)}
-        className="group block rounded-xl outline-none"
-        aria-label={t("widgets.metric.openList", { label: metric.label })}
+        className="group block h-full rounded-xl outline-none"
         data-cy={`widget-${metric.id}-link`}
       >
         <Card
           data-cy={`widget-${metric.id}`}
           data-widget-kind="metric"
           className={cn(
-            "cursor-pointer gap-2 border-s-4 py-4 transition-colors duration-150",
+            "h-full cursor-pointer gap-2 border-s-4 py-4 transition-colors duration-150",
             // Background and shadow only: the left border carries the tile's tone and must survive a hover.
             "hover:bg-accent/40 hover:shadow-md",
             "group-focus-visible:ring-2 group-focus-visible:ring-ring",
@@ -186,6 +193,7 @@ export function MetricWidgetRenderer({ widget }: WidgetRendererProps) {
         >
           {cardBody}
         </Card>
+        <span className="sr-only">{t("widgets.metric.openListHint")}</span>
       </Link>
     )
   }

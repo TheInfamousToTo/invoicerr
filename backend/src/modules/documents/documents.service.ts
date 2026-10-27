@@ -78,6 +78,7 @@ import {
   resolveRequiredIdentifiers,
   RequiredIdentifiersDecision,
 } from './country-identifiers/country-identifiers';
+import { CompanyLawSettings, companyLawSettings } from './company-law/company-law';
 import { PartyType } from './country-identifiers/schema';
 import { resolveB2gRoutingRule, resolveClientB2gRouting } from './b2g-routing/b2g-routing';
 import { defaultCountryPolicyCatalog } from './country-policy/registry';
@@ -160,6 +161,7 @@ import { referencedArrayFieldKeys, stampRowIds } from './row-selection/row-selec
 import { resolveInvoiceCrossBorderTaxForCompany } from './tax/load-and-resolve';
 import {
   isInvoiceTaxBlockError,
+  companyTaxScheme,
   parseDistanceSalesRegime,
   resolveInvoiceCrossBorderTax,
 } from './tax/resolve-invoice-tax';
@@ -689,6 +691,10 @@ export class DocumentsService implements OnModuleInit {
   ): Promise<RequiredIdentifiersDecision> {
     const resolvedPartyType: PartyType = partyType === 'INDIVIDUAL' ? 'INDIVIDUAL' : 'COMPANY';
     return resolveRequiredIdentifiers(countryCode, resolvedPartyType);
+  }
+
+  listCompanyLawSettings(countryCode: string): CompanyLawSettings {
+    return companyLawSettings(countryCode);
   }
 
   getType(typeId: string): DocumentTypeDescriptor {
@@ -2282,16 +2288,11 @@ export class DocumentsService implements OnModuleInit {
           seller: {
             country: company.country,
             countryCode: company.countryCode,
-            // Same `exemptVat` → `FRANCHISE_BASE` mapping as `tax/load-and-resolve.ts`'s own comment
-            // on this exact line — this call site fetches the company row directly rather than
-            // through that Prisma-aware entry point (see this block's own header above for why), so
-            // the mapping has to be repeated here rather than inherited automatically; keep both in
-            // sync if it ever changes.
-            taxScheme: company.exemptVat ? 'FRANCHISE_BASE' : undefined,
-            // Same reason this block already repeats the `exemptVat` mapping above: this call site
-            // reads its own company row. `parseDistanceSalesRegime` is the SHARED narrowing parser
-            // (`tax/resolve-invoice-tax.ts`), not a second hand-written mapping, so the two sites can
-            // never disagree about what a stored value means — only the row-reading is duplicated.
+            taxScheme: companyTaxScheme(company),
+            // This call site reads its own company row. `parseDistanceSalesRegime` is the SHARED
+            // narrowing parser (`tax/resolve-invoice-tax.ts`), not a second hand-written mapping, so the
+            // two sites can never disagree about what a stored value means; only the row-reading is
+            // duplicated.
             distanceSalesRegime: parseDistanceSalesRegime(company.distanceSalesRegime),
           },
           buyer: { country: client.country, countryCode: client.countryCode },

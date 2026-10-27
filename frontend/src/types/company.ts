@@ -19,6 +19,8 @@ export interface CompanyMember {
 
 export interface Company {
   id: string
+  /** Legal form and company-law values, see `lib/company-law.ts`. */
+  companyLaw?: unknown
   description?: string | null
   foundedAt: Date | string
   name: string
@@ -97,6 +99,17 @@ export interface Company {
    *  (backend's `country-policy/schema.ts`), never decided here from `country`/`countryCode`. Null
    *  for a country with no such scheme declared (every shipped country but Portugal today). */
   documentValidationCode?: { scheme: string } | null
+  /** The values this company declared for the attributes its country asks for, by attribute key. */
+  reportingProfile?: Record<string, string> | null
+  /** The attributes this company's country asks it to declare (its `companyProfile` section). */
+  companyProfileAttributes?: CompanyProfileAttribute[]
+}
+
+export interface CompanyProfileAttribute {
+  key: string
+  label: string
+  help?: string
+  values: { value: string; label: string }[]
 }
 
 /** `GET /api/company/payment-terms`. Mirrors the backend's

@@ -35,6 +35,67 @@ SonarCloud's automatic analysis only analyzes pull requests and the default bran
 reports on a queue branch. Its result gates the pull request itself, before it is queued.
 :::
 
+## Workflow rules
+
+SonarCloud analyzes `.github/workflows/` too. A step added to a workflow follows the same rules as
+the existing ones:
+
+- **No lifecycle scripts.** Install with `npm ci --ignore-scripts`. A package that needs its
+  postinstall gets it as an explicit step instead: `./node_modules/.bin/cypress install` downloads
+  the Cypress binary, `./node_modules/.bin/playwright-core install chromium` the PDF browser.
+- **No `npx`.** Call the binary the lockfile installed, `./node_modules/.bin/<tool>`. `npx` installs
+  a missing package on demand, at whatever version the registry serves that day. A tool no project
+  depends on is installed once, at an exact version, with `npm install --prefix /tmp/ci-tools
+  --no-save --ignore-scripts <name>@<version>` (see `lighthouse.yml`).
+- **Actions pinned by commit SHA**, with the version in a trailing comment
+  (`uses: actions/checkout@<sha> # v4`). Renovate keeps both up to date.
+- **Least privilege.** The workflow declares a read-only floor at the top (`contents: read`,
+  `pull-requests: read` for `dco.yml`, or `{}`), and each job that needs more declares its own
+  block. A job-level block replaces the top-level one, so it restates `contents: read` when the job
+  checks out the repository. Examples: `packages: write` to push an image, `security-events: write`
+  to upload a SARIF report, `pages: read` for `actions/configure-pages`, `pages: write` and
+  `id-token: write` only on the job that deploys to GitHub Pages.
+- **No `${{ }}` inside a script.** A value from the event, an input, a matrix, `needs` or another
+  step's output goes through `env:` and is read as `"$NAME"`. GitHub substitutes `${{ }}` before the
+  shell parses the line, so a branch name or a tag containing shell syntax would run as code. The
+  rule applies to every expression, not only attacker-controlled ones, so a reviewer never has to
+  decide which values are safe.
+- **The backend boots from a finished build.** A job that needs a running backend runs
+  `npm run build`, then starts it with `npm run start:test:built` (`node dist/src/main` with
+  `.env.test`). Never `npm run start:test` in CI: `nest start --watch` copies the `data/*.json`
+  catalogues into `dist/` asynchronously and can start the app before they land, which boots it with
+  an empty country catalogue and fails specs far from the cause. The country loader refuses an empty
+  catalogue directory, so if the files are ever missing the backend exits at boot instead of
+  reseeding every country away.
+- **CI Postgres runs with trust auth.** Service containers set `POSTGRES_HOST_AUTH_METHOD: trust`
+  and connection strings carry no password. The database is reachable only from the runner and is
+  thrown away with the job.
+
+## External services in the required e2e lane
+
+The `cypress-run` shards gate every merge, so a spec there never waits on a public server it does not
+control: a slow or unavailable sandbox would block the merge queue for a reason unrelated to the
+change under test. When the backend calls an outside service, the spec points it at a local fake
+started from `e2e/cypress.config.ts` instead:
+
+- a URL stored on a row (PDP, SdI, the Portuguese AT webservice) is written by the spec itself,
+  toward a fake on an ephemeral port;
+- a URL the backend reads from its environment at boot uses a fixed port and a variable set for the
+  e2e stack: `ADDRESS_AUTOCOMPLETE_URL` (Photon, port 19876, set in `cypress.yml`),
+  `KSEF_TEST_API_URL` (KSeF test API, port 19877, set in `backend/.env.test`) and
+  `CHORUS_PRO_SANDBOX_URL` (both PISTE sandbox hosts, port 19878, set in `backend/.env.test`);
+- the company register search (`GET /api/company-lookup`), which the onboarding wizard awaits
+  before its company step, is answered in the browser: a spec that drives the wizard with a country
+  that has a register calls `cy.stubCompanyLookup()` before it. Without it, a register that hangs
+  holds the wizard for up to eight seconds per provider in the chain, longer than the spec waits.
+  `18-onboarding-wizard.cy.ts` is the one exception: its France case tests the lookup itself and
+  reaches the real chain on purpose.
+
+The KSeF and Chorus Pro variables only repoint the test or sandbox environment: a channel connected
+in production always talks to the real authority, and a unit test next to each client guards that.
+The real round trip with each authority belongs in a `*.live.spec.ts` run by `compliance-live.yml`
+(see [Live Testing](./live-testing.md)).
+
 ## Release notes and the Discord announcement
 
 `.github/release.yml` groups pull requests into the categories GitHub's "Generate release notes"
@@ -48,6 +109,19 @@ every entry lands in "Other Changes" until that changes. Label a pull request wi
 above (or leave it unlabeled for "Other") before it merges if you want it to show up under the
 right heading in the next release's notes.
 :::
+
+## Documentation build
+
+The changelog at `/changelog` is generated at build time: `documentation/scripts/fetch-changelog.mjs`
+fetches every published release and writes one post per release into `documentation/changelog/`.
+Docusaurus compiles those posts as MDX, so `documentation/scripts/changelog-post.mjs` makes each
+release body MDX-safe first: HTML comments (GitHub's generated notes open with one) are dropped, and
+`{`, `}` and `<` outside code are escaped. Its tests run with `npm test` in `documentation/`.
+
+`docs.yml` runs those tests and the full site build on every pull request to `dev` or `main` that
+touches `documentation/`. `docs-deploy.yml` builds and publishes the site after a push to `dev`.
+A release body is not part of any pull request, so a new kind of breakage in release notes still
+shows up first on the next deploy or the next documentation pull request.
 
 ## DCO check
 
@@ -71,6 +145,20 @@ Without the secret configured, the workflow logs a notice and skips cleanly rath
 the run. `workflow_dispatch` can simulate a pre-release publish (with made-up release details) to
 exercise that skip path, or the real posting once the secret is set, without waiting for an actual
 release.
+
+## Backend dependency updates
+
+Two rules for anyone, Renovate included, who changes `backend/package.json` or its lockfile:
+
+- **The NestJS framework packages move together.** `@nestjs/common`, `@nestjs/core`,
+  `@nestjs/platform-express` and `@nestjs/testing` are released together and stay on one version.
+  `@nestjs/platform-express` imports internals of `@nestjs/core` from the same release, so a lockfile
+  that moves it alone breaks every spec that loads an upload controller, and the backend never boots:
+  `The requested module '@nestjs/core/internal' does not provide an export named ...`.
+- **`multer` is overridden.** `@nestjs/platform-express` pins an exact `multer`, and
+  `FileInterceptor` parses uploads with that copy, not with the backend's own dependency. The
+  `overrides` entry `"multer": "$multer"` makes both the version `backend/package.json` names. After a
+  `multer` update, `npm ls multer` shows a single version, `deduped` under `@nestjs/platform-express`.
 
 ## Docker image vulnerability scanning (Trivy)
 
@@ -96,6 +184,13 @@ run forever with nothing anyone could do about it, so it is reported but not gat
 gate to HIGH, or dropping `ignore-unfixed`, is a deliberate follow-up once the current baseline of
 findings is known and triaged, not something to do by just editing the `severity` input.
 :::
+
+## API latency
+
+`api-latency.yml` measures p50, p95 and p99 of every API route with k6 on a stack local to the
+runner, comments the comparison on pull requests labelled `perf` or touching `backend/`, and keeps a
+nightly history plotted on the [API latency](/api-latency) page. It never fails on a regression and
+never runs in the merge queue. See [API latency tracking](./api-latency.md).
 
 ## Lighthouse CI on the frontend
 
@@ -125,6 +220,7 @@ Every audited page must end on the path that was requested. A redirect to the si
 still get a score, so the job fails instead of reporting it.
 :::
 
-This is informative only: no score failing the pull request yet. Budgets (a minimum score below
-which the job fails) are a deliberate follow-up once a baseline of real scores exists, not
-something to add by just editing this file.
+Accessibility is gated: a score below 100 on any audited page fails the job, and the summary lists
+the failing audits per page. Performance, Best Practices and SEO stay informative. See
+[UI Conventions](./ui-conventions.md#accessibility-checks) for the axe checks that catch the same
+problems earlier, on every pull request.

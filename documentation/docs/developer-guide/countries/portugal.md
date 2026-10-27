@@ -39,3 +39,29 @@ terms](../../user-guide/settings/payment-terms.md)). Decreto-Lei n.º 62/2013, a
 alínea a) makes late-payment interest due 30 days after the debtor receives the invoice when the
 contract sets no date (`basis: "latePaymentThreshold"`). It sets no payment term. The application
 counts the 30 days from the invoice date, not from receipt of the invoice.
+
+## Private clients and the NIF
+
+The NIF/NIPC scheme (`LEGAL_ID` in the `identifiers` section of `countries/data/pt.json`) is
+required of a company and optional for an individual (`requiredFor: ["COMPANY"]`). Código do IVA
+art. 36.º, n.º 5, alínea a) asks for the identification number of the acquirer only when it is a
+taxable person (« adquirente sujeito passivo do imposto »), and n.º 16 makes a private buyer's NIF
+mandatory on the invoice only when that buyer asks for it. A private client can therefore be saved,
+and invoiced, without a NIF; one entered is printed on the invoice.
+
+## Company-law mentions
+
+The `companyLaw` section of `countries/data/pt.json` prints, under the seller's name on invoices,
+quotes, credit notes and purchase orders, from Código das Sociedades Comerciais artigo 171.º:
+
+| Legal forms | Printed | Number |
+| --- | --- | --- |
+| every sociedade | "Sociedade por quotas, matriculada na Conservatória do Registo Comercial de Lisboa sob o número de matrícula e de identificação de pessoa coletiva 500000000" | 1 |
+| por quotas, unipessoal por quotas, anónima, em comandita por ações | "Capital social 5000.00 EUR" | 2 |
+| same | "Capital realizado …", only when filled in ("se for diverso") | 2 |
+| Empresário em nome individual, other forms | nothing | artigo 171.º binds sociedades |
+
+The registration number is the NIPC, the `LEGAL_ID` identifier, since artigo 171.º names one
+"número de matrícula e de identificação de pessoa colectiva". The sede is the company address. Not
+modelled: the capital próprio owed when it is at most half the share capital, and liquidation. Text
+read at pgdlisboa.pt (56.ª versão, DL n.º 171/2026) on 2026-10-25.

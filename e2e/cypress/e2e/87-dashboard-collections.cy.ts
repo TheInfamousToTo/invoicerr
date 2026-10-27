@@ -34,6 +34,11 @@ export {}; // makes this spec a module, not a global script -- see tsconfig.json
  *    SQL window `invoice:collected-this-month` reads from, but this payment is bucketed as
  *    PREVIOUS month there (`previousValue`, never asserted on), not folded into "this month"'s own
  *    600 total.
+ *  - `invoiceGbp` (GBP, a UK client): issued AND paid in M-1, nothing in GBP this month.
+ *    Last month's GBP total is inside the [last month, this month] window the "this month" tiles
+ *    read from, but a currency with nothing this month gets no tile there at all - never a "0"
+ *    next to a "-100%" chip. The same invoice DOES show up in a custom range covering M-1, which
+ *    proves the fixture exists and the absence is the rule, not a missing invoice.
  *
  * The CUSTOM RANGE test (issue #418, `dashboard-period-option-custom`, never the "this-month" preset
  * - a preset can only ever select the CURRENT month, and this scenario needs M-2, a fixed month
@@ -60,7 +65,13 @@ function setInvoiceTransport(transportId: string) {
 		});
 }
 
-function createClient(name: string, country: string, countryCode: string, currency: string) {
+function createClient(
+	name: string,
+	country: string,
+	countryCode: string,
+	currency: string,
+	identifiers: { scheme: string; value: string }[] = [],
+) {
 	return cy
 		.request({
 			method: "POST",
@@ -75,6 +86,7 @@ function createClient(name: string, country: string, countryCode: string, curren
 				countryCode,
 				currency,
 				isActive: true,
+				identifiers,
 			},
 		})
 		.then((res) => {
@@ -180,12 +192,16 @@ describe("Dashboard Collections tile (#417) - cash actually received, by payment
 	const monthM2First = monthM2Bounds.dateFrom; // M-2, day 1
 	const monthM2Mid = utcDate(now, -2, 15); // M-2, day 15 - invoiceA's own payment date
 	const monthM1Mid = utcDate(now, -1, 10); // M-1, day 10 - invoiceB's own payment date
+	const monthM1Bounds = utcMonthBounds(now, -1); // invoiceGbp's own month
+	const monthM1First = monthM1Bounds.dateFrom; // M-1, day 1 - invoiceGbp's own issue date
 
 	before(() => {
 		cy.resetAndSeed();
 		setInvoiceTransport("email");
 
-		createClient("Deutsche Handel GmbH", "Germany", "DE", "EUR").then((clientId) => {
+		// A business in another member state: a French invoice names its VAT number.
+		const germanVat = [{ scheme: "VAT", value: "DE136695976" }];
+		createClient("Deutsche Handel GmbH", "Germany", "DE", "EUR", germanVat).then((clientId) => {
 			// invoiceOld: issued M-3, PAID TODAY - counts in "Collected this month", not in
 			// "Invoiced this month" (issued too long ago).
 			const oldData = invoiceData(clientId, monthM3, "EUR", 500);
@@ -217,6 +233,14 @@ describe("Dashboard Collections tile (#417) - cash actually received, by payment
 			const usdData = invoiceData(clientId, todayExact, "USD", 100);
 			saveDraft(usdData).then((id) =>
 				sendInvoice(id, usdData).then(() => recordPayment(id, usdData, 100, "USD", todayExact)),
+			);
+		});
+
+		// invoiceGbp: issued and paid in M-1, nothing in GBP this month.
+		createClient("Thames Trading Ltd", "United Kingdom", "GB", "GBP").then((clientId) => {
+			const gbpData = invoiceData(clientId, monthM1First, "GBP", 200);
+			saveDraft(gbpData).then((id) =>
+				sendInvoice(id, gbpData).then(() => recordPayment(id, gbpData, 200, "GBP", monthM1Mid)),
 			);
 		});
 	});
@@ -264,6 +288,32 @@ describe("Dashboard Collections tile (#417) - cash actually received, by payment
 		// #419: a metric with no matching list stays a plain, non-clickable card.
 		cy.get('[data-cy="widget-invoice:collected-this-month:EUR-link"]').should("not.exist");
 		cy.get('[data-cy="widget-invoice:collected-this-month:USD-link"]').should("not.exist");
+	});
+
+	it("a currency invoiced and collected only LAST month gets no \"this month\" tile", () => {
+		// The GBP invoice exists: a custom range over M-1 shows both of its tiles.
+		cy.request<Array<{ id: string }>>({
+			url: `${api}/api/documents/dashboard`,
+			qs: { dateFrom: monthM1Bounds.dateFrom, dateTo: monthM1Bounds.dateTo },
+		}).then(({ body: widgets }) => {
+			const ids = widgets.map((w) => w.id);
+			expect(ids, "GBP invoiced in M-1").to.include("invoice:issued-in-period:GBP");
+			expect(ids, "GBP collected in M-1").to.include("invoice:collected-in-period:GBP");
+		});
+
+		// With no period, nothing in GBP happened this month, so there is no GBP tile at all.
+		cy.request<Array<{ id: string }>>(`${api}/api/documents/dashboard`).then(({ body: widgets }) => {
+			const ids = widgets.map((w) => w.id);
+			expect(ids).not.to.include("invoice:issued-this-month:GBP");
+			expect(ids).not.to.include("invoice:collected-this-month:GBP");
+		});
+
+		cy.visit("/dashboard");
+		// The EUR tile first, so the checks below run against a rendered dashboard, never an empty
+		// grid that is still loading.
+		cy.get('[data-cy="widget-invoice:issued-this-month:EUR"]', { timeout: 20000 }).should("be.visible");
+		cy.get('[data-cy="widget-invoice:issued-this-month:GBP"]').should("not.exist");
+		cy.get('[data-cy="widget-invoice:collected-this-month:GBP"]').should("not.exist");
 	});
 
 	it("a custom range (month M-2): invoiced and collected disagree in BOTH directions", () => {

@@ -58,7 +58,7 @@ function expectSignInRejected(email: string, password: string, message: string):
     }
     cy.get('[data-cy="auth-password-input"]', { timeout: 5000 }).type(password);
     cy.get('[data-cy="auth-submit-btn"]').click();
-    expectErrorToast(message);
+    cy.get('[data-cy="auth-signin-error"]', { timeout: 10000 }).should('contain.text', message);
     cy.url().should('include', '/auth/sign-in');
 }
 
@@ -87,6 +87,7 @@ describe('Authentication E2E', () => {
         it('has a link to sign up page', () => {
             cy.visit('/auth/sign-in');
             cy.get('[data-cy="auth-signup-link"]', { timeout: 5000 }).should('be.visible');
+            cy.assertAccessible();
             cy.get('[data-cy="auth-signup-link"]').click();
             cy.url().should('include', '/auth/sign-up');
         });
@@ -170,6 +171,7 @@ describe('Authentication E2E', () => {
         it('has a link to sign in page', () => {
             cy.visit('/auth/sign-up');
             cy.get('[data-cy="auth-signin-link"]', { timeout: 5000 }).should('be.visible');
+            cy.assertAccessible();
             cy.get('[data-cy="auth-signin-link"]').click();
             cy.url().should('include', '/auth/sign-in');
         });

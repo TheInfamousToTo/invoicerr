@@ -4,19 +4,30 @@ sidebar_position: 6
 
 # Statistics
 
-The **Statistics** page (route `/stats`) gives you a visual overview of your revenue over time.
+The **Statistics** page (route `/statistics`) lists your documents in full, where the
+[Dashboard](dashboard.md) shows headline figures. Use it to look something up or check your records.
 
 ## What you see
 
-- **Revenue chart** — plotted over a configurable date range
-- **Key metrics** — total revenue, number of invoices paid, outstanding balance
-- **All invoices** table: each invoice's total and what is still owed on it, both including VAT
-- **Filter by period** — switch between monthly, quarterly, or yearly views
+- **Total invoices**: how many invoices your company has, whatever their status.
+- **All invoices**: each invoice's issue date, due date, status and currency, its total and what is
+  still owed on it, both including VAT.
+- **Quotes sent**: how many quotes currently have the status **Sent**.
+- **All quotes**: each quote's issue date, due date, status, currency and total including VAT.
+- **All credit notes**: each credit note's issue date, the invoice it corrects, and its currency.
+- **All expenses**: each expense's date, description, category, amount and currency.
 
-## Usage
+A table shows up to 500 documents, the most recently updated first. When you have more, the table
+says so.
 
-The page is read-only and pulls data from your paid invoices. It updates automatically as you mark invoices as **Paid** or create new ones.
+## Filtering by period
+
+The buttons above the tables, **This month**, **Last 3 months**, **Last 12 months** and **All time**
+(the default), filter the rows of every table by their date. **Last 3 months** starts on the first
+day of the month three months ago, and **Last 12 months** likewise. The counts at the top always
+cover all your documents.
 
 ## First use
 
-The chart will be empty until you have at least one paid invoice. Once you [mark an invoice as paid](billing/invoices.md#statuses), the statistics page begins to populate.
+On a new company the counts show 0 and the tables say **Nothing to show.** Each table fills in as
+you create documents of its kind.

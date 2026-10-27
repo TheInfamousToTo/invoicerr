@@ -39,6 +39,13 @@ import { constraintsFor, patternViolations } from '@/modules/documents/country-p
 import { defaultCountryPolicyCatalog } from '@/modules/documents/country-policy/registry';
 import { guessCountryCode } from '@/utils/country-name-to-iso';
 import {
+  applyCompanyProfileInput,
+  InvalidCompanyProfileValueError,
+  parseCompanyProfileValues,
+} from '@/modules/documents/company-profile/profile';
+import { defaultCompanyProfileCatalog } from '@/modules/documents/company-profile/registry';
+import { CompanyProfileValues } from '@/modules/documents/company-profile/schema';
+import {
   CompanyNumberFormats,
   DeclareLastNumberInferRequest,
   DeclareLastNumberInferResponse,
@@ -46,11 +53,17 @@ import {
   DeclareLastNumberResponse,
 } from './dto/number-formats.dto';
 import { assertIdentifierValueMatchesPattern } from '@/modules/documents/country-identifiers/validate-identifier-value';
+import {
+  InvalidCompanyLawDetailsError,
+  normalizeCompanyLawDetails,
+} from '@/modules/documents/company-law/company-law';
 import { ensureDefaultExpenseCategoriesSeeded } from '@/modules/documents/expense-categories/persistence';
 import { withSeatReservation } from '@/modules/billing/seat-sync';
 import { syncCompanyMemberOnMembershipChange } from '@/modules/billing/member-sync';
 import { syncPolarCustomerOnCompanyChange } from '@/modules/billing/customer-sync';
 import prisma from '@/prisma/prisma.service';
+import { sessionCache } from '@/lib/session-cache';
+import { companyMemberIds } from '@/modules/companies/company-member-ids';
 import { loadPaymentTerms } from '@/modules/company/payment-terms/load-payment-terms';
 
 /**
@@ -158,8 +171,56 @@ function normalizeDistanceSalesRegime(value: string | null | undefined): string 
   return normalized;
 }
 
-export function pickCompanyInput(input: EditCompanyDto): PickedCompanyInput {
+function normalizeCompanyLaw(value: unknown): Prisma.InputJsonValue | typeof Prisma.DbNull | undefined {
+  try {
+    const details = normalizeCompanyLawDetails(value);
+    if (details === undefined) return undefined;
+    return details === null ? Prisma.DbNull : (details as Prisma.InputJsonValue);
+  } catch (error) {
+    if (error instanceof InvalidCompanyLawDetailsError) throw new BadRequestException(error.message);
+    throw error;
+  }
+}
+
+/**
+ * The company profile to store after this edit, or `undefined` to leave the column untouched. Values
+ * are checked against the attributes of the country the company has AFTER the edit, and a country
+ * change drops the values the new country does not ask for.
+ */
+function nextReportingProfile(
+  existing: { country: string; countryCode: string | null; reportingProfile: unknown },
+  input: Pick<EditCompanyDto, 'country' | 'countryCode' | 'reportingProfile'>,
+): CompanyProfileValues | undefined {
+  const existingCountry = resolveCountryCode(existing.countryCode, existing.country);
+  const nextCountry = resolveCountryCode(
+    input.countryCode === null ? null : (input.countryCode ?? existing.countryCode),
+    input.country ?? existing.country,
+  );
+  if (input.reportingProfile === undefined && nextCountry === existingCountry) return undefined;
+  try {
+    return applyCompanyProfileInput(
+      parseCompanyProfileValues(existing.reportingProfile),
+      input.reportingProfile === undefined ? {} : input.reportingProfile,
+      defaultCompanyProfileCatalog.attributesFor(nextCountry),
+    );
+  } catch (error) {
+    if (error instanceof InvalidCompanyProfileValueError) throw new BadRequestException(error.message);
+    throw error;
+  }
+}
+
+function resolveCountryCode(
+  countryCode: string | null | undefined,
+  country: string | null | undefined,
+): string {
+  return (countryCode || guessCountryCode(country ?? undefined) || '').trim().toUpperCase();
+}
+
+export function pickCompanyInput(
+  input: EditCompanyDto,
+): PickedCompanyInput & { companyLaw?: Prisma.InputJsonValue | typeof Prisma.DbNull } {
   return {
+    companyLaw: normalizeCompanyLaw(input.companyLaw),
     description: input.description,
     foundedAt: input.foundedAt,
     name: input.name,
@@ -242,12 +303,13 @@ export class CompanyService {
     // instead of letting the frontend decide from `country`/`countryCode` itself - see
     // country-policy/schema.ts's own header. Replaces the settings tab's and the ATCUD settings
     // screen's own `=== "PT"` / `=== "PORTUGAL"` checks, which read this same endpoint.
-    const countryCode = (result.countryCode || guessCountryCode(result.country ?? undefined) || '')
-      .trim()
-      .toUpperCase();
+    const countryCode = resolveCountryCode(result.countryCode, result.country);
     return {
       ...result,
       documentValidationCode: defaultCountryPolicyCatalog.documentValidationCodeFor(countryCode) ?? null,
+      companyProfileAttributes: defaultCompanyProfileCatalog
+        .attributesFor(countryCode)
+        .map(({ key, label, help, values }) => ({ key, label, help, values })),
     };
   }
 
@@ -337,8 +399,14 @@ export class CompanyService {
     // above — shared with `createCompany` so the two paths can never diverge.
     const updatedCompany = await prisma.company.update({
       where: { id: companyId },
-      data: pickCompanyInput(rest),
+      data: {
+        ...pickCompanyInput(rest),
+        reportingProfile: nextReportingProfile(existingCompany, rest),
+      },
     });
+    if (existingCompany.name !== updatedCompany.name) {
+      await sessionCache.invalidateUsers(await companyMemberIds(prisma, companyId));
+    }
 
     await this.upsertPartyIdentifiers(
       companyId,
@@ -713,6 +781,7 @@ export class CompanyService {
     await withSeatReservation(newCompany.id, userId, (tx) =>
       tx.userCompany.create({ data: { userId, companyId: newCompany.id, role: 'OWNER' } }),
     );
+    await sessionCache.invalidateUsers([userId]);
     // Practically always a no-op here (a brand-new company has no `polarSubscriptionId` yet), kept
     // for the rare case a company row is created for one already billed elsewhere — see
     // `billing/member-sync.ts`'s own header.

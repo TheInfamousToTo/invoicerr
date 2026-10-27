@@ -95,6 +95,7 @@ export {}; // makes this spec a module, not a global script -- see tsconfig.json
  * genuinely a company-level fact, not a per-invoice one.
  */
 const api = Cypress.env("apiUrl");
+import { companyLawFor } from "../fixtures/company-law";
 
 const FAKE_SDI = {
 	idTrasmittente: "IT01234567890",
@@ -139,7 +140,13 @@ function setCompanyCountry(country: string, countryCode: string, identifiers?: {
 	return cy.request({
 		method: "POST",
 		url: `${api}/api/company/info`,
-		body: { name: "Acme Corp", country, countryCode, ...(identifiers ? { identifiers } : {}) },
+		body: {
+			name: "Acme Corp",
+			country,
+			countryCode,
+			companyLaw: companyLawFor(countryCode),
+			...(identifiers ? { identifiers } : {}),
+		},
 	});
 }
 
@@ -673,6 +680,8 @@ describe("B2G routing — the GOVERNMENT client imposes the channel/format of IT
 			.should("exist")
 			.clear()
 			.type("UFE0A1");
+		// A French invoice to a business in another member state names its VAT number.
+		cy.get('[data-cy="client-identifier-VAT"]').clear().type("IT01057861005");
 		// `cy.openSearchSelect` (not a bare click) — the same open-side Radix Popover race
 		// `openSelect`/`openDatePicker` guard against elsewhere: this trigger fires right after the
 		// "kind" Select closes on picking "Government" above, and a plain click here missed the

@@ -1,5 +1,9 @@
 import { defaultComposedCountryCatalog } from '../countries/registry';
-import { CountryIdentifierRequirementsFile, IdentifierSchemeFact } from './schema';
+import {
+  CountryIdentifierRequirementsFile,
+  IdentifierSchemeFact,
+  InvoiceIdentifierRequirement,
+} from './schema';
 import { byCodeUnit } from '@/lib/compare';
 
 function buildIndex(
@@ -71,6 +75,11 @@ export class CountryIdentifierRequirementsCatalog {
    *  no file at all. */
   schemesFor(countryCode: string): IdentifierSchemeFact[] {
     return this.files[(countryCode ?? '').toUpperCase()]?.schemes ?? [];
+  }
+
+  /** What this country's law requires on an invoice its sellers issue. Empty for a country with none. */
+  invoiceRequirementsFor(countryCode: string): InvoiceIdentifierRequirement[] {
+    return this.files[(countryCode ?? '').toUpperCase()]?.invoiceRequirements ?? [];
   }
 }
 

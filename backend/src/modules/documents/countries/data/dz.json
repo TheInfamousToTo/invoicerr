@@ -529,6 +529,72 @@
         "notes": "The tax-office article number a business is registered under. No legal text was found naming this requirement: it rests only on a native contributor's description of current practice, not on a primary legal text."
       }
     ],
+    "invoiceRequirements": [
+      {
+        "party": "SELLER",
+        "scheme": "RC",
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "Décret exécutif n° 05-468 du 10 décembre 2005, art. 3 : « La facture doit comporter les mentions, ci-après, se rapportant à l'agent économique : 1°) Mentions relatives au vendeur : [...] numéro du registre du commerce ; [...] 2°) Mentions relatives à l'acheteur : [...] numéro du registre du commerce ; numéro d'identification statistique. Si l'acheteur est un consommateur, la facture doit mentionner ses nom, prénom(s) et adresse. »",
+          "sourceCheckedAt": "2026-09-30"
+        },
+        "notes": "Décret exécutif 05-468 art. 3. The same reading as this file's RC and NIS schemes. The buyer's numbers are owed when it is an economic agent, not a consumer; a COMPANY-type client established in Algeria stands in for one, a foreign client holds no Algerian register number."
+      },
+      {
+        "party": "SELLER",
+        "scheme": "NIS",
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "Décret exécutif n° 05-468 du 10 décembre 2005, art. 3 : « La facture doit comporter les mentions, ci-après, se rapportant à l'agent économique : 1°) Mentions relatives au vendeur : [...] numéro d'identification statistique ; [...] 2°) Mentions relatives à l'acheteur : [...] numéro du registre du commerce ; numéro d'identification statistique. »",
+          "sourceCheckedAt": "2026-09-30"
+        },
+        "notes": "Décret exécutif 05-468 art. 3. The same reading as this file's RC and NIS schemes. The buyer's numbers are owed when it is an economic agent, not a consumer; a COMPANY-type client established in Algeria stands in for one, a foreign client holds no Algerian register number."
+      },
+      {
+        "party": "SELLER",
+        "scheme": "NIF",
+        "provenance": {
+          "kind": "unverified",
+          "resolutionNote": "Required by this file's NIF scheme on a native contributor's description of practice only: decree 05-468 art. 3, read in full, does not name it. Settled by the DGI text that requires it on an invoice."
+        }
+      },
+      {
+        "party": "SELLER",
+        "scheme": "AI",
+        "provenance": {
+          "kind": "unverified",
+          "resolutionNote": "Required by this file's AI scheme on a native contributor's description of practice only: decree 05-468 art. 3, read in full, does not name it. Settled by the DGI text that requires it on an invoice."
+        }
+      },
+      {
+        "party": "BUYER",
+        "scheme": "RC",
+        "when": {
+          "buyerType": ["COMPANY"],
+          "buyerEstablishment": ["DOMESTIC"]
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "Décret exécutif n° 05-468 du 10 décembre 2005, art. 3 : « La facture doit comporter les mentions, ci-après, se rapportant à l'agent économique : 1°) Mentions relatives au vendeur : [...] numéro du registre du commerce ; [...] 2°) Mentions relatives à l'acheteur : [...] numéro du registre du commerce ; numéro d'identification statistique. Si l'acheteur est un consommateur, la facture doit mentionner ses nom, prénom(s) et adresse. »",
+          "sourceCheckedAt": "2026-09-30"
+        },
+        "notes": "Décret exécutif 05-468 art. 3. The same reading as this file's RC and NIS schemes. The buyer's numbers are owed when it is an economic agent, not a consumer; a COMPANY-type client established in Algeria stands in for one, a foreign client holds no Algerian register number."
+      },
+      {
+        "party": "BUYER",
+        "scheme": "NIS",
+        "when": {
+          "buyerType": ["COMPANY"],
+          "buyerEstablishment": ["DOMESTIC"]
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "Décret exécutif n° 05-468 du 10 décembre 2005, art. 3 : « La facture doit comporter les mentions, ci-après, se rapportant à l'agent économique : 1°) Mentions relatives au vendeur : [...] numéro d'identification statistique ; [...] 2°) Mentions relatives à l'acheteur : [...] numéro du registre du commerce ; numéro d'identification statistique. »",
+          "sourceCheckedAt": "2026-09-30"
+        },
+        "notes": "Décret exécutif 05-468 art. 3. The same reading as this file's RC and NIS schemes. The buyer's numbers are owed when it is an economic agent, not a consumer; a COMPANY-type client established in Algeria stands in for one, a foreign client holds no Algerian register number."
+      }
+    ],
     "notes": "Algeria (DZ), issue #558, transcribed 2026-09-30 from RECHERCHE_558_ALGERIE.md. Two schemes sourced to a full, direct reading of decree 05-468 art. 3 (RC, NIS): the decree's own text makes both conditional on the buyer being an economic agent rather than a private consumer, modeled here through `appliesTo: 'COMPANY'`. Two further schemes (NIF, AI) rest only on the native contributor's practice answer on issue #558 (2026-09-30) after a full reading of the decree found neither mentioned there; both marked unverified per this PR's own provenance rule for a fact sourced only to contributor practice. No VAT scheme is declared: this product's settings/onboarding screens already offer a VAT identifier field unconditionally for every country (company.settings.tsx's own withVatIdentifier, a format requirement, not a per-country one), and no Algerian text read by this research names a VAT-specific number distinct from the NIF."
   },
   "correctionRoutes": {
@@ -707,5 +773,134 @@
       }
     ],
     "notes": "Algeria (DZ), issue #558, transcribed 2026-09-30 from RECHERCHE_558_ALGERIE.md (section 6). A single, well-sourced obligation: ten years from the document's own issue date. One of the most solidly settled points of this research pass: the schema's closed `origin` vocabulary expresses the Algerian text's own wording exactly, with no interpretive gap."
+  },
+  "companyLaw": {
+    "countryCode": "DZ",
+    "legalFormLabel": "Forme juridique",
+    "legalForms": [
+      {
+        "code": "DZ_PERSONNE_PHYSIQUE",
+        "name": "Personne physique (commerçant)",
+        "designation": "Personne physique"
+      },
+      {
+        "code": "DZ_EURL",
+        "name": "Entreprise unipersonnelle à responsabilité limitée",
+        "designation": "EURL"
+      },
+      {
+        "code": "DZ_SARL",
+        "name": "Société à responsabilité limitée",
+        "designation": "SARL"
+      },
+      {
+        "code": "DZ_SPA",
+        "name": "Société par actions",
+        "designation": "SPA"
+      },
+      {
+        "code": "DZ_SCA",
+        "name": "Société en commandite par actions",
+        "designation": "SCA"
+      },
+      {
+        "code": "DZ_SNC",
+        "name": "Société en nom collectif",
+        "designation": "SNC"
+      },
+      {
+        "code": "DZ_SCS",
+        "name": "Société en commandite simple",
+        "designation": "SCS"
+      }
+    ],
+    "fields": [
+      {
+        "key": "activity",
+        "kind": "text",
+        "label": "Nature de l'activité"
+      },
+      {
+        "key": "shareCapital",
+        "kind": "money",
+        "label": "Capital social"
+      }
+    ],
+    "mentions": [
+      {
+        "id": "dz-legal-form-and-activity",
+        "documentTypes": ["invoice"],
+        "legalForms": ["DZ_PERSONNE_PHYSIQUE", "DZ_EURL", "DZ_SARL", "DZ_SPA", "DZ_SCA", "DZ_SNC", "DZ_SCS"],
+        "required": true,
+        "template": {
+          "en": "Legal form: {legalForm}, activity: {activity}",
+          "fr": "Forme juridique : {legalForm}, activité : {activity}",
+          "it": "Forma giuridica: {legalForm}, attività: {activity}",
+          "pl": "Forma prawna: {legalForm}, działalność: {activity}",
+          "de": "Rechtsform: {legalForm}, Tätigkeit: {activity}",
+          "pt": "Forma jurídica: {legalForm}, atividade: {activity}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "Décret exécutif n° 05-468 du 10 décembre 2005, art. 3 : « La facture doit comporter les mentions, ci-après , se rapportant à l'agent économique : 1°) Mentions relatives au vendeur : [...] forme juridique de l'agent économique et nature de l'activité ; [...] capital social, le cas échéant ; [...] numéro du registre du commerce ; [...] »",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "Art. 3, 1°: every seller, a natural person included. The decree governs the invoice; no other document type is declared. The registre du commerce number is the RC identifier. Journal officiel n° 80 du 11 décembre 2005, read at https://www.joradp.dz/FTP/jo-francais/2005/F2005080.pdf. Later amendments of the decree were not searched for."
+      },
+      {
+        "id": "dz-share-capital",
+        "documentTypes": ["invoice"],
+        "legalForms": ["DZ_EURL", "DZ_SARL", "DZ_SPA", "DZ_SCA"],
+        "required": true,
+        "template": {
+          "en": "Share capital: {shareCapital}",
+          "fr": "Capital social : {shareCapital}",
+          "it": "Capitale sociale: {shareCapital}",
+          "pl": "Kapitał zakładowy: {shareCapital}",
+          "de": "Kapital: {shareCapital}",
+          "pt": "Capital social: {shareCapital}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "Décret exécutif n° 05-468 du 10 décembre 2005, art. 3 : « La facture doit comporter les mentions, ci-après , se rapportant à l'agent économique : 1°) Mentions relatives au vendeur : [...] forme juridique de l'agent économique et nature de l'activité ; [...] capital social, le cas échéant ; [...] numéro du registre du commerce ; [...] »",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "Art. 3, 1°, \"capital social, le cas échéant\": required of the capital companies listed here; a natural person has none. Journal officiel n° 80 du 11 décembre 2005, read at https://www.joradp.dz/FTP/jo-francais/2005/F2005080.pdf. Later amendments of the decree were not searched for."
+      },
+      {
+        "id": "dz-share-capital-partnership",
+        "documentTypes": ["invoice"],
+        "legalForms": ["DZ_SNC", "DZ_SCS"],
+        "required": false,
+        "template": {
+          "en": "Share capital: {shareCapital}",
+          "fr": "Capital social : {shareCapital}",
+          "it": "Capitale sociale: {shareCapital}",
+          "pl": "Kapitał zakładowy: {shareCapital}",
+          "de": "Kapital: {shareCapital}",
+          "pt": "Capital social: {shareCapital}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "Décret exécutif n° 05-468 du 10 décembre 2005, art. 3 : « La facture doit comporter les mentions, ci-après , se rapportant à l'agent économique : 1°) Mentions relatives au vendeur : [...] forme juridique de l'agent économique et nature de l'activité ; [...] capital social, le cas échéant ; [...] numéro du registre du commerce ; [...] »",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "Art. 3, 1°, \"le cas échéant\": whether a partnership has a share capital to state was not settled by this research, so the line prints when filled in and is never asked for. Journal officiel n° 80 du 11 décembre 2005, read at https://www.joradp.dz/FTP/jo-francais/2005/F2005080.pdf. Later amendments of the decree were not searched for."
+      }
+    ],
+    "demo": {
+      "legalFormByNameSuffix": {
+        "EURL": "DZ_EURL",
+        "SARL": "DZ_SARL"
+      },
+      "values": {
+        "activity": "Prestations de services",
+        "shareCapital": {
+          "amount": "1000000",
+          "currency": "DZD"
+        }
+      }
+    },
+    "notes": "The decree lists the legal form and share capital among the invoice mentions themselves, unlike the European countries whose company law sets them."
   }
 }

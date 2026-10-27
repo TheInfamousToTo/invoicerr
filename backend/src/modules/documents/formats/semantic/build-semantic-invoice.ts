@@ -144,7 +144,7 @@
  *   rate > 0  → 'S' (Standard rated)
  *   rate = 0  → 'Z' (Zero rated)
  *
- * A line whose rate could not be resolved at all (compute-totals.ts's own "no usable VAT rate —
+ * A line whose rate could not be resolved at all (compute-totals.ts's own "no usable VAT rate,
  * counted in net only" warning path) makes BT-151 UNANSWERABLE — this bridge REFUSES to build rather
  * than guess (`SemanticBuildError`), the same discipline the old code's own removed
  * `buildEInvoice` held for a missing `vatCategory` column.
@@ -162,7 +162,7 @@ import { getIdentifier } from '@/utils/entity-identifiers';
 
 import { DocumentTotals } from '../../totals/compute-totals';
 import type { CorrectedInvoiceReference } from '../format-provider';
-import { TaxCategoryCode } from '../../tax/types';
+import { TaxCategoryCode, TaxScheme } from '../../tax/types';
 import { defaultTaxUnionRegistry } from '../../tax/tax-unions/registry';
 import {
   defaultEinvoiceIdentifierCatalog,
@@ -195,6 +195,8 @@ export interface SemanticPartyInput {
    *  such column) and for a Company that never set one. */
   iban?: string | null;
   partyIdentifiers: { scheme: string; value: string }[];
+  /** SELLER side only: the company's own VAT scheme. Absent means the ordinary scheme. */
+  taxScheme?: TaxScheme;
 }
 
 /** One line's DESCRIPTIVE facts — the ARITHMETIC facts (net/VAT/gross) come from `totals.lines`,

@@ -173,7 +173,8 @@ lists the catalogue files someone would have to write.
 
 Check the [open compliance
 issues](https://github.com/invoicerr-app/invoicerr/issues?q=is%3Aissue+label%3Acompliance) first. If
-there is no issue for your country, [open
-one](https://github.com/invoicerr-app/invoicerr/issues/new/choose). Say which mechanism you need —
-"a Belgian company can't send to a Belgian public buyer" is something someone can pick up; "please
-add Belgium" is not.
+there is no issue for your country, open one with the [country rule
+form](https://github.com/invoicerr-app/invoicerr/issues/new?template=country_rule.yml). It asks for
+the section of the country file the rule belongs to and for its official source, in the same shape
+as the `provenance` of the JSON files. Say which mechanism you need: "a Belgian company can't send
+to a Belgian public buyer" is something someone can pick up; "please add Belgium" is not.

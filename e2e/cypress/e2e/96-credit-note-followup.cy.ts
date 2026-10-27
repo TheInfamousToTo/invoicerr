@@ -28,6 +28,10 @@ export {}; // makes this spec a module, not a global script -- see tsconfig.json
  * `makeCreditNoteLegacyUnnumbered` already rests on) must show the SAME "Issued without a number"
  * text on the detail page AND in the rendered PDF.
  */
+import { issueCreditNote } from "../support/credit-notes";
+import { POLISH_BUYER_IDENTIFIERS } from "../fixtures/identifiers";
+import { companyLawFor } from "../fixtures/company-law";
+
 const api = Cypress.env("apiUrl");
 const appOrigin = Cypress.config("baseUrl");
 
@@ -36,44 +40,10 @@ function switchCompanyToPoland() {
 		.request({
 			method: "POST",
 			url: `${api}/api/company/info`,
-			body: { name: "Acme Corp", country: "Poland", countryCode: "PL" },
+			body: { name: "Acme Corp", country: "Poland", countryCode: "PL", companyLaw: companyLawFor("PL") },
 		})
 		.then((res) => {
 			expect(res.status, "seller country switched to Poland").to.be.oneOf([200, 201]);
-		});
-}
-
-/** Creates a free credit note draft, then issues it (draft -> sending -> sent) through the real API -
- *  the same two-call save-draft/send shape `91-credit-note-numbering.cy.ts`'s own
- *  `createAndIssueCreditNote` already uses. Called BEFORE the company switches to Poland (the default
- *  seeded company is French, and PL refuses this at the API - see the "refused" tests below), so the
- *  resulting record is exactly what the round-2 fix has to keep reachable: a credit note issued while
- *  this company was NOT Polish, read afterward by a company that now is. */
-function createAndIssueCreditNoteAsFrenchSeller() {
-	const data = {
-		issueDate: "2026-09-20",
-		currency: "EUR",
-		reason: "Geste commercial - remboursement d'un trop-percu non rattache a une facture.",
-		lines: [{ description: "Remboursement", quantity: 1, unitPrice: 42, vatRate: "0" }],
-	};
-	return cy
-		.request({
-			method: "POST",
-			url: `${api}/api/documents/types/credit-note/actions/save-draft`,
-			body: { data },
-		})
-		.then((saved) => {
-			const id = saved.body?.document?.id as string;
-			expect(id, "credit note draft created as a French seller").to.be.a("string");
-			cy.request({
-				method: "POST",
-				url: `${api}/api/documents/types/credit-note/actions/send`,
-				body: { documentId: id, data: saved.body?.document?.data },
-			}).then((sent) => {
-				expect(sent.status, "send accepted").to.be.oneOf([200, 201]);
-			});
-			cy.waitForDocumentStatus(`${api}/api/documents/${id}?typeId=credit-note`, ["sent"]);
-			return cy.wrap(id);
 		});
 }
 
@@ -82,7 +52,8 @@ describe("PR #473 review point 2 - a Polish seller has no NEW credit-note instru
 
 	before(() => {
 		cy.resetAndSeed();
-		createAndIssueCreditNoteAsFrenchSeller().then((id) => {
+		// Issued while this company is still French; Poland refuses a new one at the API.
+		issueCreditNote("473-pl").then((id) => {
 			existingCreditNoteId = id as unknown as string;
 		});
 		switchCompanyToPoland();
@@ -190,6 +161,7 @@ describe("PR #473 review point 2 - a Polish seller has no NEW credit-note instru
 				countryCode: "PL",
 				currency: "EUR",
 				isActive: true,
+				identifiers: POLISH_BUYER_IDENTIFIERS,
 			},
 		}).then((clientRes) => {
 			const clientId = clientRes.body?.id as string;

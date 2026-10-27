@@ -86,6 +86,15 @@ describe('detectCountryIdentifierRequirementsDrift', () => {
     expect(report.changedCountries).toEqual(['ZZ']);
   });
 
+  it('detects a CHANGED country — `required` narrowed to some party types since the last reseed', () => {
+    const catalog = catalogWith('ZZ', [{ ...LEGAL_ID_FACT, requiredFor: ['COMPANY'] }]);
+    const stale = rowFor('ZZ', LEGAL_ID_FACT);
+
+    const report = detectCountryIdentifierRequirementsDrift(catalog, [stale]);
+
+    expect(report.changedCountries).toEqual(['ZZ']);
+  });
+
   it('detects a CHANGED country — a scheme added to the file since the last reseed', () => {
     const catalog = catalogWith('ZZ', [LEGAL_ID_FACT, VAT_FACT]);
     const existingRows = rowsFor('ZZ', [LEGAL_ID_FACT]);

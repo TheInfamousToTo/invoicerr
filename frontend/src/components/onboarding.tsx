@@ -12,6 +12,7 @@ import CountryReadinessAlert from "@/components/country-readiness-alert"
 import CountrySelect from "@/components/country-select"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
+import { typeErrors } from "@/lib/zod-messages"
 import { toast } from "sonner"
 import { useForm } from "react-hook-form"
 import { useNavigate } from "react-router"
@@ -99,7 +100,7 @@ export default function OnBoarding({
 
   const companySchema = z.object({
     name: z
-      .string({ required_error: t("settings.company.form.company.errors.required") })
+      .string({ error: typeErrors({ required: t("settings.company.form.company.errors.required") }) })
       .min(1, t("settings.company.form.company.errors.empty"))
       .max(100, t("settings.company.form.company.errors.maxLength")),
     country: z.string().min(1, t("settings.company.form.country.errors.empty")),
@@ -241,7 +242,7 @@ export default function OnBoarding({
     if (onSuccess) {
       onSuccess(company)
     } else {
-      navigate(destination)
+      void navigate(destination)
     }
   }
 

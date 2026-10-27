@@ -1,17 +1,17 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useQueryClient } from "@tanstack/react-query"
 import { useEffect } from "react"
-import { useForm, type DefaultValues } from "react-hook-form"
+import { useForm, type DefaultValues, type FieldValues } from "react-hook-form"
 import type { z } from "zod"
 
 import { usePatch, usePost } from "@/hooks/use-fetch"
 import { useMutationWithToast } from "@/hooks/use-mutation-with-toast"
 
-interface UseDocumentUpsertOptions<TSchema extends z.ZodTypeAny, TEntity> {
+interface UseDocumentUpsertOptions<TSchema extends z.ZodType<FieldValues, FieldValues>, TEntity> {
   /** Entity being edited; null/undefined = create mode. */
   entity: TEntity | null | undefined
   schema: TSchema
-  defaultValues: DefaultValues<z.infer<TSchema>>
+  defaultValues: DefaultValues<z.input<TSchema>>
   /** POST endpoint used in create mode. */
   createUrl: string
   /** PATCH endpoint used in edit mode (unused when `entity` is never set). */
@@ -19,7 +19,7 @@ interface UseDocumentUpsertOptions<TSchema extends z.ZodTypeAny, TEntity> {
   /** Toast message shown when the mutation fails. */
   errorMessage: string
   /** Maps the edited entity to form values (edit-mode reset). */
-  mapEntityToForm?: (entity: TEntity) => DefaultValues<z.infer<TSchema>>
+  mapEntityToForm?: (entity: TEntity) => DefaultValues<z.input<TSchema>>
   /** react-query keys invalidated after a successful save. */
   invalidateKeys?: readonly (readonly unknown[])[]
   /** Runs after a successful save, before the form reset (close dialog, ...). */
@@ -34,7 +34,7 @@ interface UseDocumentUpsertOptions<TSchema extends z.ZodTypeAny, TEntity> {
  * Per-document specifics (extra mutations like proforma/final, payload
  * decoration, dialog state) stay in the calling component.
  */
-export function useDocumentUpsert<TSchema extends z.ZodTypeAny, TEntity>(
+export function useDocumentUpsert<TSchema extends z.ZodType<FieldValues, FieldValues>, TEntity>(
   options: UseDocumentUpsertOptions<TSchema, TEntity>,
 ) {
   const { entity, schema, defaultValues, createUrl, updateUrl, errorMessage, invalidateKeys, onSuccess } =
@@ -51,7 +51,7 @@ export function useDocumentUpsert<TSchema extends z.ZodTypeAny, TEntity>(
     errorMessage,
   )
 
-  const form = useForm<z.infer<TSchema>>({
+  const form = useForm<z.input<TSchema>, unknown, z.output<TSchema>>({
     resolver: zodResolver(schema),
     defaultValues,
   })
@@ -70,7 +70,8 @@ export function useDocumentUpsert<TSchema extends z.ZodTypeAny, TEntity>(
 
   const submit = (data: z.infer<TSchema>) => {
     const trigger = isEdit ? updateTrigger : createTrigger
-    trigger(data).then((result) => {
+    // trigger toasts its own failure and resolves null, so this cannot reject.
+    void trigger(data).then((result) => {
       if (!result) return
       for (const queryKey of invalidateKeys ?? []) {
         queryClient.invalidateQueries({ queryKey })

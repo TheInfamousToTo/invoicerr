@@ -493,12 +493,43 @@
         "scheme": "LEGAL_ID",
         "appliesTo": "COMPANY",
         "label": "Handelsregisternummer",
+        "demoGenerator": { "id": "template", "template": "HRB {digits:6}" },
         "required": false,
         "helpTextKey": "settings.identifiers.help.DE.LEGAL_ID",
         "provenance": {
           "kind": "unverified",
           "resolutionNote": "This scheme did not exist in the shipped file before (only inherited as a candidate from the removed compliance engine's own DE profile, git tag avant-refonte-documents, backend/src/compliance/profiles/data/de.ts's requiredIdentifiers: scheme LEGAL_ID, label Handelsregisternummer, appliesTo COMPANY, no pattern — that profile carried NO provenance field at all, so its choice was never sourced there either). This task read § 37a HGB directly at gesetze-im-internet.de (https://www.gesetze-im-internet.de/hgb/__37a.html, fetched 2026-09-01): 'Auf allen Geschäftsbriefen des Kaufmanns gleichviel welcher Form, die an einen bestimmten Empfänger gerichtet werden, müssen seine Firma, die Bezeichnung nach § 19 Abs. 1 Nr. 1, der Ort seiner Handelsniederlassung, das Registergericht und die Nummer, unter der die Firma in das Handelsregister eingetragen ist, angegeben werden.' (§ 37a Abs. 1 HGB). Two things this text does NOT settle: (1) it governs 'Geschäftsbriefe' (business letters/correspondence) addressed to a specific recipient — the word 'Rechnung' (invoice) never appears in § 37a HGB at all, so whether an invoice counts as a Geschäftsbrief for this purpose is an interpretive question this task did not chase down to a further primary source (case law or an official commentary would settle it — none was read); (2) § 37a HGB binds a 'Kaufmann' (a merchant registered in the Handelsregister — GmbH, AG, OHG, KG, eingetragener Kaufmann/e.K.), not every company: a company that never registered as a Kaufmann (e.g. a small GbR) has no Handelsregisternummer to give at all, which is the reasoning behind `required: false`. Corroborating evidence the number is NOT a tax-invoice-law requirement: § 14 Abs. 4 UStG's own exhaustive list of the ten mandatory invoice particulars (read in this same research pass, see this file's VAT entry above) does not mention a Handelsregisternummer anywhere. `appliesTo` stays 'COMPANY' as in the removed profile — an individual German Kaufmann (e.K.) could in principle also hold a Handelsregisternummer, but that nuance was not chased further here. What would settle this: case law or an official commentary establishing whether a Rechnung is a Geschäftsbrief under § 37a HGB, and whether an individually-registered Kaufmann (as opposed to a corporate form) should also carry this requirement in this catalog's `appliesTo`."
         }
+      }
+    ],
+    "invoiceRequirements": [
+      {
+        "party": "SELLER",
+        "scheme": "VAT",
+        "when": {
+          "buyerType": ["COMPANY"],
+          "buyerEstablishment": ["OTHER_UNION_MEMBER"]
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "UStG § 14a: « (1) [...] 2 Führt der Unternehmer eine sonstige Leistung im Sinne des § 3a Absatz 2 in einem anderen Mitgliedstaat aus, so ist die Rechnung bis zum fünfzehnten Tag des Monats, der auf den Monat folgt, in dem der Umsatz ausgeführt worden ist, auszustellen. 3 In dieser Rechnung sind die Umsatzsteuer-Identifikationsnummer des Unternehmers und die des Leistungsempfängers anzugeben. [...] (3) 1 Führt der Unternehmer eine innergemeinschaftliche Lieferung aus, ist er zur Ausstellung einer Rechnung bis zum fünfzehnten Tag des Monats, der auf den Monat folgt, in dem der Umsatz ausgeführt worden ist, verpflichtet. 2 In der Rechnung sind auch die Umsatzsteuer-Identifikationsnummer des Unternehmers und die des Leistungsempfängers anzugeben. »",
+          "sourceCheckedAt": "2026-10-23"
+        },
+        "notes": "UStG § 14a Abs. 1 Satz 3 and Abs. 3 Satz 2. Text in the wording of Art. 23 Wachstumschancengesetz (BGBl. 2024 I Nr. 108), in force since 2025-01-01, read at https://www.buzer.de/14a_UStG.htm and cross-checked word for word at https://dejure.org/gesetze/UStG/14a.html; gesetze-im-internet.de refused the connection from the environment that read it. A business client in another member state is the case of both paragraphs: a B2B service whose place of supply is the client's state (§ 3a Abs. 2) and an intra-Community supply of goods. No domestic rule is modelled: § 14 Abs. 4 Satz 1 Nr. 2 lets the seller state either its Steuernummer or its USt-IdNr, and this catalog has no Steuernummer scheme to offer the alternative."
+      },
+      {
+        "party": "BUYER",
+        "scheme": "VAT",
+        "when": {
+          "buyerType": ["COMPANY"],
+          "buyerEstablishment": ["OTHER_UNION_MEMBER"]
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "UStG § 14a: « (1) [...] 2 Führt der Unternehmer eine sonstige Leistung im Sinne des § 3a Absatz 2 in einem anderen Mitgliedstaat aus, so ist die Rechnung bis zum fünfzehnten Tag des Monats, der auf den Monat folgt, in dem der Umsatz ausgeführt worden ist, auszustellen. 3 In dieser Rechnung sind die Umsatzsteuer-Identifikationsnummer des Unternehmers und die des Leistungsempfängers anzugeben. [...] (3) 1 Führt der Unternehmer eine innergemeinschaftliche Lieferung aus, ist er zur Ausstellung einer Rechnung bis zum fünfzehnten Tag des Monats, der auf den Monat folgt, in dem der Umsatz ausgeführt worden ist, verpflichtet. 2 In der Rechnung sind auch die Umsatzsteuer-Identifikationsnummer des Unternehmers und die des Leistungsempfängers anzugeben. »",
+          "sourceCheckedAt": "2026-10-23"
+        },
+        "notes": "UStG § 14a Abs. 1 Satz 3 and Abs. 3 Satz 2. Text in the wording of Art. 23 Wachstumschancengesetz (BGBl. 2024 I Nr. 108), in force since 2025-01-01, read at https://www.buzer.de/14a_UStG.htm and cross-checked word for word at https://dejure.org/gesetze/UStG/14a.html; gesetze-im-internet.de refused the connection from the environment that read it. A business client in another member state is the case of both paragraphs: a B2B service whose place of supply is the client's state (§ 3a Abs. 2) and an intra-Community supply of goods. No domestic rule is modelled: § 14 Abs. 4 Satz 1 Nr. 2 lets the seller state either its Steuernummer or its USt-IdNr, and this catalog has no Steuernummer scheme to offer the alternative."
       }
     ]
   },
@@ -854,8 +885,10 @@
               "key": "buyerReference",
               "kind": "text",
               "label": "Buyer reference (Leitweg-ID)",
+              "labelKey": "documents.countryFields.buyerReference.leitwegId.label",
               "required": false,
-              "helpText": "The buyer's own reference — for a German public-sector buyer this is usually a Leitweg-ID. Used as BT-10 (\"Buyer reference\") on an EN 16931 export; XRechnung's own BR-DE-15 refuses the document when this is missing (`formats/xrechnung-provider.ts`)."
+              "helpText": "The buyer's own reference. For a German public-sector buyer this is usually a Leitweg-ID. Used as BT-10 (\"Buyer reference\") on an EN 16931 export; XRechnung refuses the document when it is missing (rule BR-DE-15).",
+              "helpTextKey": "documents.countryFields.buyerReference.leitwegId.helpText"
             }
           },
           {
@@ -865,6 +898,7 @@
               "key": "supplyType",
               "kind": "select",
               "label": "Supply type",
+              "labelKey": "documents.countryFields.supplyType.label",
               "required": false,
               "options": [
                 {
@@ -876,7 +910,8 @@
                   "label": "Services"
                 }
               ],
-              "helpText": "Whether this line is a delivery of goods or a supply of services: it decides how a cross-border sale is taxed. Goods sold to a consumer in another EU member state are an intra-Community distance sale, taxed where they arrive once your EU-wide distance sales pass EUR 10 000 in a calendar year (Directive 2006/112/EC art. 33(a) and art. 59c); the same sale as a service stays taxable here (art. 45). Optional: a line that declares nothing is treated as a supply of services."
+              "helpText": "Whether this line is a delivery of goods or a supply of services: it decides how a cross-border sale is taxed. Goods sold to a consumer in another EU member state are an intra-Community distance sale, taxed where they arrive once your EU-wide distance sales pass EUR 10 000 in a calendar year (Directive 2006/112/EC art. 33(a) and art. 59c); the same sale as a service stays taxable here (art. 45). Optional: a line that declares nothing is treated as a supply of services.",
+              "helpTextKey": "documents.countryFields.supplyType.crossBorderTax.helpText"
             }
           }
         ]
@@ -891,6 +926,7 @@
               "key": "supplyType",
               "kind": "select",
               "label": "Supply type",
+              "labelKey": "documents.countryFields.supplyType.label",
               "required": false,
               "options": [
                 {
@@ -902,7 +938,8 @@
                   "label": "Services"
                 }
               ],
-              "helpText": "Whether this line is a delivery of goods or a supply of services: it decides how a cross-border sale is taxed. Goods sold to a consumer in another EU member state are an intra-Community distance sale, taxed where they arrive once your EU-wide distance sales pass EUR 10 000 in a calendar year (Directive 2006/112/EC art. 33(a) and art. 59c); the same sale as a service stays taxable here (art. 45). Optional: a line that declares nothing is treated as a supply of services."
+              "helpText": "Whether this line is a delivery of goods or a supply of services: it decides how a cross-border sale is taxed. Goods sold to a consumer in another EU member state are an intra-Community distance sale, taxed where they arrive once your EU-wide distance sales pass EUR 10 000 in a calendar year (Directive 2006/112/EC art. 33(a) and art. 59c); the same sale as a service stays taxable here (art. 45). Optional: a line that declares nothing is treated as a supply of services.",
+              "helpTextKey": "documents.countryFields.supplyType.crossBorderTax.helpText"
             }
           }
         ]
@@ -917,6 +954,7 @@
               "key": "supplyType",
               "kind": "select",
               "label": "Supply type",
+              "labelKey": "documents.countryFields.supplyType.label",
               "required": false,
               "options": [
                 {
@@ -928,7 +966,8 @@
                   "label": "Services"
                 }
               ],
-              "helpText": "Whether this line is a delivery of goods or a supply of services: it decides how a cross-border sale is taxed. Goods sold to a consumer in another EU member state are an intra-Community distance sale, taxed where they arrive once your EU-wide distance sales pass EUR 10 000 in a calendar year (Directive 2006/112/EC art. 33(a) and art. 59c); the same sale as a service stays taxable here (art. 45). Optional: a line that declares nothing is treated as a supply of services."
+              "helpText": "Whether this line is a delivery of goods or a supply of services: it decides how a cross-border sale is taxed. Goods sold to a consumer in another EU member state are an intra-Community distance sale, taxed where they arrive once your EU-wide distance sales pass EUR 10 000 in a calendar year (Directive 2006/112/EC art. 33(a) and art. 59c); the same sale as a service stays taxable here (art. 45). Optional: a line that declares nothing is treated as a supply of services.",
+              "helpTextKey": "documents.countryFields.supplyType.crossBorderTax.helpText"
             }
           }
         ]
@@ -943,6 +982,7 @@
               "key": "supplyType",
               "kind": "select",
               "label": "Supply type",
+              "labelKey": "documents.countryFields.supplyType.label",
               "required": false,
               "options": [
                 {
@@ -954,7 +994,8 @@
                   "label": "Services"
                 }
               ],
-              "helpText": "Whether this line is a delivery of goods or a supply of services: it decides how a cross-border sale is taxed. Goods sold to a consumer in another EU member state are an intra-Community distance sale, taxed where they arrive once your EU-wide distance sales pass EUR 10 000 in a calendar year (Directive 2006/112/EC art. 33(a) and art. 59c); the same sale as a service stays taxable here (art. 45). Optional: a line that declares nothing is treated as a supply of services."
+              "helpText": "Whether this line is a delivery of goods or a supply of services: it decides how a cross-border sale is taxed. Goods sold to a consumer in another EU member state are an intra-Community distance sale, taxed where they arrive once your EU-wide distance sales pass EUR 10 000 in a calendar year (Directive 2006/112/EC art. 33(a) and art. 59c); the same sale as a service stays taxable here (art. 45). Optional: a line that declares nothing is treated as a supply of services.",
+              "helpTextKey": "documents.countryFields.supplyType.crossBorderTax.helpText"
             }
           }
         ]
@@ -998,5 +1039,250 @@
       },
       "notes": "Read at gesetze-im-internet.de/bgb/__286.html. The statute says when the debtor of a claim is in default at the latest, 30 days after the due date and receipt of the invoice; it sets no payment term, and absent an agreed date a claim is due at once (BGB § 271 Abs. 1). The application uses those 30 days as its fallback and counts them from the invoice date, not from receipt."
     }
+  },
+  "companyLaw": {
+    "countryCode": "DE",
+    "legalFormLabel": "Rechtsform",
+    "legalForms": [
+      {
+        "code": "DE_GMBH",
+        "name": "Gesellschaft mit beschränkter Haftung",
+        "designation": "GmbH"
+      },
+      {
+        "code": "DE_UG",
+        "name": "Unternehmergesellschaft (haftungsbeschränkt)",
+        "designation": "UG (haftungsbeschränkt)",
+        "notes": "§ 5a Abs. 1 GmbHG: the company \"muss in der Firma [...] die Bezeichnung \"Unternehmergesellschaft (haftungsbeschränkt)\" oder \"UG (haftungsbeschränkt)\" führen\"; it is a GmbH, so § 35a GmbHG applies."
+      },
+      {
+        "code": "DE_AG",
+        "name": "Aktiengesellschaft",
+        "designation": "AG"
+      },
+      {
+        "code": "DE_EK",
+        "name": "Eingetragener Kaufmann / eingetragene Kauffrau",
+        "designation": "e.K."
+      },
+      {
+        "code": "DE_OHG",
+        "name": "Offene Handelsgesellschaft",
+        "designation": "OHG"
+      },
+      {
+        "code": "DE_KG",
+        "name": "Kommanditgesellschaft",
+        "designation": "KG",
+        "notes": "A KG in which no partner is a natural person (GmbH & Co. KG) must also name its partners with their own § 35a GmbHG details (§ 125 Abs. 1 Satz 2 HGB); that is not modelled, such a company adds it to its name or address."
+      },
+      {
+        "code": "DE_EINZEL",
+        "name": "Einzelunternehmen (nicht im Handelsregister eingetragen)",
+        "designation": "Einzelunternehmen",
+        "notes": "No mention: § 37a HGB binds a Kaufmann entered in the Handelsregister, and a business not entered there has no register court or number to print."
+      },
+      {
+        "code": "DE_OTHER",
+        "name": "Andere Rechtsform",
+        "designation": "Andere Rechtsform",
+        "notes": "No mention is declared for a form this catalog does not list."
+      }
+    ],
+    "fields": [
+      {
+        "key": "registerCourt",
+        "kind": "text",
+        "label": "Registergericht"
+      },
+      {
+        "key": "managingDirectors",
+        "kind": "text",
+        "label": "Geschäftsführer (Vor- und Familienname)"
+      },
+      {
+        "key": "boardMembers",
+        "kind": "text",
+        "label": "Vorstand (Vor- und Familienname, Vorsitzender als solcher bezeichnet)"
+      },
+      {
+        "key": "supervisoryBoardChair",
+        "kind": "text",
+        "label": "Vorsitzender des Aufsichtsrats"
+      }
+    ],
+    "mentions": [
+      {
+        "id": "de-gmbh-register",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": ["DE_GMBH", "DE_UG"],
+        "required": true,
+        "template": {
+          "en": "{legalForm}, register court: {registerCourt}, {identifier:LEGAL_ID}",
+          "fr": "{legalForm}, tribunal d'enregistrement : {registerCourt}, {identifier:LEGAL_ID}",
+          "it": "{legalForm}, tribunale del registro: {registerCourt}, {identifier:LEGAL_ID}",
+          "pl": "{legalForm}, sąd rejestrowy: {registerCourt}, {identifier:LEGAL_ID}",
+          "de": "{legalForm}, Registergericht: {registerCourt}, {identifier:LEGAL_ID}",
+          "pt": "{legalForm}, tribunal de registo: {registerCourt}, {identifier:LEGAL_ID}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "§ 35a Abs. 1 GmbHG: \"Auf allen Geschäftsbriefen gleichviel welcher Form, die an einen bestimmten Empfänger gerichtet werden, müssen die Rechtsform und der Sitz der Gesellschaft, das Registergericht des Sitzes der Gesellschaft und die Nummer, unter der die Gesellschaft in das Handelsregister eingetragen ist, sowie alle Geschäftsführer und, sofern die Gesellschaft einen Aufsichtsrat gebildet und dieser einen Vorsitzenden hat, der Vorsitzende des Aufsichtsrats mit dem Familiennamen und mindestens einem ausgeschriebenen Vornamen angegeben werden. Werden Angaben über das Kapital der Gesellschaft gemacht, so müssen in jedem Falle das Stammkapital sowie, wenn nicht alle in Geld zu leistenden Einlagen eingezahlt sind, der Gesamtbetrag der ausstehenden Einlagen angegeben werden.\" § 35a Abs. 3: \"Bestellscheine gelten als Geschäftsbriefe im Sinne des Absatzes 1.\"",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "Read at gesetze-im-internet.de on 2026-10-25: https://www.gesetze-im-internet.de/gmbhg/__35a.html. The register number is the LEGAL_ID identifier (Handelsregisternummer); the Sitz is the company address printed above. Capital is only required when the company states it, so none is printed. The texts name \"Geschäftsbriefe\" and \"Bestellscheine\", not invoices; an invoice addressed to a client is read here as a Geschäftsbrief, which this research did not settle against case law."
+      },
+      {
+        "id": "de-gmbh-managing-directors",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": ["DE_GMBH", "DE_UG"],
+        "required": true,
+        "template": {
+          "en": "Managing directors: {managingDirectors}",
+          "fr": "Gérants : {managingDirectors}",
+          "it": "Amministratori: {managingDirectors}",
+          "pl": "Członkowie zarządu: {managingDirectors}",
+          "de": "Geschäftsführer: {managingDirectors}",
+          "pt": "Gerentes: {managingDirectors}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "§ 35a Abs. 1 GmbHG: \"Auf allen Geschäftsbriefen gleichviel welcher Form, die an einen bestimmten Empfänger gerichtet werden, müssen die Rechtsform und der Sitz der Gesellschaft, das Registergericht des Sitzes der Gesellschaft und die Nummer, unter der die Gesellschaft in das Handelsregister eingetragen ist, sowie alle Geschäftsführer und, sofern die Gesellschaft einen Aufsichtsrat gebildet und dieser einen Vorsitzenden hat, der Vorsitzende des Aufsichtsrats mit dem Familiennamen und mindestens einem ausgeschriebenen Vornamen angegeben werden. Werden Angaben über das Kapital der Gesellschaft gemacht, so müssen in jedem Falle das Stammkapital sowie, wenn nicht alle in Geld zu leistenden Einlagen eingezahlt sind, der Gesamtbetrag der ausstehenden Einlagen angegeben werden.\" § 35a Abs. 3: \"Bestellscheine gelten als Geschäftsbriefe im Sinne des Absatzes 1.\"",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "Read at gesetze-im-internet.de on 2026-10-25: https://www.gesetze-im-internet.de/gmbhg/__35a.html. The texts name \"Geschäftsbriefe\" and \"Bestellscheine\", not invoices; an invoice addressed to a client is read here as a Geschäftsbrief, which this research did not settle against case law."
+      },
+      {
+        "id": "de-gmbh-supervisory-board-chair",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": ["DE_GMBH", "DE_UG"],
+        "required": false,
+        "template": {
+          "en": "Chair of the supervisory board: {supervisoryBoardChair}",
+          "fr": "Président du conseil de surveillance : {supervisoryBoardChair}",
+          "it": "Presidente del consiglio di sorveglianza: {supervisoryBoardChair}",
+          "pl": "Przewodniczący rady nadzorczej: {supervisoryBoardChair}",
+          "de": "Vorsitzender des Aufsichtsrats: {supervisoryBoardChair}",
+          "pt": "Presidente do conselho fiscal: {supervisoryBoardChair}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "§ 35a Abs. 1 GmbHG: \"Auf allen Geschäftsbriefen gleichviel welcher Form, die an einen bestimmten Empfänger gerichtet werden, müssen die Rechtsform und der Sitz der Gesellschaft, das Registergericht des Sitzes der Gesellschaft und die Nummer, unter der die Gesellschaft in das Handelsregister eingetragen ist, sowie alle Geschäftsführer und, sofern die Gesellschaft einen Aufsichtsrat gebildet und dieser einen Vorsitzenden hat, der Vorsitzende des Aufsichtsrats mit dem Familiennamen und mindestens einem ausgeschriebenen Vornamen angegeben werden. Werden Angaben über das Kapital der Gesellschaft gemacht, so müssen in jedem Falle das Stammkapital sowie, wenn nicht alle in Geld zu leistenden Einlagen eingezahlt sind, der Gesamtbetrag der ausstehenden Einlagen angegeben werden.\" § 35a Abs. 3: \"Bestellscheine gelten als Geschäftsbriefe im Sinne des Absatzes 1.\"",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "Only \"sofern die Gesellschaft einen Aufsichtsrat gebildet und dieser einen Vorsitzenden hat\", which the settings cannot tell: printed when filled in, never asked for. Read at gesetze-im-internet.de on 2026-10-25: https://www.gesetze-im-internet.de/gmbhg/__35a.html."
+      },
+      {
+        "id": "de-ag-register",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": ["DE_AG"],
+        "required": true,
+        "template": {
+          "en": "{legalForm}, register court: {registerCourt}, {identifier:LEGAL_ID}",
+          "fr": "{legalForm}, tribunal d'enregistrement : {registerCourt}, {identifier:LEGAL_ID}",
+          "it": "{legalForm}, tribunale del registro: {registerCourt}, {identifier:LEGAL_ID}",
+          "pl": "{legalForm}, sąd rejestrowy: {registerCourt}, {identifier:LEGAL_ID}",
+          "de": "{legalForm}, Registergericht: {registerCourt}, {identifier:LEGAL_ID}",
+          "pt": "{legalForm}, tribunal de registo: {registerCourt}, {identifier:LEGAL_ID}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "§ 80 Abs. 1 AktG: \"Auf allen Geschäftsbriefen gleichviel welcher Form, die an einen bestimmten Empfänger gerichtet werden, müssen die Rechtsform und der Sitz der Gesellschaft, das Registergericht des Sitzes der Gesellschaft und die Nummer, unter der die Gesellschaft in das Handelsregister eingetragen ist, sowie alle Vorstandsmitglieder und der Vorsitzende des Aufsichtsrats mit dem Familiennamen und mindestens einem ausgeschriebenen Vornamen angegeben werden. Der Vorsitzende des Vorstands ist als solcher zu bezeichnen. [...]\" § 80 Abs. 3: \"Bestellscheine gelten als Geschäftsbriefe im Sinne des Absatzes 1.\"",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "Read at gesetze-im-internet.de on 2026-10-25: https://www.gesetze-im-internet.de/aktg/__80.html. The register number is the LEGAL_ID identifier; the Sitz is the company address printed above. The texts name \"Geschäftsbriefe\" and \"Bestellscheine\", not invoices; an invoice addressed to a client is read here as a Geschäftsbrief, which this research did not settle against case law."
+      },
+      {
+        "id": "de-ag-board",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": ["DE_AG"],
+        "required": true,
+        "template": {
+          "en": "Management board: {boardMembers}",
+          "fr": "Directoire : {boardMembers}",
+          "it": "Consiglio di gestione: {boardMembers}",
+          "pl": "Zarząd: {boardMembers}",
+          "de": "Vorstand: {boardMembers}",
+          "pt": "Conselho de administração executivo: {boardMembers}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "§ 80 Abs. 1 AktG: \"Auf allen Geschäftsbriefen gleichviel welcher Form, die an einen bestimmten Empfänger gerichtet werden, müssen die Rechtsform und der Sitz der Gesellschaft, das Registergericht des Sitzes der Gesellschaft und die Nummer, unter der die Gesellschaft in das Handelsregister eingetragen ist, sowie alle Vorstandsmitglieder und der Vorsitzende des Aufsichtsrats mit dem Familiennamen und mindestens einem ausgeschriebenen Vornamen angegeben werden. Der Vorsitzende des Vorstands ist als solcher zu bezeichnen. [...]\" § 80 Abs. 3: \"Bestellscheine gelten als Geschäftsbriefe im Sinne des Absatzes 1.\"",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "Read at gesetze-im-internet.de on 2026-10-25: https://www.gesetze-im-internet.de/aktg/__80.html. The chair of the Vorstand is designated as such within the entered text. The texts name \"Geschäftsbriefe\" and \"Bestellscheine\", not invoices; an invoice addressed to a client is read here as a Geschäftsbrief, which this research did not settle against case law."
+      },
+      {
+        "id": "de-ag-supervisory-board-chair",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": ["DE_AG"],
+        "required": true,
+        "template": {
+          "en": "Chair of the supervisory board: {supervisoryBoardChair}",
+          "fr": "Président du conseil de surveillance : {supervisoryBoardChair}",
+          "it": "Presidente del consiglio di sorveglianza: {supervisoryBoardChair}",
+          "pl": "Przewodniczący rady nadzorczej: {supervisoryBoardChair}",
+          "de": "Vorsitzender des Aufsichtsrats: {supervisoryBoardChair}",
+          "pt": "Presidente do conselho fiscal: {supervisoryBoardChair}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "§ 80 Abs. 1 AktG: \"Auf allen Geschäftsbriefen gleichviel welcher Form, die an einen bestimmten Empfänger gerichtet werden, müssen die Rechtsform und der Sitz der Gesellschaft, das Registergericht des Sitzes der Gesellschaft und die Nummer, unter der die Gesellschaft in das Handelsregister eingetragen ist, sowie alle Vorstandsmitglieder und der Vorsitzende des Aufsichtsrats mit dem Familiennamen und mindestens einem ausgeschriebenen Vornamen angegeben werden. Der Vorsitzende des Vorstands ist als solcher zu bezeichnen. [...]\" § 80 Abs. 3: \"Bestellscheine gelten als Geschäftsbriefe im Sinne des Absatzes 1.\"",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "Read at gesetze-im-internet.de on 2026-10-25: https://www.gesetze-im-internet.de/aktg/__80.html. The texts name \"Geschäftsbriefe\" and \"Bestellscheine\", not invoices; an invoice addressed to a client is read here as a Geschäftsbrief, which this research did not settle against case law."
+      },
+      {
+        "id": "de-registered-merchant-register",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": ["DE_EK"],
+        "required": true,
+        "template": {
+          "en": "{legalForm}, register court: {registerCourt}, {identifier:LEGAL_ID}",
+          "fr": "{legalForm}, tribunal d'enregistrement : {registerCourt}, {identifier:LEGAL_ID}",
+          "it": "{legalForm}, tribunale del registro: {registerCourt}, {identifier:LEGAL_ID}",
+          "pl": "{legalForm}, sąd rejestrowy: {registerCourt}, {identifier:LEGAL_ID}",
+          "de": "{legalForm}, Registergericht: {registerCourt}, {identifier:LEGAL_ID}",
+          "pt": "{legalForm}, tribunal de registo: {registerCourt}, {identifier:LEGAL_ID}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "§ 37a Abs. 1 HGB: \"Auf allen Geschäftsbriefen des Kaufmanns gleichviel welcher Form, die an einen bestimmten Empfänger gerichtet werden, müssen seine Firma, die Bezeichnung nach § 19 Abs. 1 Nr. 1, der Ort seiner Handelsniederlassung, das Registergericht und die Nummer, unter der die Firma in das Handelsregister eingetragen ist, angegeben werden.\" § 19 Abs. 1 Nr. 1 HGB: \"bei Einzelkaufleuten die Bezeichnung \"eingetragener Kaufmann\", \"eingetragene Kauffrau\" oder eine allgemein verständliche Abkürzung dieser Bezeichnung, insbesondere \"e.K.\", \"e.Kfm.\" oder \"e.Kfr.\"",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "Read at gesetze-im-internet.de on 2026-10-25: https://www.gesetze-im-internet.de/hgb/__37a.html and .../__19.html. The Ort der Handelsniederlassung is the company address printed above. The texts name \"Geschäftsbriefe\" and \"Bestellscheine\", not invoices; an invoice addressed to a client is read here as a Geschäftsbrief, which this research did not settle against case law."
+      },
+      {
+        "id": "de-partnership-register",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": ["DE_OHG", "DE_KG"],
+        "required": true,
+        "template": {
+          "en": "{legalForm}, register court: {registerCourt}, {identifier:LEGAL_ID}",
+          "fr": "{legalForm}, tribunal d'enregistrement : {registerCourt}, {identifier:LEGAL_ID}",
+          "it": "{legalForm}, tribunale del registro: {registerCourt}, {identifier:LEGAL_ID}",
+          "pl": "{legalForm}, sąd rejestrowy: {registerCourt}, {identifier:LEGAL_ID}",
+          "de": "{legalForm}, Registergericht: {registerCourt}, {identifier:LEGAL_ID}",
+          "pt": "{legalForm}, tribunal de registo: {registerCourt}, {identifier:LEGAL_ID}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "§ 125 Abs. 1 HGB: \"Auf allen Geschäftsbriefen der Gesellschaft, gleichviel welcher Form, die an einen bestimmten Empfänger gerichtet werden, müssen die Firma und der Sitz der Gesellschaft, das Registergericht und die Nummer, unter der die Gesellschaft in das Handelsregister eingetragen ist, angegeben werden. Bei einer Gesellschaft, bei der kein Gesellschafter eine natürliche Person ist, sind auf den Geschäftsbriefen der Gesellschaft ferner die Firmen oder Namen der Gesellschafter anzugeben [...]\" § 177a HGB: \"§ 125 gilt auch für die Gesellschaft, bei der ein Kommanditist eine natürliche Person ist. [...]\"",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "Read at gesetze-im-internet.de on 2026-10-25: https://www.gesetze-im-internet.de/hgb/__125.html and .../__177a.html. The texts name \"Geschäftsbriefe\" and \"Bestellscheine\", not invoices; an invoice addressed to a client is read here as a Geschäftsbrief, which this research did not settle against case law."
+      }
+    ],
+    "demo": {
+      "legalFormByNameSuffix": {
+        "GmbH": "DE_GMBH",
+        "UG": "DE_UG"
+      },
+      "values": {
+        "registerCourt": "Amtsgericht {city}",
+        "managingDirectors": "Anna Schmidt"
+      }
+    },
+    "notes": "Every mention reads the business-letter provisions of the GmbHG, AktG and HGB. Not modelled: capital details (only required when stated), companies in liquidation, branches of foreign companies."
   }
 }

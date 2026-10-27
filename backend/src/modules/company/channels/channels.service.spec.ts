@@ -314,6 +314,32 @@ describe('ChannelCredentialsService', () => {
       ]);
     });
 
+    it('a French SME sees pdp mandated from 2027-09-01 only, and not yet in force', async () => {
+      vi.useFakeTimers({ now: new Date('2026-10-25T12:00:00Z'), toFake: ['Date'] });
+      try {
+        mockedPrisma.company.findUnique.mockResolvedValue({
+          country: 'France',
+          countryCode: 'FR',
+          reportingProfile: { sizeCategory: 'SME' },
+        });
+        const facts = await service.suggestedChannels('company-1');
+        expect(facts).toEqual([
+          expect.objectContaining({ providerId: 'pdp', mandatedFrom: '2027-09-01', effectiveNow: false }),
+        ]);
+        const { banner, channels } = await service.legalChannels('company-1');
+        expect(banner).toMatchObject({
+          legalChannelId: 'pdp',
+          mandatedFrom: '2027-09-01',
+          effectiveNow: false,
+        });
+        expect(channels.find((channel) => channel.id === 'pdp')).toMatchObject({
+          mandatedFrom: '2027-09-01',
+        });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it("a Polish company's channel policy is ksef, still merely SUGGESTED (no sourced mandate date yet)", async () => {
       mockedPrisma.company.findUnique.mockResolvedValue({ country: 'Poland', countryCode: 'PL' });
       const facts = await service.suggestedChannels('company-1');

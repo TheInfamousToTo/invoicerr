@@ -1,4 +1,6 @@
 export {}; // makes this spec a module, not a global script -- see tsconfig.json
+import { giveBaselineClientItsVat } from "../support/baseline-client";
+import { companyLawFor } from "../fixtures/company-law";
 
 /**
  * Issue #581: a "Validate" action that assigns an invoice's legal number and locks it, WITHOUT
@@ -80,7 +82,13 @@ function setCompanyCountry(
 	return cy.request({
 		method: "POST",
 		url: `${api}/api/company/info`,
-		body: { name: "Acme Corp", country, countryCode, ...(identifiers ? { identifiers } : {}) },
+		body: {
+			name: "Acme Corp",
+			country,
+			countryCode,
+			companyLaw: companyLawFor(countryCode),
+			...(identifiers ? { identifiers } : {}),
+		},
 	});
 }
 
@@ -384,7 +392,11 @@ describe("Invoice Validate (issue #581) - numbers and locks without sending, exc
 	});
 
 	it("Poland never shows that alert and never attempts a transmission - Validate stays numbering and locking, nothing else", () => {
-		setCompanyCountry("Poland", "PL", [{ scheme: "VAT", value: "PL5260001246" }]);
+		setCompanyCountry("Poland", "PL", [
+			{ scheme: "LEGAL_ID", value: "5260001246" },
+			{ scheme: "VAT", value: "PL5260001246" },
+		]);
+		giveBaselineClientItsVat();
 
 		cy.request({ url: `${api}/api/documents/references/client/search` })
 			.its("body")

@@ -28,6 +28,29 @@ To widen that coverage, or to add a country of your own, see [Adding a
 country](../adding-a-country.md): the catalogue files listed on every other page in this directory
 are the ones Poland already has.
 
+## NIP
+
+Art. 106e ust. 1 of the VAT act asks every invoice for the seller's tax number (pkt 4) and for the
+number under which the buyer received the supply (pkt 5). For a Polish business both are its NIP, the
+`LEGAL_ID` scheme of the `identifiers` section of `countries/data/pl.json`. The scheme applies to a
+company only and is `required: true`: your company's NIP must be filled in to save Settings or finish
+onboarding, and a Polish company client's NIP to save the client. A private client has no NIP and is
+not offered the field.
+
+:::info[Clients saved before]
+A Polish company client saved without its NIP keeps its record. The client form asks for it at the
+next edit, and Validate and Send keep refusing an invoice to it until it is filled in.
+:::
+
+## KSeF and private buyers
+
+Art. 106ga ust. 2 pkt 4 of the VAT act lifts the KSeF obligation for an invoice « na rzecz nabywcy
+towarów lub usług będącego osobą fizyczną nieprowadzącą działalności gospodarczej », a natural
+person not carrying on a business. The `ksef` fact in the `channelPolicy` section of
+`countries/data/pl.json` records it with `scope.buyerType: ["COMPANY"]`. The fact is `suggested`,
+so the scope has no effect today; it keeps an invoice to a private client outside KSeF if the fact
+is ever made `mandated`.
+
 ## Fallback payment term
 
 The `paymentTerms.fallbackTerm` entry of `countries/data/pl.json` is the 30 days an invoice's due
@@ -37,3 +60,21 @@ preventing excessive delays in commercial transactions starts statutory interest
 creditor's performance when the contract sets no payment date (`basis: "latePaymentThreshold"`). It
 sets no payment term. The application counts the 30 days from the invoice date, not from the
 creditor's performance.
+
+## Company-law mentions
+
+The `companyLaw` section of `countries/data/pl.json` prints, under the seller's name on invoices,
+quotes, credit notes and purchase orders (pisma i zamówienia handlowe), from the Kodeks spółek
+handlowych:
+
+| Legal forms | Printed | Source |
+| --- | --- | --- |
+| sp. z o.o. | "Sąd rejestrowy: …, KRS 0000123456", "Kapitał zakładowy 5000.00 PLN" | art. 206 § 1 |
+| S.A., S.K.A. | register line, "Kapitał zakładowy …, kapitał wpłacony …" | art. 374 § 1, art. 127 § 5 |
+| P.S.A. | register line, "Kapitał akcyjny …" | art. 300^61 § 1 |
+| spółka jawna, komandytowa, partnerska, sole trader, other forms | nothing | none of these articles binds them |
+
+The NIP of point 3) is the `LEGAL_ID` identifier; the seat and address of point 1) are the company
+address. Not modelled: the group of companies (point 5) and the unpaid contributions of a sp. z o.o.
+formed from the model agreement. Text read in the Kancelaria Sejmu consolidated text (t.j. Dz. U. z
+2024 r. poz. 18, with the amendments up to Dz. U. z 2026 r. poz. 644) on 2026-10-25.

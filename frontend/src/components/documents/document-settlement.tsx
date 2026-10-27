@@ -1,7 +1,9 @@
+import { Check } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { useDocumentSettlement, usePaymentMethods } from "@/hooks/queries"
 import { Badge } from "@/components/ui/badge"
+import { ProseHelp } from "@/components/ui/prose-help"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 
@@ -99,6 +101,34 @@ export function DocumentSettlementBadge({
     >
       {t(labelKey)}
     </Badge>
+  )
+}
+
+/** Whether the record's balance is settled. False until the balance has loaded, so the action stays
+ *  offered rather than vanishing on a slow or failed read. */
+export function useBalanceSettled(typeId: string, documentId: string | undefined, enabled: boolean): boolean {
+  const { data } = useDocumentSettlement(typeId, enabled ? documentId : undefined)
+  return data?.settlement.settled === true
+}
+
+/** Stands in the primary action slot once nothing is left to record, in the settled badge's tone. */
+export function SettledMark({ dataCy, className }: Readonly<{ dataCy: string; className?: string }>) {
+  const { t } = useTranslation()
+  const label = t("documents.settlement.badge.settled")
+  return (
+    <span
+      role="img"
+      aria-label={label}
+      title={label}
+      className={cn(
+        "inline-flex size-8 shrink-0 items-center justify-center rounded-full",
+        TONE_CLASSES.success,
+        className,
+      )}
+      data-cy={dataCy}
+    >
+      <Check className="size-4" strokeWidth={2.5} aria-hidden="true" />
+    </span>
   )
 }
 
@@ -268,13 +298,13 @@ export function DocumentSettlementSection({ typeId, documentId }: DocumentSettle
               </ul>
             )}
             {warnings.length > 0 && (
-              <div className="space-y-1 rounded-md bg-warning p-2" data-cy="document-settlement-warnings">
-                {warnings.map((warning) => (
-                  <p key={warning} className="text-xs text-warning-foreground">
-                    {warning}
-                  </p>
-                ))}
-              </div>
+              <ProseHelp
+                tone="warning"
+                title={t("documents.settlement.warningsTitle")}
+                dataCy="document-settlement-warnings"
+              >
+                {warnings}
+              </ProseHelp>
             )}
           </div>
         ) : null}

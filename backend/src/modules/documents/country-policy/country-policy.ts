@@ -18,6 +18,9 @@
 import prisma from '@/prisma/prisma.service';
 import { guessCountryCode } from '@/utils/country-name-to-iso';
 
+import { parseCompanyProfileValues } from '../company-profile/profile';
+import { CompanyProfileValues } from '../company-profile/schema';
+import { PartyType } from '../country-identifiers/schema';
 import { defaultCountryPolicyCatalog } from './registry';
 
 export interface CountryPolicyDecision {
@@ -108,6 +111,27 @@ export async function resolveClientCountryCode(
   return resolvedCode || undefined;
 }
 
+export async function resolveClientType(
+  companyId: string,
+  clientId: string | undefined | null,
+): Promise<PartyType | undefined> {
+  if (!clientId) return undefined;
+  const client = await prisma.client.findFirst({
+    where: { id: clientId, companyId },
+    select: { type: true },
+  });
+  return client?.type;
+}
+
+/** The issuing company's declared profile values; empty when it declared none. */
+export async function resolveCompanyProfile(companyId: string): Promise<CompanyProfileValues> {
+  const company = await prisma.company.findUnique({
+    where: { id: companyId },
+    select: { reportingProfile: true },
+  });
+  return parseCompanyProfileValues(company?.reportingProfile);
+}
+
 type DocumentCountryActionRuleRow = Awaited<
   ReturnType<typeof prisma.documentCountryActionRule.findMany>
 >[number];
@@ -151,7 +175,7 @@ function decideFromRules(
       rule.provenanceKind === 'legal' && rule.sourceText
         ? ` (${rule.sourceText})`
         : rule.resolutionNote
-          ? ` (unverified — ${rule.resolutionNote})`
+          ? ` (unverified: ${rule.resolutionNote})`
           : '';
     return {
       allowed: false,

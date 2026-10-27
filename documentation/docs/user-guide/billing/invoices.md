@@ -17,21 +17,26 @@ before any payment or credit note. What is still owed on it is in its settlement
 - **Search** — find an invoice by its number or client name
 - **Filter**: toggle the status chips: **Draft**, **Validated**, **Sending**, **Sent**, **Send failed**, **Cancelled**, **Imported**
 - **View** (eye icon) — read-only details
-- **Download** - a plain **PDF** is always available; once the invoice has been numbered, **Download normalized XML** adds **CII**, **UBL**, **Factur-X**, **FA(3)** (Polish KSeF), **FatturaPA** (Italian SdI), **Peppol BIS Billing 3.0**, and **XRechnung**. An **Imported** invoice also offers **Download original** - see [Migrating from another tool](migrating-from-another-tool.md#downloading-the-original)
+- **Preview PDF** / **Download PDF** - open the invoice's PDF in a new tab, or save it to your computer as a file named after the invoice's number (see [PDF file name](#pdf-file-name))
+- **Download normalized XML** - once the invoice has been numbered: **CII**, **UBL**, **Factur-X**, **FA(3)** (Polish KSeF), **FatturaPA** (Italian SdI), **Peppol BIS Billing 3.0**, and **XRechnung**. An **Imported** invoice also offers **Download original** - see [Migrating from another tool](migrating-from-another-tool.md#downloading-the-original)
 - **Validate** - assign the invoice's legal number and lock it, without sending anything. A warning
   appears first: this is final, correct a mistake with a credit note afterwards, the same as for a sent
-  invoice. For a French or Italian domestic B2B invoice, validating also transmits it through your
-  accredited channel (PDP for France, SdI for Italy), since each country's own law treats the invoice
+  invoice. For a French domestic invoice to a business client, or any Italian domestic invoice,
+  validating also transmits it through your accredited channel (PDP for France, SdI for Italy). A
+  French invoice to a private client needs no PDP and is only numbered and locked. Each country's own law treats the invoice
   as not genuinely issued until it reaches that channel - the warning dialog says so explicitly in
   that case, naming the channel and stating it cannot be undone; see
   [France](../../developer-guide/countries/france.md#validate-and-the-pdp-mandate) and
   [Italy](../../developer-guide/countries/italy.md#validate-and-the-sdi-mandate). For every other
   invoice, **Send** stays a separate, later step. Validating is refused while the client has no
-  address, no city, or lacks an identifier required for its country; the message names what is missing
+  address or no city, and while your company or the client lacks an identifier your country's law
+  requires on this invoice (see
+  [Identifiers on the PDF](#identifiers-on-the-pdf)); the message names what is missing
   and links to the client
 - **Send**: deliver the invoice through email or, once connected, a country's e-invoicing channel (KSeF, SdI, PDP…). Available both before and after validating; sending an already-validated invoice never re-assigns its number, it only delivers it
-- **Mark as paid** — record payment manually, or use [Bank Reconciliation](bank-reconciliation.md)
-  to confirm one from an imported bank statement
+- **Record payment**: enter a payment received (amount, date, method), or use
+  [Bank Reconciliation](bank-reconciliation.md) to confirm one from an imported bank statement. See
+  [Recording payments](#recording-payments)
 - **Edit** — available only while the invoice is still a **Draft**; once sent, a mistake is fixed with a correction, not a re-edit
 - **Delete** - available only on a **Draft**, after a confirmation; see [Deleting a draft](#deleting-a-draft)
 - **Correct** (scale icon, appears once an invoice is **Validated**, **Sent** or **Send failed**): opens the correction routes for this invoice; see below. This is also where **cancelling** an invoice lives: an invoice that reached "Sent" is never removed, only cancelled, and only where this country's law allows it
@@ -77,7 +82,7 @@ When you type a **Designation**, matching items from your [article catalog](../a
 offered under the field. A small spinner shows at the right of the field while the search is
 running, and the list says so when nothing in the catalog matches.
 
-There is no per-document "Payment Method" field: every enabled [payment method](../billing/payment-methods.md) your company has turned on is printed on the invoice automatically - unless the client has its own [restriction](../clients.md#restricting-payment-methods-for-a-client), in which case only the methods you allowed for that client are printed. The one actually used is only recorded afterwards, when you mark the invoice as paid.
+There is no per-document "Payment Method" field: every enabled [payment method](../billing/payment-methods.md) your company has turned on is printed on the invoice automatically - unless the client has its own [restriction](../clients.md#restricting-payment-methods-for-a-client), in which case only the methods you allowed for that client are printed. The one actually used is only recorded afterwards, when you record the payment.
 
 ### Creating from a quote
 
@@ -131,9 +136,26 @@ Choosing a local cancellation asks you to confirm first: it is irreversible, and
 | --- | --- |
 | **Draft** | Created, not yet sent — editable |
 | **Sending** | Send in progress |
-| **Sent** | Delivered to the client — this is also when **Paid** / **Partially paid** starts being tracked as a balance, shown alongside the status rather than replacing it |
+| **Sent** | Delivered to the client. This is also when the balance starts being tracked (**Unpaid**, **Partially paid**, **Settled**), shown alongside the status rather than replacing it |
 | **Send failed** | The last delivery attempt failed |
 | **Cancelled** | Voided; no longer legally in force |
+
+## Recording payments
+
+**Record payment** is offered on a sent invoice, in its row and on its own page, for as long as
+something is still owed. An invoice can be paid in several instalments: each payment is listed in the
+invoice's settlement panel, and the badge reads **Partially paid** until the balance reaches zero.
+
+Once nothing is owed any more, whether through payments, [credit notes](credit-notes.md) or both, the
+badge reads **Settled** and a green check takes the place of **Record payment**, in the list and on
+the invoice's page. The action is no longer offered there.
+
+:::info[Money received after the invoice is settled]
+A payment that still arrives afterwards, through an online payment link or
+[Bank Reconciliation](bank-reconciliation.md), is recorded rather than refused. The settlement panel
+then shows the amount paid on top as an **Excess**, so you can refund it or issue a
+[credit note](credit-notes.md).
+:::
 
 ## Download formats
 
@@ -147,6 +169,61 @@ Choosing a local cancellation asks you to confirm first: it is irreversible, and
 | **FatturaPA** | Italian SdI national schema |
 | **Peppol BIS Billing 3.0** | Pan-European Peppol network format |
 | **XRechnung** | German public-sector e-invoicing (KoSIT) |
+
+### PDF file name
+
+**Download PDF** saves the file under the document's number, for example `INVOICE-2026-0001.pdf`. A
+document with no number yet (a draft) is saved as its type, status and the first eight characters of
+its identifier, for example `Invoice Draft cmvoks8p.pdf`. Characters a file name cannot hold, such as
+`/`, become `-`. **Preview PDF** saves nothing: it opens the same PDF in a new browser tab. The same
+rule applies to every document type.
+
+## Identifiers on the PDF
+
+The PDF prints, under each party's address, every identifier filled in on your company and on the
+client (SIREN, VAT number, NIF, Partita IVA, ...), each under the name its own country gives it.
+
+Some of them are mandatory on an invoice, depending on your country's law and on the sale. For
+example, in France: your SIREN always, your VAT number unless you use the small-business VAT
+exemption, the SIREN of a French business client (never of a private client, who has none), and both
+VAT numbers when you invoice a business in another EU country. While the invoice is a draft, its PDF
+marks each mandatory identifier that is still empty as missing, in red and in the language of the
+PDF. The PDF the client receives never shows that marker.
+
+**Validate** and **Send** refuse an invoice while one of those mandatory identifiers, or one of the
+[company-law mentions](#company-law-mentions-on-the-pdf) your legal form requires, is empty. The
+message names each one, under its country's name and with whose it is (your company or the client),
+and offers a button to the place to fill it in: **Edit company** when your company lacks one, **Edit
+client** otherwise. A draft can always be saved.
+
+:::info[Where the list comes from]
+The rules for each country are sourced to its invoicing law and listed on its
+[country support page](../../developer-guide/country-support/index.md), under "Required identifiers".
+The app reads a client of type **Company** as a business and a client of type **Individual** as a
+private person: it does not know whether a client is registered for VAT.
+:::
+
+## Company-law mentions on the PDF
+
+Right under your company name, the PDF prints the company-law mentions your country requires of your
+legal form: for example "SAS au capital de 1000.00 EUR" and "RCS Lyon" in France, the register court,
+register number and managing directors of a German GmbH, or the registry office and share capital of
+a Portuguese sociedade por quotas. They are printed in the language of the document, on the document
+types your country's law names (invoices, quotes, credit notes and purchase orders for the European
+countries, invoices only for Algeria). You fill them in under
+[Company-law details](../settings/company-branding.md#company-law-details).
+
+A form without share capital, such as a French individual entrepreneur, never prints a capital line.
+While the invoice is a draft, a required value still empty is marked as missing, like an identifier,
+and the PDF the client receives leaves that mention out. **Validate** and **Send** refuse the invoice
+until it is filled in, with the same message and the same **Edit company** button as a missing
+identifier. A company that has not chosen its legal form yet is asked for it first.
+
+:::info[Where the list comes from]
+Each mention is sourced to its country's company law (Code de commerce, GmbHG and HGB, codice civile,
+Código das Sociedades Comerciais, Kodeks spółek handlowych, Algerian invoicing decree) and explained on
+that country's page under "Company-law mentions".
+:::
 
 ## VAT in your own country's currency
 

@@ -55,6 +55,7 @@ import { DocumentTypeRegistry } from '../../descriptors/type-registry';
 import { DocumentsService } from '../../documents.service';
 import { buildDocumentReferenceProvider } from '../../references/document-reference.provider';
 import { EntityReferenceRegistry } from '../../references/reference-registry';
+import { takeDocumentNumberForTransitionWithStatus } from '../../numbering/take-number';
 import { buildEmailTransport } from '../../transports/email-transport';
 import { TransportRegistry } from '../../transports/transport-registry';
 import { DocumentQueueDispatcher } from '../document-queue.dispatcher';
@@ -65,6 +66,7 @@ import { withDerivedContactFields } from '../../../clients/primary-contact';
 import { removeQueueJobsForCompany } from './queue-test-cleanup';
 import { warmUpPdfRenderer } from './queue-test-pdf-warmup';
 import { ISSUABLE_CLIENT_FIELDS } from '../../__tests__/issuable-client';
+import { ISSUABLE_FRENCH_SELLER_FIELDS } from '../../__tests__/issuable-client';
 
 // Gated EXPLICITLY (DOCUMENTS_QUEUE_REDIS_TESTS=1), not merely on REDIS_URL being set: a bare local
 // `npx jest` loads `.env` (so REDIS_URL is always set on a dev machine) and runs spec files in
@@ -204,6 +206,7 @@ describeWithRedis('document-action queue — real Redis, real Postgres, real Mai
 
   let moduleRef: TestingModule;
   let documentsService: DocumentsService;
+  let queueDispatcher: DocumentQueueDispatcher;
   let queue: Queue;
   let companyId: string;
   // A real "send" now really archives (archive/archive-on-send.ts).
@@ -241,6 +244,7 @@ describeWithRedis('document-action queue — real Redis, real Postgres, real Mai
     await moduleRef.init();
 
     documentsService = moduleRef.get(DocumentsService);
+    queueDispatcher = moduleRef.get(DocumentQueueDispatcher);
     queue = moduleRef.get<Queue>(getQueueToken(Q_DOCUMENT_ACTION));
 
     const company = await prisma.company.create({
@@ -255,6 +259,7 @@ describeWithRedis('document-action queue — real Redis, real Postgres, real Mai
         phone: '+33000000000',
         email: 'queue-integration-company@example.com',
         invoiceTransportId: 'email',
+        ...ISSUABLE_FRENCH_SELLER_FIELDS,
       },
     });
     companyId = company.id;
@@ -400,5 +405,40 @@ describeWithRedis('document-action queue — real Redis, real Postgres, real Mai
     expect((stored.data as Record<string, unknown>).client).toBe(noEmailClient.id);
 
     await prisma.client.delete({ where: { id: otherClient.id } }).catch(() => undefined);
+  });
+
+  it('a free credit note queued before "send" refused it ends "send_failed" with the reason, keeping its number', async () => {
+    const creditNoteData = {
+      issueDate: '2026-01-01',
+      currency: 'EUR',
+      reason: 'Goodwill gesture.',
+      lines: [{ description: 'Refund', quantity: 1, unit: 'unit', unitPrice: 50, vatRate: '20' }],
+    };
+    const created = await documentsService.runAction(companyId, 'credit-note', 'save-draft', {
+      data: creditNoteData,
+    });
+    const documentId = created.document!.id;
+
+    // The state an older version's phase 1 left behind: numbered, "sending", its job in the queue.
+    const { numbered } = await takeDocumentNumberForTransitionWithStatus(
+      companyId,
+      'credit-note',
+      documentId,
+      ['draft'],
+      'sending',
+      creditNoteData,
+    );
+    await queueDispatcher.enqueueAction({
+      companyId,
+      typeId: 'credit-note',
+      documentId,
+      actionId: 'send',
+      payload: { data: creditNoteData, params: {} },
+    });
+
+    const settled = await waitForStatus(documentId, ['sent', 'send_failed']);
+    expect(settled.status).toBe('send_failed');
+    expect(settled.lastActionError).toMatch(/no client to send it to/);
+    expect(settled.displayNumber).toBe(numbered!.displayNumber);
   });
 });

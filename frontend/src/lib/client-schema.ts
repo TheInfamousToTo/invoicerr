@@ -63,7 +63,7 @@ export function buildClientSchema(
         .optional()
         .refine((val) => {
           if (!val) return true
-          return z.string().email().safeParse(val).success
+          return z.email().safeParse(val).success
         }, t("clients.upsert.validation.contactEmail.format")),
       // Several named contacts per client (#415) - the wizard's own CONTACT step
       // (`client-upsert.tsx`'s `ContactsSection`). Optional/absent for the CSV import's row schema
@@ -80,14 +80,14 @@ export function buildClientSchema(
             email: z
               .string()
               .optional()
-              .refine((val) => !val || z.string().email().safeParse(val).success, {
-                message: t("clients.upsert.validation.contactEmail.format"),
+              .refine((val) => !val || z.email().safeParse(val).success, {
+                error: t("clients.upsert.validation.contactEmail.format"),
               }),
             phone: z
               .string()
               .optional()
               .refine((val) => !val || /^[+]?[0-9\s\-()]{8,20}$/.test(val), {
-                message: t("clients.upsert.validation.contactPhone.format"),
+                error: t("clients.upsert.validation.contactPhone.format"),
               }),
             isPrimary: z.boolean().optional(),
           }),
@@ -120,7 +120,7 @@ export function buildClientSchema(
         // whether `contacts` is also present.
         if (!val.contactFirstname || val.contactFirstname.trim() === "") {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             path: ["contactFirstname"],
             message:
               t("clients.upsert.validation.contactFirstname.required") ||
@@ -129,7 +129,7 @@ export function buildClientSchema(
         }
         if (!val.contactLastname || val.contactLastname.trim() === "") {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             path: ["contactLastname"],
             message:
               t("clients.upsert.validation.contactLastname.required") ||
@@ -139,7 +139,7 @@ export function buildClientSchema(
       } else {
         if (!val.name || val.name.trim() === "") {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             path: ["name"],
             message: t("clients.upsert.validation.name.required"),
           })
@@ -151,7 +151,7 @@ export function buildClientSchema(
         const value = idx >= 0 ? val.identifiers?.[idx]?.value : undefined
         if (req.required && (!value || value.trim() === "")) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             path: idx >= 0 ? ["identifiers", idx, "value"] : ["identifiers"],
             message: `${req.label} is required`,
           })
@@ -168,7 +168,7 @@ export function buildClientSchema(
         }
         if (!matches) {
           ctx.addIssue({
-            code: z.ZodIssueCode.custom,
+            code: "custom",
             path: ["identifiers", idx, "value"],
             message: t(
               "clients.upsert.validation.identifiers.patternMismatch",

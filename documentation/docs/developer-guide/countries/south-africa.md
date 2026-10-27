@@ -68,5 +68,5 @@ not a JSON file — see [When a country needs more than a file](../adding-a-coun
 Check the [open compliance
 issues](https://github.com/invoicerr-app/invoicerr/issues?q=is%3Aissue+label%3Acompliance) first. If
 there is no issue for South Africa, [open
-one](https://github.com/invoicerr-app/invoicerr/issues/new/choose) and name which of the files above
+one](https://github.com/invoicerr-app/invoicerr/issues/new?template=country_rule.yml) and name which of the files above
 you need — a request that names one mechanism is far more actionable than "please add South Africa".
