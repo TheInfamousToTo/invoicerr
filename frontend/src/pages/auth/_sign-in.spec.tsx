@@ -1,7 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { render, screen, waitFor } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { MemoryRouter, Route, Routes } from "react-router"
-import { toast } from "sonner"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { authClient } from "@/lib/auth"
@@ -10,9 +9,12 @@ import LoginPage from "./sign-in"
 import LogoutPage from "./sign-out"
 
 vi.mock("@/lib/auth", () => ({
-  authClient: { signIn: { email: vi.fn(), social: vi.fn() }, signOut: vi.fn(async () => ({ data: null })) },
+  authClient: {
+    signIn: { email: vi.fn(), social: vi.fn() },
+    signOut: vi.fn(async () => ({ data: null })),
+    getSession: vi.fn(),
+  },
 }))
-vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
 // Leading underscore keeps generouted from registering this file as a route.
 function jsonResponse(body: unknown): Response {
@@ -131,11 +133,16 @@ describe("<LoginPage> on a demo instance", () => {
     installFetchMock(closed, demo)
     signInEmail.mockResolvedValue({
       data: null,
-      error: { status: 401, statusText: "Unauthorized", message: "Invalid email or password" },
+      error: {
+        status: 401,
+        statusText: "Unauthorized",
+        code: "INVALID_EMAIL_OR_PASSWORD",
+        message: "Invalid email or password",
+      },
     } as never)
     renderSignIn()
 
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Invalid email or password"))
+    expect(await screen.findByTestId("auth-signin-error")).toHaveTextContent("Invalid email or password")
     expect(screen.getByTestId("auth-submit-btn")).not.toBeDisabled()
     expect(screen.getByTestId("demo-credentials-notice")).toBeInTheDocument()
     expect(signInEmail).toHaveBeenCalledTimes(1)
@@ -191,5 +198,70 @@ describe("<LoginPage> on a demo instance", () => {
     await waitFor(() => expect(screen.queryByTestId("auth-signup-link")).not.toBeInTheDocument())
     expect(screen.queryByTestId("demo-credentials-notice")).not.toBeInTheDocument()
     expect(signInEmail).not.toHaveBeenCalled()
+  })
+})
+
+describe("<LoginPage> failed sign-in", () => {
+  const signInEmail = vi.mocked(authClient.signIn.email)
+  const getSession = vi.mocked(authClient.getSession)
+
+  function submit(email = "owner@example.test", password = "Password-1!") {
+    fireEvent.change(screen.getByTestId("auth-email-input"), { target: { value: email } })
+    fireEvent.change(screen.getByTestId("auth-password-input"), { target: { value: password } })
+    fireEvent.click(screen.getByTestId("auth-submit-btn"))
+  }
+
+  afterEach(() => {
+    signInEmail.mockReset()
+    getSession.mockReset()
+  })
+
+  it("explains an address the server does not accept, naming the address used", async () => {
+    installFetchMock({ allowed: true, requiresCode: false })
+    signInEmail.mockResolvedValue({
+      data: null,
+      error: { status: 403, statusText: "Forbidden", code: "INVALID_ORIGIN", message: "Invalid origin" },
+    } as never)
+    renderSignIn()
+
+    submit()
+
+    const error = await screen.findByTestId("auth-signin-error")
+    expect(error).toHaveTextContent(/not the address this instance is configured for/i)
+    expect(error).toHaveTextContent(window.location.origin)
+  })
+
+  it("says so when the server signed in but the browser kept no session", async () => {
+    installFetchMock({ allowed: true, requiresCode: false })
+    signInEmail.mockResolvedValue({
+      data: { user: { id: "u1", createdAt: new Date() } },
+      error: null,
+    } as never)
+    getSession.mockResolvedValue({ data: null, error: null } as never)
+    renderSignIn()
+
+    submit()
+
+    const error = await screen.findByTestId("auth-signin-error")
+    expect(error).toHaveTextContent(/browser did not keep the session/i)
+    expect(screen.getByTestId("auth-submit-btn")).not.toBeDisabled()
+  })
+
+  it("shows the server's reason for wrong credentials", async () => {
+    installFetchMock({ allowed: true, requiresCode: false })
+    signInEmail.mockResolvedValue({
+      data: null,
+      error: {
+        status: 401,
+        statusText: "Unauthorized",
+        code: "INVALID_EMAIL_OR_PASSWORD",
+        message: "Invalid email or password",
+      },
+    } as never)
+    renderSignIn()
+
+    submit()
+
+    expect(await screen.findByTestId("auth-signin-error")).toHaveTextContent("Invalid email or password")
   })
 })

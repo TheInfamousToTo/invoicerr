@@ -1,4 +1,4 @@
-import { Fingerprint } from "lucide-react"
+import { CircleAlert, Fingerprint } from "lucide-react"
 import type React from "react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
@@ -44,10 +44,13 @@ function DemoCredentialsNotice({ demo }: Readonly<{ demo: DemoInstanceView }>) {
   )
 }
 
+type SignInError = { title: string; description: string }
+
 export default function LoginPage() {
   const { t } = useTranslation()
 
   const [loading, setLoading] = useState(false)
+  const [signInError, setSignInError] = useState<SignInError | null>(null)
   const backendHealth = useBackendHealth()
   const backendUnavailable = backendHealth === "unavailable"
   const { demo } = useDemoMode()
@@ -100,21 +103,40 @@ export default function LoginPage() {
   const signInWithPassword = useCallback(
     async (email: string, password: string) => {
       setLoading(true)
+      setSignInError(null)
 
       const result = await authClient.signIn.email({ email, password, rememberMe: true })
 
       if (result.error) {
-        toast.error(result.error.message || t("auth.login.messages.loginError"))
-      }
-
-      if (result.data?.user.createdAt) {
-        toast.success(t("auth.login.messages.loginSuccess"))
-        // Force a full page reload to refresh the session state
-        window.location.href = "/dashboard"
+        setSignInError(
+          result.error.code === "INVALID_ORIGIN"
+            ? {
+                title: t("auth.login.messages.invalidOriginTitle"),
+                description: t("auth.login.messages.invalidOrigin", { origin: window.location.origin }),
+              }
+            : {
+                title: t("auth.login.messages.loginErrorTitle"),
+                description: result.error.message || t("auth.login.messages.loginError"),
+              },
+        )
+        setLoading(false)
         return
       }
 
-      setLoading(false)
+      // A 200 does not mean the browser stored the session cookie (a Secure cookie over http is dropped).
+      const session = await authClient.getSession()
+      if (!session.data) {
+        setSignInError({
+          title: t("auth.login.messages.sessionNotStoredTitle"),
+          description: t("auth.login.messages.sessionNotStored"),
+        })
+        setLoading(false)
+        return
+      }
+
+      toast.success(t("auth.login.messages.loginSuccess"))
+      // Force a full page reload to refresh the session state
+      window.location.href = "/dashboard"
     },
     [t],
   )
@@ -175,6 +197,13 @@ export default function LoginPage() {
     >
       {backendUnavailable && <ServerUnavailableBanner />}
       {demo && <DemoCredentialsNotice demo={demo} />}
+      {signInError && (
+        <Alert variant="destructive" className="mb-4" data-cy="auth-signin-error">
+          <CircleAlert />
+          <AlertTitle>{signInError.title}</AlertTitle>
+          <AlertDescription>{signInError.description}</AlertDescription>
+        </Alert>
+      )}
 
       {/* A provider named by the link, or found from the address typed below. Offered above the
           form: someone arriving on their company's own link should not have to read past a

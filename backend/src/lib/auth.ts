@@ -42,6 +42,7 @@ import { NO_FREE_SEAT_CODE, NoFreeSeatError, withSeatReservation } from '../modu
 import { syncCompanyMemberOnMembershipChange } from '../modules/billing/member-sync';
 import { syncPolarMemberEmailForUser } from '../modules/billing/member-email-sync';
 import { MailService } from '../mail/mail.service';
+import { servedOverHttps } from './app-url-scheme';
 import { deleteOrphanedUserAfterSeatRefusal, isNoFreeSeatRefusal } from './seat-refusal-cleanup';
 import { createPendingSignupStore, createRedisClientForPendingSignups } from './pending-signup-store';
 import { CLIENT_IP_HEADER } from './client-ip-header';
@@ -375,20 +376,10 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: 'postgresql',
   }),
-  // Without this, better-auth's own default (`dist/cookies/index.mjs`) derives `secure` from whether
-  // `baseURL` (i.e. `APP_URL`) STARTS WITH `https://` — not from `NODE_ENV`. A deployment that
-  // terminates TLS somewhere other than this container's own bundled nginx (another reverse proxy in
-  // front of it) and leaves `APP_URL` on an internal `http://` address would then mint session cookies
-  // with no `Secure` attribute at all: they would be sent over any accidental plain-HTTP hop. Tying it
-  // to `NODE_ENV === 'production'` instead makes the decision explicit and independent of how `APP_URL`
-  // happens to be spelled. This line — `sameSite: 'lax'`, the default `emit` also documents explicitly
-  // here rather than leaving it an unstated library default — is the ONLY thing standing between every
-  // Nest route (`/api/*` outside `/api/auth`, which better-auth's own origin check already covers) and
-  // CSRF: there is no separate application-level CSRF token anywhere in this codebase. `httpOnly: true`
-  // is better-auth's own default already; restated here so all three attributes this guarantee depends
-  // on are visible in one place instead of two of them being implicit.
+  // `sameSite: 'lax'` is the only CSRF defence of the Nest routes outside `/api/auth`: there is no
+  // application-level CSRF token. `Secure` follows APP_URL's scheme (`app-url-scheme.ts`).
   advanced: {
-    useSecureCookies: process.env.NODE_ENV === 'production',
+    useSecureCookies: servedOverHttps(appUrl()),
     defaultCookieAttributes: { sameSite: 'lax', httpOnly: true },
     // Per-client rate limiting fix, proven live 2026-09-22 (150 concurrent `GET /api/auth/get-session`
     // from 150 distinct client addresses served/refused the exact same 100/50 split as the same 150

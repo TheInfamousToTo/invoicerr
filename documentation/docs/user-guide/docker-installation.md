@@ -22,9 +22,25 @@ The fastest way to run Invoicerr is using Docker Compose. A prebuilt image is av
 board capable of 64-bit Debian (Pi 3 and newer) runs the `linux/arm64/v8` image unchanged.
 :::
 
+## Image tags
+
+`ghcr.io/invoicerr-app/invoicerr:latest` is always the last **stable** release. A pre-release (for
+example `v2.0.0-alpha.5`) is never published as `latest`: to run one, write its exact tag in
+`image:`, such as `ghcr.io/invoicerr-app/invoicerr:v2.0.0-alpha.5`. The
+[releases page](https://github.com/invoicerr-app/invoicerr/releases) lists every tag, pre-releases
+included.
+
 ## Quick start
 
-1. Create a `docker-compose.yml` file with the following content, then adjust the environment variables to your setup:
+1. Create a `.env` file next to where `docker-compose.yml` will live, holding the two secrets the
+   compose file below reads:
+
+   ```bash title=".env"
+   POSTGRES_PASSWORD=<output of: openssl rand -hex 24>
+   BETTER_AUTH_SECRET=<output of: openssl rand -hex 32>
+   ```
+
+2. Create a `docker-compose.yml` file with the following content, then adjust the environment variables to your setup:
 
    ```yaml title="docker-compose.yml"
    services:
@@ -32,6 +48,8 @@ board capable of 64-bit Debian (Pi 3 and newer) runs the `linux/arm64/v8` image 
        image: ghcr.io/invoicerr-app/invoicerr:latest
        ports:
          - "80:80"
+       volumes:
+         - documents_data:/data
        environment:
          - DATABASE_URL=postgresql://invoicerr:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in a .env file next to this one}@invoicerr_db:5432/invoicerr_db
          - APP_URL=https://invoicerr.example.com
@@ -45,13 +63,17 @@ board capable of 64-bit Debian (Pi 3 and newer) runs the `linux/arm64/v8` image 
          # Email delivery - see "Email delivery" below for the Resend alternative (Brevo's own SMTP
          # relay also works with the SMTP settings below)
          - SMTP_HOST=smtp-relay.example.com
-         - SMTP_USER="username@example.com"
-         - SMTP_FROM="user-from@example.com"
-         - SMTP_PASSWORD="your_smtp_password"
+         - SMTP_USER=username@example.com
+         - SMTP_FROM=user-from@example.com
+         - SMTP_PASSWORD=your_smtp_password
          - SMTP_PORT=587
          - SMTP_SECURE=false
 
-         - BETTER_AUTH_SECRET="your_better_auth_secret"
+         - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET in a .env file next to this one}
+
+         # Generated PDFs, the legal archive, received invoices and logos: kept on the volume above.
+         - DOCUMENTS_ARCHIVE_DIR=/data/documents-archive
+         - DOCUMENTS_INBOUND_DIR=/data/documents-inbound
        depends_on:
          - invoicerr_db
          - redis
@@ -78,18 +100,29 @@ board capable of 64-bit Debian (Pi 3 and newer) runs the `linux/arm64/v8` image 
        driver: local
      redis_data:
        driver: local
+     documents_data:
+       driver: local
    ```
 
    The app will not boot at all without a reachable Redis — it is not optional, and there is no
    degraded fallback if it is missing.
 
-2. Run the app:
+   :::warning[No quotes in list-style values]
+   In the `- KEY=value` form used above, Docker Compose keeps quotes as part of the value:
+   `- SMTP_USER="me@example.com"` sets the user to `"me@example.com"`, quotes included, and the SMTP
+   server refuses it. Write the value bare, even when it contains spaces. Quotes are only stripped in
+   the `KEY: "value"` map form and in a `.env` file.
+   :::
+
+3. Run the app:
 
    ```bash
    docker compose up -d
    ```
 
-3. Open your browser at `http://localhost`.
+4. Open your browser at the address set in `APP_URL`. To try it on your own machine first, set
+   `APP_URL=http://localhost` and open `http://localhost`; see [HTTP on a LAN or HTTPS behind a
+   reverse proxy](#http-on-a-lan-or-https-behind-a-reverse-proxy) for anything else.
 
 :::tip
 The repository's [`docker-compose.yml`](https://github.com/invoicerr-app/invoicerr/blob/main/docker-compose.yml) also includes an OIDC example (placeholder values, live rather than commented out — set `OIDC_CLIENT_ID` to actually register the provider, or remove the whole block if you don't want single sign-on).
@@ -138,16 +171,62 @@ These are set under the `invoicerr` service's `environment` key.
 | --- | --- |
 | `DATABASE_URL` | PostgreSQL connection string, built from `POSTGRES_PASSWORD` below, e.g. `postgresql://invoicerr:${POSTGRES_PASSWORD}@invoicerr_db:5432/invoicerr_db` |
 | `POSTGRES_PASSWORD` | Required. The `invoicerr_db` service's own password, generated with e.g. `openssl rand -hex 24`. Postgres sets it only once, the first time the database volume is initialised; see the upgrade warning below before changing it on an existing deployment. |
-| `APP_URL` | Full public URL of the frontend (e.g. `https://invoicerr.example.com`). Required for email templates and links, and used as better-auth's own base URL. |
+| `APP_URL` | The address users open in their browser, scheme and port included (e.g. `https://invoicerr.example.com` or `http://nas.local:8181`). Used for email links, as better-auth's own base URL, and to decide whether session cookies are `Secure`. Sign-in is refused from any other address unless it is listed in `CORS_ORIGINS`. |
+| `CORS_ORIGINS` | Optional. Comma-separated extra addresses users may open the app from besides `APP_URL` (e.g. `http://192.168.1.20:8181` when `APP_URL` uses a host name). |
 | `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` | Required — the app refuses to boot without a reachable Redis (BullMQ queues every document-send job). Defaults to `localhost:6379`, no password, if unset; `REDIS_URL` (e.g. `redis://:pass@redis:6379`) is accepted instead and wins when both are set. |
-| `BETTER_AUTH_SECRET` | The one that's actually documented and recommended — any random string, e.g. `openssl rand -hex 32`. Leaving it (and `JWT_SECRET` below) unset falls back to a known default, which the app flags as insecure. |
+| `BETTER_AUTH_SECRET` | Required. Signs every session; generate it with `openssl rand -hex 32`. The app refuses to boot when it is unset (and `JWT_SECRET` too) or still set to a placeholder such as `your_better_auth_secret`. |
 | `JWT_SECRET` | A **legacy fallback only** — better-auth reads `BETTER_AUTH_SECRET \|\| JWT_SECRET`. Set `BETTER_AUTH_SECRET` instead for anything new; this one exists so an older deployment that only ever set `JWT_SECRET` keeps working unchanged. |
+| `DOCUMENTS_ARCHIVE_DIR` | Where generated PDFs and the legal document archive are written. Point it inside a volume (`/data/documents-archive` in the example): left unset, files go to the container's own filesystem and are lost when the container is recreated, for example on every update. |
+| `DOCUMENTS_INBOUND_DIR` | Where received invoices, expense attachments and company logos are stored. Same rule: inside the volume (`/data/documents-inbound`). |
 | `DEFAULT_LOCALE` | Optional. Instance-wide fallback language (`en`, `fr`, `it`, `pl`, `de`, or `pt`) for any document or system email whose client/company/user never set one of their own — see [Document Language](./document-language.md) for the full cascade. Left unset, everything renders in English exactly as before. |
 | `PDF_RENDER_CONCURRENCY` | Optional, `4` by default. How many PDFs one process renders at once; further requests wait their turn. Up to this many Chromium pages stay open between renders so the next one starts faster, which costs memory even when idle. |
 | `SESSION_CACHE_TTL_MS` | Optional, `10000` (10 seconds) by default. How long the API keeps a signed-in session in memory instead of reading it from the database on every request. Sign-outs, company switches and membership or role changes are still seen by the very next request. `0` turns the cache off. |
 | `ADDRESS_AUTOCOMPLETE_URL` | Optional, empty by default. Turns on address suggestions (street, house number, postcode, city, country) while typing a client's or your company's address - see [Address autocomplete](#address-autocomplete) below. |
 
 Make sure port 80 is available on your host machine, or change the port mapping.
+
+## HTTP on a LAN or HTTPS behind a reverse proxy
+
+Session cookies follow the scheme of `APP_URL`: `Secure` for `https://`, plain for `http://`. A
+browser drops a `Secure` cookie received over plain HTTP, so `APP_URL` must be the exact address
+users type, scheme included.
+
+**Over plain HTTP on a local network.** Map a port and give that address:
+
+```yaml
+ports:
+  - "8181:80"
+environment:
+  - APP_URL=http://nas.local:8181
+```
+
+Sign-in works, and the backend logs one warning at boot: passwords and session cookies travel
+unencrypted, so anyone on the same network can read them. Keep this for a network you trust, never
+for an instance reachable from the internet.
+
+**Over HTTPS behind a reverse proxy** (Caddy, Traefik, nginx, a Cloudflare tunnel). The proxy
+terminates TLS and forwards to the container's port 80:
+
+```yaml
+environment:
+  - APP_URL=https://invoicerr.example.com
+  - TRUST_PROXY_HOPS=2
+```
+
+`APP_URL` is the public `https://` address, never the internal `http://` one the proxy forwards to.
+`TRUST_PROXY_HOPS` counts the HTTP proxies in front of the app, the container's own nginx included,
+so that rate limits apply per client rather than to the proxy's address.
+
+:::info[When sign-in fails]
+The sign-in page names the cause:
+
+- **This address cannot sign in**: the page was opened from an address that is neither `APP_URL`
+  nor listed in `CORS_ORIGINS` (for example by IP while `APP_URL` uses a host name). Open the
+  `APP_URL` address, or add the other one to `CORS_ORIGINS`.
+- **Signed in, but no session was kept**: the browser dropped the session cookie, usually because
+  `APP_URL` says `https://` while the page was opened over `http://`. Open the `https://` address,
+  or set `APP_URL` to the `http://` one.
+:::
 
 ## Address autocomplete
 
@@ -194,9 +273,9 @@ Invoicerr needs to send emails (quote/invoice notifications, signature links). T
 ```yaml
 - MAIL_PROVIDER=smtp # can be omitted, this is the default
 - SMTP_HOST=smtp-relay.example.com
-- SMTP_USER="username@example.com"
-- SMTP_FROM="user-from@example.com" # optional, defaults to SMTP_USER
-- SMTP_PASSWORD="your_smtp_password"
+- SMTP_USER=username@example.com
+- SMTP_FROM=user-from@example.com # optional, defaults to SMTP_USER
+- SMTP_PASSWORD=your_smtp_password
 - SMTP_PORT=587 # default SMTP port for TLS
 - SMTP_SECURE=false # set to true if your SMTP server requires a secure connection
 ```
@@ -218,8 +297,8 @@ Brevo (formerly Sendinblue) has no dedicated provider any more — use its own S
 
 ```yaml
 - MAIL_PROVIDER=resend
-- RESEND_API_KEY="your_resend_api_key"
-- MAIL_FROM="user-from@example.com" # optional, falls back to SMTP_FROM/SMTP_USER
+- RESEND_API_KEY=your_resend_api_key
+- MAIL_FROM=user-from@example.com # optional, falls back to SMTP_FROM/SMTP_USER
 ```
 
 | Variable | Description |
