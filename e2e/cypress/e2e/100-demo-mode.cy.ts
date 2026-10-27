@@ -27,10 +27,23 @@ describe("Demo mode (issue #533)", () => {
 		cy.get('[data-cy="demo-credentials-notice"]', { timeout: 10000 }).should(
 			"be.visible",
 		);
+		cy.get('[data-cy="demo-credentials-email"]').should("have.text", DEMO_EMAIL);
+		cy.get('[data-cy="demo-credentials-password"]').should("have.text", DEMO_PASSWORD);
 		cy.get('[data-cy="demo-credentials-notice"]').should(
 			"contain.text",
-			"demo@invoicerr.app",
+			"Data resets every 4 hours.",
 		);
+	});
+
+	it("signs in with the demo account in one click and lands on the dashboard", () => {
+		cy.intercept("POST", "**/api/auth/sign-in/email").as("signIn");
+		cy.visit("/auth/sign-in");
+		cy.get('[data-cy="demo-signin-btn"]', { timeout: 10000 }).click();
+		cy.wait("@signIn")
+			.its("request.body")
+			.should("include", { email: DEMO_EMAIL, password: DEMO_PASSWORD });
+		cy.url({ timeout: 20000 }).should("include", "/dashboard");
+		cy.get('[data-cy="demo-banner"]', { timeout: 10000 }).should("be.visible");
 	});
 
 	it("hides the sign-up link, since the server says sign-up is closed", () => {

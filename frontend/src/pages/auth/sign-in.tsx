@@ -16,23 +16,49 @@ import { ServerUnavailableBanner } from "@/components/server-unavailable-banner"
 import { authClient } from "@/lib/auth"
 import { envOidcProviderId, getEnvVariable, isOidcOnly } from "@/lib/runtime-config"
 import { useBackendHealth } from "@/hooks/use-backend-health"
-import { useDemoMode, useRegistrationStatus } from "@/hooks/queries"
+import { type DemoInstanceView, useDemoMode, useRegistrationStatus } from "@/hooks/queries"
 import { Info } from "lucide-react"
 
-/**
- * Issue #533: shown above the sign-in form only, on the demo instance. The credentials shown here
- * are literally correct, not a placeholder, so someone landing on the demo can sign in without going
- * looking elsewhere for them (the issue's own requirement: "the demo sign-in page shows the
- * credentials").
- */
-function DemoCredentialsNotice() {
+function DemoCredentialsNotice({
+  demo,
+  loading,
+  disabled,
+  onTry,
+}: {
+  demo: DemoInstanceView
+  loading: boolean
+  disabled: boolean
+  onTry: () => void
+}) {
   const { t } = useTranslation()
   return (
     <Alert variant="default" className="mb-4" data-cy="demo-credentials-notice">
       <Info />
       <AlertTitle>{t("demo.signIn.title", "This is a public demo")}</AlertTitle>
       <AlertDescription>
-        {t("demo.signIn.description", "Sign in with demo@invoicerr.app / demo. Data resets every 4 hours.")}
+        <p>{t("demo.signIn.description")}</p>
+        <dl className="grid grid-cols-[auto_1fr] gap-x-3">
+          <dt>{t("auth.login.form.email.label")}</dt>
+          <dd className="font-medium text-foreground select-all" data-cy="demo-credentials-email">
+            {demo.email}
+          </dd>
+          <dt>{t("auth.login.form.password.label")}</dt>
+          <dd className="font-medium text-foreground select-all" data-cy="demo-credentials-password">
+            {demo.password}
+          </dd>
+        </dl>
+        <p>{t("demo.signIn.resets", { count: demo.resetIntervalHours })}</p>
+        <Button
+          type="button"
+          size="sm"
+          className="mt-1"
+          loading={loading}
+          disabled={disabled}
+          onClick={onTry}
+          data-cy="demo-signin-btn"
+        >
+          {t("demo.signIn.tryButton")}
+        </Button>
       </AlertDescription>
     </Alert>
   )
@@ -44,7 +70,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const backendHealth = useBackendHealth()
   const backendUnavailable = backendHealth === "unavailable"
-  const { demoMode } = useDemoMode()
+  const { demo } = useDemoMode()
   const { data: registration, isPending: registrationPending } = useRegistrationStatus()
   // Kept on an invitation-only instance: the sign-up page is where an invitee types their code.
   // Hidden until the server answers, so a closed instance never flashes it; a failed check keeps it.
@@ -91,16 +117,10 @@ export default function LoginPage() {
     }
   }
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-
+  const signInWithPassword = async (email: string, password: string) => {
     setLoading(true)
 
-    const result = await authClient.signIn.email({
-      email: (event.currentTarget.elements.namedItem("email") as HTMLInputElement).value,
-      password: (event.currentTarget.elements.namedItem("password") as HTMLInputElement).value,
-      rememberMe: true,
-    })
+    const result = await authClient.signIn.email({ email, password, rememberMe: true })
 
     if (result.error) {
       toast.error(result.error.message || t("auth.login.messages.loginError"))
@@ -114,6 +134,15 @@ export default function LoginPage() {
     }
 
     setLoading(false)
+  }
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const fields = event.currentTarget.elements
+    void signInWithPassword(
+      (fields.namedItem("email") as HTMLInputElement).value,
+      (fields.namedItem("password") as HTMLInputElement).value,
+    )
   }
 
   const footer = (
@@ -154,7 +183,14 @@ export default function LoginPage() {
       dataCy="auth-card"
     >
       {backendUnavailable && <ServerUnavailableBanner />}
-      {demoMode && <DemoCredentialsNotice />}
+      {demo && (
+        <DemoCredentialsNotice
+          demo={demo}
+          loading={loading}
+          disabled={backendUnavailable}
+          onTry={() => signInWithPassword(demo.email, demo.password)}
+        />
+      )}
 
       {/* A provider named by the link, or found from the address typed below. Offered above the
           form: someone arriving on their company's own link should not have to read past a

@@ -295,7 +295,7 @@ describe("(app)/_layout — the legal-links footer", () => {
 
   it("renders no <footer> at all once a self-hosted instance's catalogue settles empty", () => {
     mockedUseLegalDocuments.mockReturnValue(
-      legalDocumentsResult({ data: { saasMode: false, demoMode: false, documents: [] } }),
+      legalDocumentsResult({ data: { saasMode: false, demoMode: false, demo: null, documents: [] } }),
     )
 
     const { container } = renderLayout()
@@ -311,6 +311,7 @@ describe("(app)/_layout — the legal-links footer", () => {
         data: {
           saasMode: true,
           demoMode: false,
+          demo: null,
           documents: [
             {
               slug: "terms-of-service",

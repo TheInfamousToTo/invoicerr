@@ -1,11 +1,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { render, screen, waitFor } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { MemoryRouter } from "react-router"
+import { toast } from "sonner"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import { authClient } from "@/lib/auth"
 import LoginPage from "./sign-in"
 
 vi.mock("@/lib/auth", () => ({ authClient: { signIn: { email: vi.fn(), social: vi.fn() } } }))
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
 // Leading underscore keeps generouted from registering this file as a route.
 function jsonResponse(body: unknown): Response {
@@ -21,11 +24,12 @@ function jsonResponse(body: unknown): Response {
 }
 
 type CanRegister = { allowed: boolean; requiresCode: boolean } | "pending" | "error"
+type DemoInstance = { email: string; password: string; resetIntervalHours: number }
 
-function installFetchMock(canRegister: CanRegister) {
+function installFetchMock(canRegister: CanRegister, demo: DemoInstance | null = null) {
   const handlers: Record<string, unknown> = {
     "/api/health": { status: "ok" },
-    "/api/legal/documents": { saasMode: false, demoMode: false, documents: [] },
+    "/api/legal/documents": { saasMode: false, demoMode: demo !== null, demo, documents: [] },
     "/api/invitations/can-register": canRegister,
   }
   const fn = vi.fn(async (input: RequestInfo | URL) => {
@@ -58,7 +62,10 @@ function renderSignIn() {
 const registrationSettled = (client: QueryClient) =>
   waitFor(() => expect(client.getQueryState(["registration", "status"])?.status).not.toBe("pending"))
 
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.clearAllMocks()
+})
 
 describe("<LoginPage> sign-up link", () => {
   it("is offered while the server accepts new accounts", async () => {
@@ -97,5 +104,69 @@ describe("<LoginPage> sign-up link", () => {
 
     await registrationSettled(client)
     expect(screen.getByTestId("auth-signup-link")).toBeInTheDocument()
+  })
+})
+
+describe("<LoginPage> on a demo instance", () => {
+  const signInEmail = vi.mocked(authClient.signIn.email)
+  const demo = { email: "visitor@demo.test", password: "open-sesame", resetIntervalHours: 6 }
+  const closed = { allowed: false, requiresCode: false }
+
+  it("shows the demo account and reset interval the server serves", async () => {
+    installFetchMock(closed, demo)
+    renderSignIn()
+
+    const notice = await screen.findByTestId("demo-credentials-notice")
+    expect(screen.getByTestId("demo-credentials-email")).toHaveTextContent(/^visitor@demo\.test$/)
+    expect(screen.getByTestId("demo-credentials-password")).toHaveTextContent(/^open-sesame$/)
+    expect(notice).toHaveTextContent("Data resets every 6 hours.")
+  })
+
+  it("says every hour, not every 1 hours", async () => {
+    installFetchMock(closed, { ...demo, resetIntervalHours: 1 })
+    renderSignIn()
+
+    expect(await screen.findByTestId("demo-credentials-notice")).toHaveTextContent("Data resets every hour.")
+  })
+
+  it("signs in with the served demo account in one click", async () => {
+    installFetchMock(closed, demo)
+    signInEmail.mockReturnValue(new Promise(() => {}))
+    renderSignIn()
+
+    fireEvent.click(await screen.findByTestId("demo-signin-btn"))
+
+    expect(signInEmail).toHaveBeenCalledWith({
+      email: "visitor@demo.test",
+      password: "open-sesame",
+      rememberMe: true,
+    })
+  })
+
+  it("reports a failed one-click sign-in the way the form does, and lets the visitor retry", async () => {
+    installFetchMock(closed, demo)
+    signInEmail.mockResolvedValue({
+      data: null,
+      error: { status: 401, statusText: "Unauthorized", message: "Invalid email or password" },
+    } as never)
+    renderSignIn()
+
+    fireEvent.click(await screen.findByTestId("demo-signin-btn"))
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Invalid email or password"))
+    expect(screen.getByTestId("demo-signin-btn")).not.toBeDisabled()
+  })
+
+  it("renders neither the box nor the button outside demo mode", async () => {
+    const fetchMock = installFetchMock(closed, null)
+    renderSignIn()
+
+    await screen.findByTestId("auth-card")
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/api/legal/documents"))).toBe(true),
+    )
+    await waitFor(() => expect(screen.queryByTestId("auth-signup-link")).not.toBeInTheDocument())
+    expect(screen.queryByTestId("demo-credentials-notice")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("demo-signin-btn")).not.toBeInTheDocument()
   })
 })

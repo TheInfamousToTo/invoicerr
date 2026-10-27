@@ -68,8 +68,32 @@ button as a convenience.
 ### The banner
 
 Every authenticated page shows a sticky top banner: *"Demo: data resets every 4 hours. Nothing you
-enter is kept or sent."* The sign-in page additionally shows the demo credentials directly, so a
-visitor never has to look for them elsewhere.
+enter is kept or sent."* The number of hours is `DEMO_RESET_INTERVAL_HOURS` (see
+[Configuration](#configuration)), never part of the translated text.
+
+### The sign-in page
+
+The sign-in page shows a "This is a public demo" box above the form with the demo account's e-mail
+and password, the reset interval, and a **Try the demo** button that signs the visitor in with the
+demo account and lands on the dashboard. The manual form keeps working; the button goes through the
+same sign-in call and the same error handling as the form.
+
+The e-mail, password and reset interval are served by the backend, never written into the frontend
+or into a translation: `GET /api/legal/documents`, the public endpoint that already carries
+`demoMode`, returns them as `demo`:
+
+```json
+{ "demoMode": true, "demo": { "email": "demo@invoicerr.app", "password": "demo", "resetIntervalHours": 4 } }
+```
+
+Translations only carry the surrounding sentences, so a translation can never alter or drop the
+credentials. The password is public by design: the box prints it for anyone who opens the page.
+
+:::info[Nothing of this exists outside demo mode]
+With `DEMO_MODE` off, `demo` is always `null`: no demo e-mail, password or interval is ever sent to
+a browser, and neither the box, the button nor the banner renders. There is no demo-only sign-in
+route to reach; the button uses the ordinary e-mail sign-in, with the credentials it was served.
+:::
 
 ## The seed
 
@@ -121,7 +145,9 @@ demo data, by construction.
 The product does not schedule its own reset; that is an infrastructure decision. Run
 `npm run demo:reset` (`tsx scripts/demo-reset.ts`, the same "raw script, compiled `src`" pattern
 `catalogs:release` already uses, see that script's own header) from a Kubernetes **CronJob** on a
-4-hour schedule (`0 */4 * * *`), against the demo namespace's own `DEMO_MODE=true` environment. It
+4-hour schedule (`0 */4 * * *`), against the demo namespace's own `DEMO_MODE=true` environment. A
+different schedule needs `DEMO_RESET_INTERVAL_HOURS` set to match, or the sign-in page and the
+banner will state the wrong interval. It
 is idempotent and self-contained: it creates the demo account if missing, reuses it otherwise, and
 needs no other process to be stopped first.
 
@@ -137,7 +163,14 @@ invoking `tsx` from inside `dist/`.
 
 ## Configuration
 
-See `backend/.env.example` for `DEMO_MODE` itself. There is nothing else to configure: the demo
-account's address and password are fixed (`demo@invoicerr.app` / `demo`,
-`backend/src/modules/demo/demo-flag.ts`), and every blocked sender needs no per-transport
+See `backend/.env.example` for both settings.
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `DEMO_MODE` | off | Turns the instance into the public demo described on this page. |
+| `DEMO_RESET_INTERVAL_HOURS` | `4` | How often the reset job runs, in whole hours, as the sign-in page and the banner state it. Read only in demo mode; anything but a positive whole number falls back to `4`. |
+
+The demo account's address and password are fixed (`demo@invoicerr.app` / `demo`,
+`backend/src/modules/demo/demo-flag.ts`): the reset script creates the account with them, and the
+sign-in page shows them from the same constants. Every blocked sender needs no per-transport
 configuration to stay blocked.
