@@ -137,3 +137,21 @@ terms](../../user-guide/settings/payment-terms.md)). D.Lgs. 231/2002, art. 4, co
 caps the payment period at 30 days from the debtor's receipt of the invoice, unless the parties
 agree otherwise (`basis: "maximumWhenNotAgreed"`). The application counts the 30 days from the
 invoice date, not from receipt of the invoice.
+
+## Company-law mentions
+
+The `companyLaw` section of `countries/data/it.json` prints, under the seller's name on invoices,
+quotes, credit notes and purchase orders (atti e corrispondenza), from codice civile art. 2250:
+
+| Legal forms | Printed | Paragraph |
+| --- | --- | --- |
+| S.r.l., S.p.A., S.a.p.a., S.n.c., S.a.s. | "Registro delle imprese di Milano n. 01234567890" | first |
+| S.r.l., S.p.A., S.a.p.a. | "Capitale sociale versato 10000.00 EUR" | second |
+| S.r.l. and S.p.A. con unico socio | "Società con unico socio" | fourth |
+| Ditta individuale, other forms | nothing | art. 2250 binds società |
+
+The sede is the company address. Art. 2250 names the registro delle imprese office and registration
+number, not the REA number, so the REA is not declared. FatturaPA has its own `IscrizioneREA` block
+(office, REA number, capital, sole member, liquidation), which the e-invoice export does not fill yet.
+Not modelled: liquidation (third paragraph). Text read at normattiva.it on 2026-10-25 (in force since
+29-7-2009).

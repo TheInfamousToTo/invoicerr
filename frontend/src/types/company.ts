@@ -19,6 +19,8 @@ export interface CompanyMember {
 
 export interface Company {
   id: string
+  /** Legal form and company-law values, see `lib/company-law.ts`. */
+  companyLaw?: unknown
   description?: string | null
   foundedAt: Date | string
   name: string

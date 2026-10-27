@@ -78,6 +78,7 @@ import {
   resolveRequiredIdentifiers,
   RequiredIdentifiersDecision,
 } from './country-identifiers/country-identifiers';
+import { CompanyLawSettings, companyLawSettings } from './company-law/company-law';
 import { PartyType } from './country-identifiers/schema';
 import { resolveB2gRoutingRule, resolveClientB2gRouting } from './b2g-routing/b2g-routing';
 import { defaultCountryPolicyCatalog } from './country-policy/registry';
@@ -690,6 +691,10 @@ export class DocumentsService implements OnModuleInit {
   ): Promise<RequiredIdentifiersDecision> {
     const resolvedPartyType: PartyType = partyType === 'INDIVIDUAL' ? 'INDIVIDUAL' : 'COMPANY';
     return resolveRequiredIdentifiers(countryCode, resolvedPartyType);
+  }
+
+  listCompanyLawSettings(countryCode: string): CompanyLawSettings {
+    return companyLawSettings(countryCode);
   }
 
   getType(typeId: string): DocumentTypeDescriptor {

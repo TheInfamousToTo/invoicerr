@@ -141,3 +141,22 @@ files, and two pages already say it without anyone retyping it:
 To widen that coverage, or to add a country of your own, see [Adding a
 country](../adding-a-country.md): the catalogue files listed on every other page in this directory
 are the ones France already has.
+
+## Company-law mentions
+
+The `companyLaw` section of `countries/data/fr.json` prints, under the seller's name on invoices,
+quotes, credit notes and purchase orders:
+
+| Legal forms | Printed | Source |
+| --- | --- | --- |
+| SAS, SARL, SA, SCA, SE | "SAS au capital de 1000.00 EUR" | Code de commerce art. R. 123-238, 3° and 4° |
+| SNC, SCS | the legal form alone | R. 123-238, 1° and 2° |
+| EI | "EI" | R. 526-27 and R. 123-237, 9° |
+| every company above | "RCS Lyon" | R. 123-237, 2° |
+| EI, other forms | "RCS Lyon", only when the city is filled in | R. 123-237, 2° binds a person registered at the RCS |
+
+An SASU and an EURL are the SAS and SARL forms with one partner, and print as such. The SIREN of
+R. 123-237, 1° is the `LEGAL_ID` identifier, already printed with the identifiers; the registered
+office of 3° is the company address. Not modelled: liquidation (4°), foreign companies (5°),
+locataire-gérant (6°), contrat d'appui (7°), EIRL (8°), and the SA "à directoire et conseil de
+surveillance" wording. All texts were read at codes.droit.org, edition of 2026-10-01.

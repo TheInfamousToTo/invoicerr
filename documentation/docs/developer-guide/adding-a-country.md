@@ -145,6 +145,7 @@ separate directory or file to open any more; the "Section" column names the exac
 | Company lookup | `companyLookup` | Which company registry providers autofill a company or client form for this country, in the order they are tried before the worldwide directories, and the i18n key of the note shown with it. See "Company lookup" below. | No - read live from the file by `company-lookup/coverage/registry.ts`. |
 | Payment term cap | `paymentTerms` | The longest payment term two businesses may agree on in this country, in days after the issue date: `maxNetDays`, and `maxEndOfMonthDays` for a term counted to the end of the month. Provenance is mandatory. Read by the payment-terms setting (`GET /api/company/payment-terms`) to show a non-blocking warning; a country without the section gets no warning. | No - read live from the file. |
 | National e-invoice codes | `einvoiceCodes` | The codes a national format needs where EN 16931 has none: the exemption code of an untaxed line and the rule that selects it (`exemptionCodes`), the code of the seller's tax scheme (`taxRegimeCodes`), and the recipient codes used when the buyer has no delivery code (`recipientCodes`). Provenance is mandatory on every code. Read by the FatturaPA builder; Italy is the only country with the section. | No - read live from the file. |
+| Company-law mentions | `companyLaw` | The seller's company-law identity this country requires on its documents: the legal forms a company picks from, the values each form must give (share capital, register court or city, managing directors, …), and the template printed for each mention, in every language a document renders in. See the maintainer note below, "company-law mentions". | No - read live from the file. |
 
 You will rarely need all of these for a new country. A country whose only need is "let the OSS tax
 engine compute a destination rate for it" needs *only* the `taxSystem` section - see
@@ -582,6 +583,70 @@ completes the client. A scheme's `required` flag is never read at issuance.
 The frontend renders it from those params in the reader's language. Client type
 stands in for "acts as a business": the app does not record whether a client is VAT-registered, and
 each rule's `notes` says where that approximation matters.
+
+### Maintainer note: company-law mentions
+
+The `companyLaw` section carries what a country's company law asks a seller to print about itself:
+legal form, share capital, trade register. It is distinct from `identifiers` (a template may quote an
+identifier, it never redeclares one) and from `mentions` (notes about the transaction):
+
+```json
+"companyLaw": {
+  "countryCode": "FR",
+  "legalFormLabel": "Forme juridique",
+  "legalForms": [
+    { "code": "FR_SAS", "name": "Société par actions simplifiée (SAS, SASU)", "designation": "SAS" },
+    { "code": "FR_EI", "name": "Entrepreneur individuel (EI, micro-entrepreneur)", "designation": "EI" }
+  ],
+  "fields": [
+    { "key": "shareCapital", "kind": "money", "label": "Capital social" },
+    { "key": "registerCity", "kind": "text", "label": "Ville du greffe (RCS)" }
+  ],
+  "mentions": [
+    {
+      "id": "fr-legal-form-and-capital",
+      "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+      "legalForms": ["FR_SAS"],
+      "required": true,
+      "template": { "en": "{legalForm} with a share capital of {shareCapital}", "fr": "{legalForm} au capital de {shareCapital}", "...": "..." },
+      "provenance": { "kind": "legal", "sourceText": "...", "sourceCheckedAt": "2026-10-25" },
+      "notes": "R. 123-238, 3° and 4°. ..."
+    }
+  ]
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `legalFormLabel` | The country's own name for the legal form, shown above the select and in a missing marker. |
+| `legalForms` | The forms a company of this country picks from. `code` is stored on the company and starts with the country code (`FR_SAS`), so a form kept across a change of country never reads as another country's form; `designation` is what `{legalForm}` prints, in the words the law accepts; `notes` says why a form carries no mention, when it carries none. |
+| `fields` | The values a company may be asked for. `kind` is `text` or `money` (an amount and its currency). `label` is the country's own name for it. The key `legalForm` is reserved. |
+| `mentions[].documentTypes` | The document type ids the mention is printed on. |
+| `mentions[].legalForms` | The forms it binds. A form with no mention prints nothing, which is how a sole trader or a partnership gets no capital line. |
+| `mentions[].required` | `true`: every value it quotes is required, the working copy flags a gap and Validate and Send refuse it. `false`: printed once every value is filled in, never asked for (an RCS city an individual entrepreneur may or may not have). |
+| `mentions[].template` | One string per language a document renders in (`en`, `fr`, `it`, `pl`, `de`, `pt`), all quoting the same placeholders: `{legalForm}`, a field key such as `{shareCapital}`, or `{identifier:LEGAL_ID}` for a value of the company's identifiers. |
+| `provenance`, `notes` | Same discipline as every other fact. |
+| `demo` | Optional. What a demo company of this country is seeded with: `legalFormByNameSuffix` maps the suffix ending a demo company name to a legal form, and `values` fills its fields (`{city}` stands for the company's city). The demo seed (`demo/seed-runtime/seed-company.ts`) reads it, so a demo invoice can be validated. |
+
+`countries/data/all.ts` refuses, at load time, a template missing for one language, a placeholder
+naming an undeclared field, templates of one mention quoting different placeholders, a mention naming
+an undeclared legal form, a legal form code without the country prefix, a mention without provenance, and a `demo` naming an undeclared legal form or field (`assertValidCompanyLawSection`).
+
+The settings screen reads `GET /api/documents/company-law?countryCode=XX`
+(`company-law/company-law.ts#companyLawSettings`): each legal form and the fields its mentions quote,
+each marked required when a required mention quotes it. The screen shows the legal form select and
+the fields of the selected form, and never reads a country code. The values are stored in
+`Company.companyLaw`, `{ "legalForm": "FR_SAS", "values": { ... } }`, and kept when the country changes;
+a legal form of the previous country is not one of the new country's, so it is asked for again.
+
+The PDF (`rendering/render-instance-pdf.ts`) prints the mentions of the document's type right under
+the company name, in the document's language, an amount as `1000.00 EUR` like every other amount of
+the page. On a working copy of an invoice a required mention with a gap is printed with a "missing"
+marker in place of the value; the copy a client keeps leaves that mention out. Validate and Send add
+the same gaps, party `SELLER` and the field key as `scheme`, to the `INVOICE_IDENTIFIERS_MISSING`
+refusal described in the note above, so the same message and the same **Edit company** button cover
+them. A company that has not picked a legal form is asked for it, under `legalFormLabel`, as soon as
+a required mention covers the document type.
 
 ### Maintainer note: frontend country reference data
 

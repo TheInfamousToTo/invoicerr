@@ -50,6 +50,8 @@ import {
 import type { Company, ResolvedRevenueSettings } from "@/types"
 
 import { NumberFormatsSection } from "./number-formats.section"
+import { CompanyLawSection } from "./company-law.section"
+import { toCompanyLawForm, toCompanyLawPayload } from "@/lib/company-law"
 import { DeclareLastNumberSection } from "./declare-last-number.section"
 
 /** Mirrors the backend's `reconciliation-settings.ts#DEFAULT_TOLERANCE_PERCENT` — shown the first
@@ -152,6 +154,13 @@ export default function CompanySettings() {
     distanceSalesRegime: z.string().optional(),
     reportingProfile: z.record(z.string(), z.string().optional()).optional(),
     identifiers: z.array(z.object({ scheme: z.string(), value: z.string() })).optional(),
+    companyLaw: z.object({
+      legalForm: z.string(),
+      values: z.record(
+        z.string(),
+        z.union([z.string(), z.object({ amount: z.string(), currency: z.string() })]).optional(),
+      ),
+    }),
     // Peppol / electronic routing (stored as PEPPOL_ENDPOINT party identifier)
     peppolSchemeId: z.string().optional(),
     peppolEndpointId: z.string().optional(),
@@ -236,6 +245,7 @@ export default function CompanySettings() {
       iban: "",
       invoicePDFFormat: "",
       identifiers: [],
+      companyLaw: { legalForm: "", values: {} },
       peppolSchemeId: "0088",
       peppolEndpointId: "",
       invoiceTransportId: "",
@@ -302,6 +312,7 @@ export default function CompanySettings() {
           })),
         peppolSchemeId: parsedPeppolSchemeId,
         peppolEndpointId: parsedPeppolEndpointId,
+        companyLaw: toCompanyLawForm(data.companyLaw),
       }
 
       // This snapshot can resolve AFTER the user has already touched the form — `/api/company/info`
@@ -511,6 +522,7 @@ export default function CompanySettings() {
       // `DateTime` column (`company.service.ts#editCompanyInfo` passes it through untouched), and
       // Prisma refuses a bare calendar date there.
       foundedAt: toCalendarDateInstant(values.foundedAt),
+      companyLaw: toCompanyLawPayload(values.companyLaw),
       // "" means "no reference currency chosen" in the form; stored as null, not an empty string.
       referenceCurrency: values.referenceCurrency?.trim() ? values.referenceCurrency : null,
       // Same "empty means use the computed default, stored as null" convention as referenceCurrency
@@ -767,6 +779,8 @@ export default function CompanySettings() {
                 )}
               </SettingsFieldGroup>
             ) : null}
+
+            <CompanyLawSection countryCode={countryCodeValue || undefined} />
 
             {orphanedIdentifiers.length > 0 && (
               // Identifiers this company already has ON FILE whose scheme the currently-selected

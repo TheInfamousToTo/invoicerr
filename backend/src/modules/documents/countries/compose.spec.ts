@@ -57,6 +57,7 @@ describe('countries/compose: section coverage per country (pinned on purpose, se
         'b2gRouting',
         'companyLookup',
         'paymentTerms',
+        'companyLaw',
       ],
       DZ: [
         'policy',
@@ -66,6 +67,7 @@ describe('countries/compose: section coverage per country (pinned on purpose, se
         'taxSystem',
         'channelPolicy',
         'retention',
+        'companyLaw',
       ],
       FR: [
         'policy',
@@ -85,6 +87,7 @@ describe('countries/compose: section coverage per country (pinned on purpose, se
         'b2gRouting',
         'companyLookup',
         'paymentTerms',
+        'companyLaw',
         'companyProfile',
       ],
       IT: [
@@ -102,6 +105,7 @@ describe('countries/compose: section coverage per country (pinned on purpose, se
         'companyLookup',
         'paymentTerms',
         'einvoiceCodes',
+        'companyLaw',
       ],
       PL: [
         'policy',
@@ -117,6 +121,7 @@ describe('countries/compose: section coverage per country (pinned on purpose, se
         'b2gRouting',
         'companyLookup',
         'paymentTerms',
+        'companyLaw',
       ],
       PT: [
         'policy',
@@ -134,6 +139,7 @@ describe('countries/compose: section coverage per country (pinned on purpose, se
         'b2gRouting',
         'companyLookup',
         'paymentTerms',
+        'companyLaw',
       ],
     });
   });

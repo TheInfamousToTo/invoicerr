@@ -1420,5 +1420,160 @@
       "notes": "Agenzia delle Entrate, \"Specifiche tecniche operative del formato della fattura del Sistema di Interscambio\", version 1.4: https://www.fatturapa.gov.it/export/documenti/fatturapa/v1.4/Specifiche_tecniche_del_formato_FatturaPA_V1.4.pdf, CodiceDestinatario. The SdI rejects XXXXXXX with error 00313 unless the buyer's IdFiscaleIVA carries an IdPaese other than IT (Agenzia delle Entrate, SdI technical specifications, Allegato A version 1.9.1: https://www.agenziaentrate.gov.it/portale/documents/d/guest/allegato-a-specifiche-tecniche-vers-1-9-1). With 0000000 and no PECDestinatario, the SdI makes the invoice available in the buyer's reserved area."
     },
     "notes": "FatturaPA codes for an Italian seller. Since 2021-01-01 the SdI refuses the generic Natura codes N2, N3 and N6 (error 00445, Agenzia delle Entrate, SdI technical specifications, Allegato A version 1.9.1: https://www.agenziaentrate.gov.it/portale/documents/d/guest/allegato-a-specifiche-tecniche-vers-1-9-1), so only the detailed codes are declared. Every code accepted by the official schema 1.2.3 is listed; the ones without appliesTo cannot be selected from an invoice yet."
+  },
+  "companyLaw": {
+    "countryCode": "IT",
+    "legalFormLabel": "Forma giuridica",
+    "legalForms": [
+      {
+        "code": "IT_SRL",
+        "name": "Società a responsabilità limitata",
+        "designation": "S.r.l."
+      },
+      {
+        "code": "IT_SRL_SOCIO_UNICO",
+        "name": "Società a responsabilità limitata con unico socio",
+        "designation": "S.r.l."
+      },
+      {
+        "code": "IT_SPA",
+        "name": "Società per azioni",
+        "designation": "S.p.A."
+      },
+      {
+        "code": "IT_SPA_SOCIO_UNICO",
+        "name": "Società per azioni con unico socio",
+        "designation": "S.p.A."
+      },
+      {
+        "code": "IT_SAPA",
+        "name": "Società in accomandita per azioni",
+        "designation": "S.a.p.a."
+      },
+      {
+        "code": "IT_SNC",
+        "name": "Società in nome collettivo",
+        "designation": "S.n.c."
+      },
+      {
+        "code": "IT_SAS",
+        "name": "Società in accomandita semplice",
+        "designation": "S.a.s."
+      },
+      {
+        "code": "IT_DITTA_INDIVIDUALE",
+        "name": "Ditta individuale",
+        "designation": "Ditta individuale",
+        "notes": "No mention: art. 2250 binds società, not a sole trader."
+      },
+      {
+        "code": "IT_OTHER",
+        "name": "Altra forma",
+        "designation": "Altra forma",
+        "notes": "No mention is declared for a form this catalog does not list."
+      }
+    ],
+    "fields": [
+      {
+        "key": "registerOffice",
+        "kind": "text",
+        "label": "Ufficio del registro delle imprese"
+      },
+      {
+        "key": "registerNumber",
+        "kind": "text",
+        "label": "Numero d'iscrizione al registro delle imprese"
+      },
+      {
+        "key": "shareCapital",
+        "kind": "money",
+        "label": "Capitale sociale versato (da ultimo bilancio)"
+      }
+    ],
+    "mentions": [
+      {
+        "id": "it-register",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": [
+          "IT_SRL",
+          "IT_SRL_SOCIO_UNICO",
+          "IT_SPA",
+          "IT_SPA_SOCIO_UNICO",
+          "IT_SAPA",
+          "IT_SNC",
+          "IT_SAS"
+        ],
+        "required": true,
+        "template": {
+          "en": "Companies register of {registerOffice}, no. {registerNumber}",
+          "fr": "Registre des entreprises de {registerOffice}, n° {registerNumber}",
+          "it": "Registro delle imprese di {registerOffice} n. {registerNumber}",
+          "pl": "Rejestr przedsiębiorstw {registerOffice}, nr {registerNumber}",
+          "de": "Unternehmensregister {registerOffice}, Nr. {registerNumber}",
+          "pt": "Registo das empresas de {registerOffice}, n.º {registerNumber}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "Codice civile art. 2250: \"Negli atti e nella corrispondenza delle società soggette all'obbligo dell'iscrizione nel registro delle imprese devono essere indicati la sede della società e lo ufficio del registro delle imprese presso il quale questa è iscritta e il numero d'iscrizione. Il capitale delle società per azioni, in accomandita per azioni e a responsabilità limitata deve essere negli atti e nella corrispondenza indicato secondo la somma effettivamente versata e quale risulta esistente dallo ultimo bilancio. Dopo lo scioglimento delle società previste dal primo comma deve essere espressamente indicato negli atti e nella corrispondenza che la società è in liquidazione. Negli atti e nella corrispondenza delle società per azioni ed a responsabilità limitata deve essere indicato se queste hanno un unico socio. [...]\"",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "Art. 2250, first paragraph, read as binding the società listed here, all of which are registered in the registro delle imprese. The sede is the company address printed above. Read at normattiva.it (testo in vigore dal 29-7-2009), https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:regio.decreto:1942-03-16;262~art2250."
+      },
+      {
+        "id": "it-paid-up-capital",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": ["IT_SRL", "IT_SRL_SOCIO_UNICO", "IT_SPA", "IT_SPA_SOCIO_UNICO", "IT_SAPA"],
+        "required": true,
+        "template": {
+          "en": "Paid-up share capital {shareCapital}",
+          "fr": "Capital social versé {shareCapital}",
+          "it": "Capitale sociale versato {shareCapital}",
+          "pl": "Kapitał zakładowy wpłacony {shareCapital}",
+          "de": "Eingezahltes Kapital {shareCapital}",
+          "pt": "Capital social realizado {shareCapital}"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "Codice civile art. 2250: \"Negli atti e nella corrispondenza delle società soggette all'obbligo dell'iscrizione nel registro delle imprese devono essere indicati la sede della società e lo ufficio del registro delle imprese presso il quale questa è iscritta e il numero d'iscrizione. Il capitale delle società per azioni, in accomandita per azioni e a responsabilità limitata deve essere negli atti e nella corrispondenza indicato secondo la somma effettivamente versata e quale risulta esistente dallo ultimo bilancio. Dopo lo scioglimento delle società previste dal primo comma deve essere espressamente indicato negli atti e nella corrispondenza che la società è in liquidazione. Negli atti e nella corrispondenza delle società per azioni ed a responsabilità limitata deve essere indicato se queste hanno un unico socio. [...]\"",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "Art. 2250, second paragraph: the amount actually paid, as it stands in the last balance sheet. Read at normattiva.it (testo in vigore dal 29-7-2009), https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:regio.decreto:1942-03-16;262~art2250."
+      },
+      {
+        "id": "it-single-member",
+        "documentTypes": ["invoice", "quote", "credit-note", "purchase-order"],
+        "legalForms": ["IT_SRL_SOCIO_UNICO", "IT_SPA_SOCIO_UNICO"],
+        "required": true,
+        "template": {
+          "en": "Single-member company",
+          "fr": "Société à associé unique",
+          "it": "Società con unico socio",
+          "pl": "Spółka jednoosobowa",
+          "de": "Gesellschaft mit einem einzigen Gesellschafter",
+          "pt": "Sociedade com sócio único"
+        },
+        "provenance": {
+          "kind": "legal",
+          "sourceText": "Codice civile art. 2250: \"Negli atti e nella corrispondenza delle società soggette all'obbligo dell'iscrizione nel registro delle imprese devono essere indicati la sede della società e lo ufficio del registro delle imprese presso il quale questa è iscritta e il numero d'iscrizione. Il capitale delle società per azioni, in accomandita per azioni e a responsabilità limitata deve essere negli atti e nella corrispondenza indicato secondo la somma effettivamente versata e quale risulta esistente dallo ultimo bilancio. Dopo lo scioglimento delle società previste dal primo comma deve essere espressamente indicato negli atti e nella corrispondenza che la società è in liquidazione. Negli atti e nella corrispondenza delle società per azioni ed a responsabilità limitata deve essere indicato se queste hanno un unico socio. [...]\"",
+          "sourceCheckedAt": "2026-10-25"
+        },
+        "notes": "Art. 2250, fourth paragraph. Read at normattiva.it (testo in vigore dal 29-7-2009), https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:regio.decreto:1942-03-16;262~art2250."
+      }
+    ],
+    "demo": {
+      "legalFormByNameSuffix": {
+        "SRL": "IT_SRL",
+        "SRLS": "IT_SRL"
+      },
+      "values": {
+        "registerOffice": "{city}",
+        "registerNumber": "01234567890",
+        "shareCapital": {
+          "amount": "10000",
+          "currency": "EUR"
+        }
+      }
+    },
+    "notes": "Art. 2250 does not name the REA number: what it asks for is the registro delle imprese office and the registration number, which is what is declared. The FatturaPA format carries the same facts in its own IscrizioneREA block, which the e-invoice export does not fill yet. Not modelled: companies in liquidation."
   }
 }

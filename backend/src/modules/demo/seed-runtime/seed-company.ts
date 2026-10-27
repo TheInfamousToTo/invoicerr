@@ -23,6 +23,7 @@ import { fromMinor } from '@/utils/financial';
 import { CompanyRole } from '../../../../prisma/generated/prisma/client';
 import { defaultCountryPolicyCatalog } from '@/modules/documents/country-policy/registry';
 import { resolveVatCurrencyRule } from '@/modules/documents/vat-currency/registry';
+import { demoCompanyLaw } from '@/modules/documents/company-law/company-law';
 
 import {
   CountryMeta,
@@ -171,6 +172,7 @@ export async function seedCountryCompany(
       // reaching `TransportRegistry.register`'s own demo-mode guard. A visitor clicking "Send" on
       // a demo invoice should see THIS feature's refusal, not an unrelated configuration gap.
       invoiceTransportId: 'email',
+      companyLaw: demoCompanyLaw(meta.countryCode, companyName, city),
     },
     select: { id: true },
   });

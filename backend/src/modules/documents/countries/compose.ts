@@ -36,6 +36,7 @@ import { B2gRoutingRuleFact } from '../b2g-routing/schema';
 import { CountryCompanyLookupSection } from '../../company-lookup/coverage/schema';
 import { CountryPaymentTermsFile } from '../payment-terms/schema';
 import { CountryEinvoiceCodesFile } from '../einvoice-codes/schema';
+import { CountryCompanyLawFile } from '../company-law/schema';
 import { CountryCompanyProfileFile } from '../company-profile/schema';
 
 /** One composed view per country, one optional field per existing catalog: see this module's own
@@ -61,6 +62,7 @@ export interface ComposedCountryView {
   companyLookup?: CountryCompanyLookupSection;
   paymentTerms?: CountryPaymentTermsFile;
   einvoiceCodes?: CountryEinvoiceCodesFile;
+  companyLaw?: CountryCompanyLawFile;
   companyProfile?: CountryCompanyProfileFile;
 }
 
@@ -86,6 +88,7 @@ export const COMPOSED_COUNTRY_SECTION_KEYS: ReadonlyArray<keyof Omit<ComposedCou
   'companyLookup',
   'paymentTerms',
   'einvoiceCodes',
+  'companyLaw',
   'companyProfile',
 ];
 

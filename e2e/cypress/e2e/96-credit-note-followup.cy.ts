@@ -30,6 +30,7 @@ export {}; // makes this spec a module, not a global script -- see tsconfig.json
  */
 import { issueCreditNote } from "../support/credit-notes";
 import { POLISH_BUYER_IDENTIFIERS } from "../fixtures/identifiers";
+import { companyLawFor } from "../fixtures/company-law";
 
 const api = Cypress.env("apiUrl");
 const appOrigin = Cypress.config("baseUrl");
@@ -39,7 +40,7 @@ function switchCompanyToPoland() {
 		.request({
 			method: "POST",
 			url: `${api}/api/company/info`,
-			body: { name: "Acme Corp", country: "Poland", countryCode: "PL" },
+			body: { name: "Acme Corp", country: "Poland", countryCode: "PL", companyLaw: companyLawFor("PL") },
 		})
 		.then((res) => {
 			expect(res.status, "seller country switched to Poland").to.be.oneOf([200, 201]);

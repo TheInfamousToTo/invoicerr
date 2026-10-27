@@ -919,6 +919,11 @@ Cypress.Commands.add('resetAndSeed', () => {
                 { scheme: 'LEGAL_ID', value: '73282932000074' },
                 { scheme: 'VAT', value: 'FR44732829320' },
             ],
+            // The legal form, share capital and RCS city French law requires on its invoices.
+            companyLaw: {
+                legalForm: 'FR_SAS',
+                values: { shareCapital: { amount: '1000', currency: 'EUR' }, registerCity: 'Paris' },
+            },
         },
         failOnStatusCode: false,
     }).then((res) => {

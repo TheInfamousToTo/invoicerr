@@ -95,6 +95,7 @@ export {}; // makes this spec a module, not a global script -- see tsconfig.json
  * genuinely a company-level fact, not a per-invoice one.
  */
 const api = Cypress.env("apiUrl");
+import { companyLawFor } from "../fixtures/company-law";
 
 const FAKE_SDI = {
 	idTrasmittente: "IT01234567890",
@@ -139,7 +140,13 @@ function setCompanyCountry(country: string, countryCode: string, identifiers?: {
 	return cy.request({
 		method: "POST",
 		url: `${api}/api/company/info`,
-		body: { name: "Acme Corp", country, countryCode, ...(identifiers ? { identifiers } : {}) },
+		body: {
+			name: "Acme Corp",
+			country,
+			countryCode,
+			companyLaw: companyLawFor(countryCode),
+			...(identifiers ? { identifiers } : {}),
+		},
 	});
 }
 

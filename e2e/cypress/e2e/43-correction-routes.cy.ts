@@ -27,6 +27,7 @@ export {}; // makes this spec a module, not a global script -- see tsconfig.json
  * numbered file in the suite: the switch does not contaminate any other spec.
  */
 import { FRENCH_BUYER_IDENTIFIERS, POLISH_BUYER_IDENTIFIERS } from "../fixtures/identifiers";
+import { companyLawFor } from "../fixtures/company-law";
 
 const api = Cypress.env("apiUrl");
 
@@ -955,6 +956,7 @@ describe("Correction routes — Poland's faktura korygująca (the KOR route)", (
 				name: "Acme Corp",
 				country: "Poland",
 				countryCode: "PL",
+				companyLaw: companyLawFor("PL"),
 				invoiceTransportId: "email",
 			},
 		}).then((res) => {
