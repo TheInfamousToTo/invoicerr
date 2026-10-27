@@ -48,8 +48,9 @@ describe("Demo mode (issue #533)", () => {
 		cy.get('[data-cy="demo-credentials-notice"]', { timeout: 10000 }).should(
 			"be.visible",
 		);
-		// Absence of a request can only be observed over time.
-		cy.wait(1500);
+		// An attempt would have started with the credentials box and left the form busy.
+		cy.get('[data-cy="auth-submit-btn"]').should("not.be.disabled");
+		cy.get('[data-cy="auth-email-input"]').should("not.be.disabled");
 		cy.location("pathname").should("eq", "/auth/sign-in");
 		cy.get("@signIn").should("not.have.been.called");
 	});
