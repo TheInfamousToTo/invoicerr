@@ -71,12 +71,27 @@ Every authenticated page shows a sticky top banner: *"Demo: data resets every 4 
 enter is kept or sent."* The number of hours is `DEMO_RESET_INTERVAL_HOURS` (see
 [Configuration](#configuration)), never part of the translated text.
 
+### Automatic sign-in
+
+A visitor with no session is signed in with the demo account and lands on the dashboard, with no
+click. Any route that sends a signed-out visitor to the sign-in page leads there, so opening the
+demo on any page works. The sign-in page makes the attempt once per visit, through the same sign-in
+call and the same error handling as the form: if it fails, the visitor stays on the sign-in page with
+the error shown and the form usable, never a spinner.
+
+After an explicit sign-out (the account menu, `/auth/sign-out`, or the waiting-for-seat screen), the
+visitor lands on the sign-in page and is not signed straight back in. Every sign-out goes through
+`frontend/src/lib/sign-out.ts`, which records it in `sessionStorage` for the browser tab:
+
+- a reload of that tab stays on the sign-in page;
+- a new tab, or the same browser after the tab is closed, is a fresh visit and is signed in again;
+- a browser that refuses `sessionStorage` is never signed in automatically, since the page cannot
+  tell whether the visitor just signed out.
+
 ### The sign-in page
 
 The sign-in page shows a "This is a public demo" box above the form with the demo account's e-mail
-and password, the reset interval, and a **Try the demo** button that signs the visitor in with the
-demo account and lands on the dashboard. The manual form keeps working; the button goes through the
-same sign-in call and the same error handling as the form.
+and password and the reset interval, so a visitor who signed out can sign back in by hand.
 
 The e-mail, password and reset interval are served by the backend, never written into the frontend
 or into a translation: `GET /api/legal/documents`, the public endpoint that already carries
@@ -91,8 +106,9 @@ credentials. The password is public by design: the box prints it for anyone who 
 
 :::info[Nothing of this exists outside demo mode]
 With `DEMO_MODE` off, `demo` is always `null`: no demo e-mail, password or interval is ever sent to
-a browser, and neither the box, the button nor the banner renders. There is no demo-only sign-in
-route to reach; the button uses the ordinary e-mail sign-in, with the credentials it was served.
+a browser, nothing signs anyone in automatically, and neither the box nor the banner renders. There
+is no demo-only sign-in route to reach: the automatic sign-in uses the ordinary e-mail sign-in, with
+the credentials it was served.
 :::
 
 ## The seed
