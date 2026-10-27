@@ -4,7 +4,7 @@ sidebar_position: 3
 
 # Clients
 
-The **Clients** page is your address book of everyone you bill. Clients are reused across quotes, invoices, and receipts, so you enter their details once.
+The **Clients** page is your address book of everyone you bill. Clients are reused across quotes and invoices, so you enter their details once.
 
 ## Actions
 

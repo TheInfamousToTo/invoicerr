@@ -41,7 +41,6 @@ before any payment or credit note. What is still owed on it is in its settlement
 - **Delete** - available only on a **Draft**, after a confirmation; see [Deleting a draft](#deleting-a-draft)
 - **Correct** (scale icon, appears once an invoice is **Validated**, **Sent** or **Send failed**): opens the correction routes for this invoice; see below. This is also where **cancelling** an invoice lives: an invoice that reached "Sent" is never removed, only cancelled, and only where this country's law allows it
 - **Issue credit note** - start a [credit note](credit-notes.md) correcting this invoice's own lines
-- **Create receipt** (receipt icon) — generate a [receipt](receipts.md) from this invoice
 
 ## Creating an invoice
 
