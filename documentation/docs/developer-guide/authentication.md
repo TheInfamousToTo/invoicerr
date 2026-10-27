@@ -17,6 +17,8 @@ Login is handled via the BetterAuth library (`backend/src/lib/auth.ts`), which s
 
 On login, a session cookie is created. `AuthGuard` reads it via `auth.api.getSession()` and attaches the resolved user to `request.user`.
 
+The cookie is `Secure`, and named `__Secure-better-auth.session_token`, when `APP_URL` starts with `https://`; with an `http://` `APP_URL` it is a plain `better-auth.session_token`, so an instance served over HTTP on a local network can still sign in. `NODE_ENV` plays no part. The backend logs a warning at boot when `APP_URL` is `http://` on a host other than loopback, or unset.
+
 ### Session cache
 
 Resolving a session costs a few database queries (the session, its user, and every company membership the `customSession` plugin adds), on every request. `AuthGuard` therefore keeps the resolved session in memory for `SESSION_CACHE_TTL_MS` (10 seconds by default, `0` turns it off), keyed on the session cookie's value. Requests authenticated with an API key are never cached.

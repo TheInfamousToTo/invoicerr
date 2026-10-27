@@ -58,7 +58,7 @@ function expectSignInRejected(email: string, password: string, message: string):
     }
     cy.get('[data-cy="auth-password-input"]', { timeout: 5000 }).type(password);
     cy.get('[data-cy="auth-submit-btn"]').click();
-    expectErrorToast(message);
+    cy.get('[data-cy="auth-signin-error"]', { timeout: 10000 }).should('contain.text', message);
     cy.url().should('include', '/auth/sign-in');
 }
 

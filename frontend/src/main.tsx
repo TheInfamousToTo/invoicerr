@@ -10,6 +10,7 @@ import { Toaster } from "@/components/ui/sonner"
 import { createRoot } from "react-dom/client"
 import { queryClient } from "./lib/query-client"
 import { registerSW } from "virtual:pwa-register"
+import { WORKER_RELOADED_KEY, reloadOnWorkerTakeover } from "./lib/worker-takeover-reload"
 
 // Service worker registration, guarded against Cypress.
 //
@@ -35,21 +36,21 @@ if (!("Cypress" in window)) {
   // tabs already open — but their JavaScript is still the previous build. Until they reload, that
   // old bundle keeps talking to the NEW backend, and any contract that changed in between (a list
   // that became a page object, a renamed field) surfaces as a crash on the next screen the user
-  // opens. Reload once the new worker is in charge; the sessionStorage flag keeps a worker that
-  // claims twice in a row from turning this into a reload loop.
-  navigator.serviceWorker?.addEventListener("controllerchange", () => {
-    const key = "invoicerr-sw-reloaded"
-    try {
-      if (sessionStorage.getItem(key) === "1") return
-      sessionStorage.setItem(key, "1")
-    } catch {
-      // Storage unavailable (private mode, blocked site data): reload anyway, once per event.
-    }
-    window.location.reload()
-  })
+  // opens.
+  if (navigator.serviceWorker) {
+    reloadOnWorkerTakeover(
+      navigator.serviceWorker,
+      // Read lazily: the `sessionStorage` getter itself throws when site data is blocked.
+      {
+        getItem: (key) => sessionStorage.getItem(key),
+        setItem: (key, value) => sessionStorage.setItem(key, value),
+      },
+      () => window.location.reload(),
+    )
+  }
   window.addEventListener("load", () => {
     try {
-      sessionStorage.removeItem("invoicerr-sw-reloaded")
+      sessionStorage.removeItem(WORKER_RELOADED_KEY)
     } catch {
       // Same reasoning: without storage there is nothing to clear.
     }
