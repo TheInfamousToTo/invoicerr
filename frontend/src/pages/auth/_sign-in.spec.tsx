@@ -1,11 +1,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { render, screen, waitFor } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { MemoryRouter } from "react-router"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import { authClient } from "@/lib/auth"
 import LoginPage from "./sign-in"
 
-vi.mock("@/lib/auth", () => ({ authClient: { signIn: { email: vi.fn(), social: vi.fn() } } }))
+vi.mock("@/lib/auth", () => ({
+  authClient: { signIn: { email: vi.fn(), social: vi.fn() }, getSession: vi.fn() },
+}))
 
 // Leading underscore keeps generouted from registering this file as a route.
 function jsonResponse(body: unknown): Response {
@@ -97,5 +100,70 @@ describe("<LoginPage> sign-up link", () => {
 
     await registrationSettled(client)
     expect(screen.getByTestId("auth-signup-link")).toBeInTheDocument()
+  })
+})
+
+describe("<LoginPage> failed sign-in", () => {
+  const signInEmail = vi.mocked(authClient.signIn.email)
+  const getSession = vi.mocked(authClient.getSession)
+
+  function submit(email = "owner@example.test", password = "Password-1!") {
+    fireEvent.change(screen.getByTestId("auth-email-input"), { target: { value: email } })
+    fireEvent.change(screen.getByTestId("auth-password-input"), { target: { value: password } })
+    fireEvent.click(screen.getByTestId("auth-submit-btn"))
+  }
+
+  afterEach(() => {
+    signInEmail.mockReset()
+    getSession.mockReset()
+  })
+
+  it("explains an address the server does not accept, naming the address used", async () => {
+    installFetchMock({ allowed: true, requiresCode: false })
+    signInEmail.mockResolvedValue({
+      data: null,
+      error: { status: 403, statusText: "Forbidden", code: "INVALID_ORIGIN", message: "Invalid origin" },
+    } as never)
+    renderSignIn()
+
+    submit()
+
+    const error = await screen.findByTestId("auth-signin-error")
+    expect(error).toHaveTextContent(/not the address this instance is configured for/i)
+    expect(error).toHaveTextContent(window.location.origin)
+  })
+
+  it("says so when the server signed in but the browser kept no session", async () => {
+    installFetchMock({ allowed: true, requiresCode: false })
+    signInEmail.mockResolvedValue({
+      data: { user: { id: "u1", createdAt: new Date() } },
+      error: null,
+    } as never)
+    getSession.mockResolvedValue({ data: null, error: null } as never)
+    renderSignIn()
+
+    submit()
+
+    const error = await screen.findByTestId("auth-signin-error")
+    expect(error).toHaveTextContent(/browser did not keep the session/i)
+    expect(screen.getByTestId("auth-submit-btn")).not.toBeDisabled()
+  })
+
+  it("shows the server's reason for wrong credentials", async () => {
+    installFetchMock({ allowed: true, requiresCode: false })
+    signInEmail.mockResolvedValue({
+      data: null,
+      error: {
+        status: 401,
+        statusText: "Unauthorized",
+        code: "INVALID_EMAIL_OR_PASSWORD",
+        message: "Invalid email or password",
+      },
+    } as never)
+    renderSignIn()
+
+    submit()
+
+    expect(await screen.findByTestId("auth-signin-error")).toHaveTextContent("Invalid email or password")
   })
 })

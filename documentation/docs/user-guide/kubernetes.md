@@ -40,24 +40,16 @@ same way — swap the provider-specific values where noted.
 - A Postgres database, unless you only need `postgresql.enabled: true`'s bundled, single-replica,
   **dev/kind-only** Postgres (no HA, no backups — never use it for anything real).
 
-:::warning[HTTPS is a prerequisite, and it fails looking like a login bug]
-`backend/src/lib/auth.ts` configures better-auth with
-`advanced.useSecureCookies: process.env.NODE_ENV === 'production'`, and the published image sets
-`ENV NODE_ENV=production` (repository `Dockerfile`, runtime stage). Every session cookie this
-deployment mints is therefore named with the `__Secure-` prefix and carries the `Secure` attribute —
-and a browser refuses to store a `__Secure-` cookie received over plain HTTP.
+:::warning[`app.appUrl` must be the https:// address users open]
+Session cookies follow the scheme of `APP_URL` (`app.appUrl`): an `https://` value mints
+`__Secure-`-prefixed cookies with the `Secure` attribute, an `http://` value plain ones. Behind this
+chart's Ingress, users open an `https://` address, so `app.appUrl` must name it. An internal
+`http://` value would hand out cookies without `Secure` on an HTTPS site, and opening the site over
+`http://` while `app.appUrl` says `https://` makes the browser drop the cookie: the sign-in page then
+reports "Signed in, but no session was kept".
 
-Served over `http://`, the instance then looks healthy and is not. `GET /api/health` is `@Public()`
-(`backend/src/modules/health/health.controller.ts`) and answers `200` with no session at all, so
-every probe, `curl` and dashboard stays green. Every other route goes through the global `AuthGuard`
-(`backend/src/guards/auth.guard.ts`), finds no session cookie, and throws `UnauthorizedException` —
-**401**. The SPA turns that 401 into a redirect to `/auth/sign-in`
-(`frontend/src/hooks/use-fetch.ts`), so the visible symptom is "I sign in and land back on the
-sign-in page": it reads as broken authentication, and the thing actually missing is TLS. Terminate
-HTTPS before debugging anything else.
-
-Same family, same disguise: `app.appUrl` and `app.corsOrigins` must be spelled `https://` as well.
-Both feed better-auth's `trustedOrigins` (`backend/src/lib/auth.ts`) and Nest's own
+The scheme matters for origins too: `app.appUrl` and every `app.corsOrigins` entry must be spelled
+`https://`. Both feed better-auth's `trustedOrigins` (`backend/src/lib/auth.ts`) and Nest's own
 `app.enableCors({ credentials: true, origin: [...] })` (`backend/src/create-app.ts`), and
 better-auth compares the browser's `Origin` header against that list as an **exact origin string,
 scheme included** — `matchesOriginPattern` reduces to `pattern === getOrigin(url)` for `http:`/

@@ -3687,7 +3687,12 @@
       "signUpLink": "Sign up",
       "messages": {
         "loginSuccess": "Successfully signed in",
-        "loginError": "Invalid credentials"
+        "loginError": "Invalid credentials",
+        "loginErrorTitle": "Sign-in failed",
+        "invalidOriginTitle": "This address cannot sign in",
+        "invalidOrigin": "{{origin}} is not the address this instance is configured for. Open Invoicerr at the address set in APP_URL, or ask your administrator to add this one to CORS_ORIGINS.",
+        "sessionNotStoredTitle": "Signed in, but no session was kept",
+        "sessionNotStored": "Your browser did not keep the session. This happens when the instance is configured for https:// but opened over http://, or when cookies are blocked for this site."
       },
       "oidc": "Sign in with OIDC.",
       "oidcLink": "OIDC Login",

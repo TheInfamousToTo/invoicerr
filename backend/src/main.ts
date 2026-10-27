@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { SwaggerModule } from '@nestjs/swagger';
 
 import { syncDatabaseSchema } from './prisma/sync-schema';
@@ -6,6 +7,7 @@ import { assertPolarEnvConfiguredForBoot } from './modules/billing/polar-env';
 import { createSwaggerBasicAuthMiddleware } from './lib/swagger-basic-auth';
 import { buildSwaggerDocument } from './swagger-document';
 import { createApp } from './create-app';
+import { insecureAppUrlWarning } from './lib/app-url-scheme';
 
 async function bootstrap() {
   // Refuse to boot on a known-placeholder or empty auth secret: docker-compose.yml's example
@@ -25,6 +27,9 @@ async function bootstrap() {
   // opaquely, on the FIRST real checkout/webhook request. This turns that into a clean, named,
   // immediate refusal instead — before `app.listen()` ever runs.
   assertPolarEnvConfiguredForBoot();
+
+  const appUrlWarning = insecureAppUrlWarning(process.env.APP_URL);
+  if (appUrlWarning) new Logger('Bootstrap').warn(appUrlWarning);
 
   if (process.env.NODE_ENV === 'production') {
     try {
