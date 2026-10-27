@@ -1,6 +1,6 @@
 import { CircleAlert, Fingerprint } from "lucide-react"
 import type React from "react"
-import { useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router"
 import { toast } from "sonner"
@@ -14,25 +14,31 @@ import { Label } from "@/components/ui/label"
 import { LegalLinks } from "@/components/legal-links"
 import { ServerUnavailableBanner } from "@/components/server-unavailable-banner"
 import { authClient } from "@/lib/auth"
+import { hasSignedOutInThisTab } from "@/lib/sign-out"
 import { envOidcProviderId, getEnvVariable, isOidcOnly } from "@/lib/runtime-config"
 import { useBackendHealth } from "@/hooks/use-backend-health"
-import { useDemoMode, useRegistrationStatus } from "@/hooks/queries"
+import { type DemoInstanceView, useDemoMode, useRegistrationStatus } from "@/hooks/queries"
 import { Info } from "lucide-react"
 
-/**
- * Issue #533: shown above the sign-in form only, on the demo instance. The credentials shown here
- * are literally correct, not a placeholder, so someone landing on the demo can sign in without going
- * looking elsewhere for them (the issue's own requirement: "the demo sign-in page shows the
- * credentials").
- */
-function DemoCredentialsNotice() {
+function DemoCredentialsNotice({ demo }: Readonly<{ demo: DemoInstanceView }>) {
   const { t } = useTranslation()
   return (
     <Alert variant="default" className="mb-4" data-cy="demo-credentials-notice">
       <Info />
       <AlertTitle>{t("demo.signIn.title", "This is a public demo")}</AlertTitle>
       <AlertDescription>
-        {t("demo.signIn.description", "Sign in with demo@invoicerr.app / demo. Data resets every 4 hours.")}
+        <p>{t("demo.signIn.description")}</p>
+        <dl className="grid grid-cols-[auto_1fr] gap-x-3">
+          <dt>{t("auth.login.form.email.label")}</dt>
+          <dd className="font-medium text-foreground select-all" data-cy="demo-credentials-email">
+            {demo.email}
+          </dd>
+          <dt>{t("auth.login.form.password.label")}</dt>
+          <dd className="font-medium text-foreground select-all" data-cy="demo-credentials-password">
+            {demo.password}
+          </dd>
+        </dl>
+        <p>{t("demo.signIn.resets", { count: demo.resetIntervalHours })}</p>
       </AlertDescription>
     </Alert>
   )
@@ -47,7 +53,7 @@ export default function LoginPage() {
   const [signInError, setSignInError] = useState<SignInError | null>(null)
   const backendHealth = useBackendHealth()
   const backendUnavailable = backendHealth === "unavailable"
-  const { demoMode } = useDemoMode()
+  const { demo } = useDemoMode()
   const { data: registration, isPending: registrationPending } = useRegistrationStatus()
   // Kept on an invitation-only instance: the sign-up page is where an invitee types their code.
   // Hidden until the server answers, so a closed instance never flashes it; a failed check keeps it.
@@ -94,48 +100,62 @@ export default function LoginPage() {
     }
   }
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const signInWithPassword = useCallback(
+    async (email: string, password: string) => {
+      setLoading(true)
+      setSignInError(null)
+
+      const result = await authClient.signIn.email({ email, password, rememberMe: true })
+
+      if (result.error) {
+        setSignInError(
+          result.error.code === "INVALID_ORIGIN"
+            ? {
+                title: t("auth.login.messages.invalidOriginTitle"),
+                description: t("auth.login.messages.invalidOrigin", { origin: window.location.origin }),
+              }
+            : {
+                title: t("auth.login.messages.loginErrorTitle"),
+                description: result.error.message || t("auth.login.messages.loginError"),
+              },
+        )
+        setLoading(false)
+        return
+      }
+
+      // A 200 does not mean the browser stored the session cookie (a Secure cookie over http is dropped).
+      const session = await authClient.getSession()
+      if (!session.data) {
+        setSignInError({
+          title: t("auth.login.messages.sessionNotStoredTitle"),
+          description: t("auth.login.messages.sessionNotStored"),
+        })
+        setLoading(false)
+        return
+      }
+
+      toast.success(t("auth.login.messages.loginSuccess"))
+      // Force a full page reload to refresh the session state
+      window.location.href = "/dashboard"
+    },
+    [t],
+  )
+
+  // Once per visit: a failure leaves the page as it is, with the error and the form.
+  const autoSignInStarted = useRef(false)
+  useEffect(() => {
+    if (!demo || autoSignInStarted.current || hasSignedOutInThisTab()) return
+    autoSignInStarted.current = true
+    void signInWithPassword(demo.email, demo.password)
+  }, [demo, signInWithPassword])
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-
-    setLoading(true)
-    setSignInError(null)
-
-    const result = await authClient.signIn.email({
-      email: (event.currentTarget.elements.namedItem("email") as HTMLInputElement).value,
-      password: (event.currentTarget.elements.namedItem("password") as HTMLInputElement).value,
-      rememberMe: true,
-    })
-
-    if (result.error) {
-      setSignInError(
-        result.error.code === "INVALID_ORIGIN"
-          ? {
-              title: t("auth.login.messages.invalidOriginTitle"),
-              description: t("auth.login.messages.invalidOrigin", { origin: window.location.origin }),
-            }
-          : {
-              title: t("auth.login.messages.loginErrorTitle"),
-              description: result.error.message || t("auth.login.messages.loginError"),
-            },
-      )
-      setLoading(false)
-      return
-    }
-
-    // A 200 does not mean the browser stored the session cookie (a Secure cookie over http is dropped).
-    const session = await authClient.getSession()
-    if (!session.data) {
-      setSignInError({
-        title: t("auth.login.messages.sessionNotStoredTitle"),
-        description: t("auth.login.messages.sessionNotStored"),
-      })
-      setLoading(false)
-      return
-    }
-
-    toast.success(t("auth.login.messages.loginSuccess"))
-    // Force a full page reload to refresh the session state
-    window.location.href = "/dashboard"
+    const fields = event.currentTarget.elements
+    void signInWithPassword(
+      (fields.namedItem("email") as HTMLInputElement).value,
+      (fields.namedItem("password") as HTMLInputElement).value,
+    )
   }
 
   const footer = (
@@ -176,7 +196,7 @@ export default function LoginPage() {
       dataCy="auth-card"
     >
       {backendUnavailable && <ServerUnavailableBanner />}
-      {demoMode && <DemoCredentialsNotice />}
+      {demo && <DemoCredentialsNotice demo={demo} />}
       {signInError && (
         <Alert variant="destructive" className="mb-4" data-cy="auth-signin-error">
           <CircleAlert />

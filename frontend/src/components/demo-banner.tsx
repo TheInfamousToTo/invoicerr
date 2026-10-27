@@ -13,14 +13,14 @@ import { useDemoMode } from "@/hooks/queries"
  */
 export function DemoBanner() {
   const { t } = useTranslation()
-  const { demoMode } = useDemoMode()
+  const { demo } = useDemoMode()
 
-  if (!demoMode) return null
+  if (!demo) return null
 
   return (
     <Alert variant="warning" className="mb-0 rounded-none border-x-0" data-cy="demo-banner">
       <Info />
-      <AlertTitle>{t("demo.banner.title", "Demo: data resets every 4 hours")}</AlertTitle>
+      <AlertTitle>{t("demo.banner.title", { count: demo.resetIntervalHours })}</AlertTitle>
       <AlertDescription>
         {t("demo.banner.description", "Nothing you enter is kept or sent.")}
       </AlertDescription>

@@ -3784,12 +3784,15 @@
   },
   "demo": {
     "banner": {
-      "title": "Demo: data resets every 4 hours",
+      "title": "Demo: data resets every {{count}} hours",
+      "title_one": "Demo: data resets every hour",
       "description": "Nothing you enter is kept or sent."
     },
     "signIn": {
       "title": "This is a public demo",
-      "description": "Sign in with demo@invoicerr.app / demo. Data resets every 4 hours."
+      "description": "Sign in with the account below.",
+      "resets": "Data resets every {{count}} hours.",
+      "resets_one": "Data resets every hour."
     },
     "disabledTooltip": "Disabled in this demo."
   },
