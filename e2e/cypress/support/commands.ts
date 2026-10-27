@@ -672,8 +672,35 @@ Cypress.Commands.add('openDocument', (documentId: string) => {
  * @example cy.openDocumentActionsMenu()
  */
 Cypress.Commands.add('openDocumentActionsMenu', () => {
-    cy.get('[data-cy="document-actions-menu"]', { timeout: 15000 }).scrollIntoView().click();
-    cy.get('[data-cy="document-actions-menu-content"]', { timeout: 10000 }).should('be.visible');
+    // Same idempotent click-and-verify loop as `openDocumentRowMenu`: reopened right after one of
+    // its entries closed it, the trigger's click can land while that layer's outside-pointerdown
+    // listener is still attached and open nothing.
+    const content = '[data-cy="document-actions-menu-content"]';
+    const isOpen = () =>
+        cy.get('body', { log: false }).then(($body) => $body.find(`${content}[data-state="open"]`).length > 0);
+    const OPEN_POLL_MS = 100;
+    const OPEN_TIMEOUT_MS = 800;
+    const MAX_ATTEMPTS = 3;
+    const pollForOpen = (elapsedMs: number): Cypress.Chainable<boolean> =>
+        isOpen().then((open) => {
+            if (open || elapsedMs >= OPEN_TIMEOUT_MS) return cy.wrap(open, { log: false });
+            cy.wait(OPEN_POLL_MS, { log: false });
+            return pollForOpen(elapsedMs + OPEN_POLL_MS);
+        });
+    const openWithRetries = (attempt: number): void => {
+        cy.get('[data-cy="document-actions-menu"]', { timeout: 15000 }).scrollIntoView().click();
+        pollForOpen(0).then((opened) => {
+            if (opened || attempt >= MAX_ATTEMPTS) return;
+            Cypress.log({ name: 'openDocumentActionsMenu', message: `menu did not open on attempt ${attempt} -- retrying` });
+            openWithRetries(attempt + 1);
+        });
+    };
+    isOpen().then((alreadyOpen) => {
+        if (alreadyOpen) return;
+        cy.wait(50, { log: false });
+        openWithRetries(1);
+    });
+    cy.get(content, { timeout: 10000 }).should('be.visible').and('have.attr', 'data-state', 'open');
 });
 
 /**
