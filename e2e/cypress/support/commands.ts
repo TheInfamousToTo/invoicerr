@@ -666,16 +666,20 @@ Cypress.Commands.add('openDocument', (documentId: string) => {
 });
 
 /**
- * Opens the detail page's "Actions" menu (document-detail.tsx) and waits for its content — every
- * secondary action (`document-action-<id>`), PDF/XML downloads, share link and recurrence live in
- * there; only the ONE primary action is a plain button in the header.
- * @example cy.openDocumentActionsMenu()
+ * Opens a Radix dropdown menu and waits for its content, idempotently.
+ * A Radix trigger TOGGLES, so a second call while the menu is already open (a spec that first
+ * asserts an entry exists, then clicks it) must not close what the first opened.
+ * `data-state="open"`, not `:visible` — a menu that just closed (an entry was clicked) is still
+ * in the DOM and visible for its exit animation, with `data-state="closed"`, and treating that
+ * as "already open" is what left the next click landing on a menu that was going away.
+ * Same open-side race `openDatePicker` above guards against, on the same primitive family: a
+ * trigger clicked right after the PREVIOUS Radix layer closed (this very menu, after one of its
+ * entries was clicked) can land inside the window where that layer's outside-pointerdown
+ * listener is still attached, and the click never opens anything. Short wait, then
+ * click-and-verify with bounded retries — a genuine regression still fails loudly on the final
+ * assertion below.
  */
-Cypress.Commands.add('openDocumentActionsMenu', () => {
-    // Same idempotent click-and-verify loop as `openDocumentRowMenu`: reopened right after one of
-    // its entries closed it, the trigger's click can land while that layer's outside-pointerdown
-    // listener is still attached and open nothing.
-    const content = '[data-cy="document-actions-menu-content"]';
+function openRadixMenu(trigger: string, content: string, name: string): void {
     const isOpen = () =>
         cy.get('body', { log: false }).then(($body) => $body.find(`${content}[data-state="open"]`).length > 0);
     const OPEN_POLL_MS = 100;
@@ -688,10 +692,10 @@ Cypress.Commands.add('openDocumentActionsMenu', () => {
             return pollForOpen(elapsedMs + OPEN_POLL_MS);
         });
     const openWithRetries = (attempt: number): void => {
-        cy.get('[data-cy="document-actions-menu"]', { timeout: 15000 }).scrollIntoView().click();
+        cy.get(trigger, { timeout: 15000 }).scrollIntoView().click();
         pollForOpen(0).then((opened) => {
             if (opened || attempt >= MAX_ATTEMPTS) return;
-            Cypress.log({ name: 'openDocumentActionsMenu', message: `menu did not open on attempt ${attempt} -- retrying` });
+            Cypress.log({ name, message: `menu did not open on attempt ${attempt} -- retrying` });
             openWithRetries(attempt + 1);
         });
     };
@@ -701,6 +705,20 @@ Cypress.Commands.add('openDocumentActionsMenu', () => {
         openWithRetries(1);
     });
     cy.get(content, { timeout: 10000 }).should('be.visible').and('have.attr', 'data-state', 'open');
+}
+
+/**
+ * Opens the detail page's "Actions" menu (document-detail.tsx) and waits for its content — every
+ * secondary action (`document-action-<id>`), PDF/XML downloads, share link and recurrence live in
+ * there; only the ONE primary action is a plain button in the header.
+ * @example cy.openDocumentActionsMenu()
+ */
+Cypress.Commands.add('openDocumentActionsMenu', () => {
+    openRadixMenu(
+        '[data-cy="document-actions-menu"]',
+        '[data-cy="document-actions-menu-content"]',
+        'openDocumentActionsMenu',
+    );
 });
 
 /**
@@ -755,44 +773,12 @@ Cypress.Commands.add('runDocumentAction', (actionId: string) => {
  * @example cy.openDocumentRowMenu(invoiceId)
  */
 Cypress.Commands.add('openDocumentRowMenu', (documentId: string) => {
-    const content = `[data-cy="document-row-menu-content-${documentId}"]`;
     cy.get(`[data-cy="document-list-row-${documentId}"]`, { timeout: 15000 }).should('exist');
-    // Idempotent: a Radix trigger TOGGLES, so a second call while the menu is already open (a spec
-    // that first asserts an entry exists, then clicks it) must not close what the first opened.
-    // `data-state="open"`, not `:visible` — a menu that just closed (an entry was clicked) is still
-    // in the DOM and visible for its exit animation, with `data-state="closed"`, and treating that
-    // as "already open" is what left the next click landing on a menu that was going away.
-    // Same open-side race `openDatePicker` above guards against, on the same primitive family: a
-    // trigger clicked right after the PREVIOUS Radix layer closed (this very menu, after one of its
-    // entries was clicked) can land inside the window where that layer's outside-pointerdown
-    // listener is still attached, and the click never opens anything (scenario leg fr-pl, the
-    // PDF entry then the XML entry back to back). Short wait, then click-and-verify with bounded
-    // retries — a genuine regression still fails loudly on the final assertion below.
-    const isOpen = () =>
-        cy.get('body', { log: false }).then(($body) => $body.find(`${content}[data-state="open"]`).length > 0);
-    const OPEN_POLL_MS = 100;
-    const OPEN_TIMEOUT_MS = 800;
-    const MAX_ATTEMPTS = 3;
-    const pollForOpen = (elapsedMs: number): Cypress.Chainable<boolean> =>
-        isOpen().then((open) => {
-            if (open || elapsedMs >= OPEN_TIMEOUT_MS) return cy.wrap(open, { log: false });
-            cy.wait(OPEN_POLL_MS, { log: false });
-            return pollForOpen(elapsedMs + OPEN_POLL_MS);
-        });
-    const openWithRetries = (attempt: number): void => {
-        cy.get(`[data-cy="document-row-menu-${documentId}"]`, { timeout: 15000 }).scrollIntoView().click();
-        pollForOpen(0).then((opened) => {
-            if (opened || attempt >= MAX_ATTEMPTS) return;
-            Cypress.log({ name: 'openDocumentRowMenu', message: `menu did not open on attempt ${attempt} -- retrying` });
-            openWithRetries(attempt + 1);
-        });
-    };
-    isOpen().then((alreadyOpen) => {
-        if (alreadyOpen) return;
-        cy.wait(50, { log: false });
-        openWithRetries(1);
-    });
-    cy.get(content, { timeout: 10000 }).should('be.visible').and('have.attr', 'data-state', 'open');
+    openRadixMenu(
+        `[data-cy="document-row-menu-${documentId}"]`,
+        `[data-cy="document-row-menu-content-${documentId}"]`,
+        'openDocumentRowMenu',
+    );
 });
 
 /**
