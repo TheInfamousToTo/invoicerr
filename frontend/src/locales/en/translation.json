@@ -3785,10 +3785,9 @@
     },
     "signIn": {
       "title": "This is a public demo",
-      "description": "Sign in with the account below, or in one click.",
+      "description": "Sign in with the account below.",
       "resets": "Data resets every {{count}} hours.",
-      "resets_one": "Data resets every hour.",
-      "tryButton": "Try the demo"
+      "resets_one": "Data resets every hour."
     },
     "disabledTooltip": "Disabled in this demo."
   },

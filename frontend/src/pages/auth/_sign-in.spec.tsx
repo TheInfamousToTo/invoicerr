@@ -1,13 +1,17 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
-import { MemoryRouter } from "react-router"
+import { render, screen, waitFor } from "@testing-library/react"
+import { MemoryRouter, Route, Routes } from "react-router"
 import { toast } from "sonner"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { authClient } from "@/lib/auth"
+import { signOut } from "@/lib/sign-out"
 import LoginPage from "./sign-in"
+import LogoutPage from "./sign-out"
 
-vi.mock("@/lib/auth", () => ({ authClient: { signIn: { email: vi.fn(), social: vi.fn() } } }))
+vi.mock("@/lib/auth", () => ({
+  authClient: { signIn: { email: vi.fn(), social: vi.fn() }, signOut: vi.fn(async () => ({ data: null })) },
+}))
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
 // Leading underscore keeps generouted from registering this file as a route.
@@ -65,6 +69,7 @@ const registrationSettled = (client: QueryClient) =>
 afterEach(() => {
   vi.unstubAllGlobals()
   vi.clearAllMocks()
+  sessionStorage.clear()
 })
 
 describe("<LoginPage> sign-up link", () => {
@@ -111,39 +116,18 @@ describe("<LoginPage> on a demo instance", () => {
   const signInEmail = vi.mocked(authClient.signIn.email)
   const demo = { email: "visitor@demo.test", password: "open-sesame", resetIntervalHours: 6 }
   const closed = { allowed: false, requiresCode: false }
+  const servedAccount = { email: "visitor@demo.test", password: "open-sesame", rememberMe: true }
 
-  it("shows the demo account and reset interval the server serves", async () => {
-    installFetchMock(closed, demo)
-    renderSignIn()
-
-    const notice = await screen.findByTestId("demo-credentials-notice")
-    expect(screen.getByTestId("demo-credentials-email")).toHaveTextContent(/^visitor@demo\.test$/)
-    expect(screen.getByTestId("demo-credentials-password")).toHaveTextContent(/^open-sesame$/)
-    expect(notice).toHaveTextContent("Data resets every 6 hours.")
-  })
-
-  it("says every hour, not every 1 hours", async () => {
-    installFetchMock(closed, { ...demo, resetIntervalHours: 1 })
-    renderSignIn()
-
-    expect(await screen.findByTestId("demo-credentials-notice")).toHaveTextContent("Data resets every hour.")
-  })
-
-  it("signs in with the served demo account in one click", async () => {
+  it("signs the visitor in with the served demo account, with no click and no button", async () => {
     installFetchMock(closed, demo)
     signInEmail.mockReturnValue(new Promise(() => {}))
     renderSignIn()
 
-    fireEvent.click(await screen.findByTestId("demo-signin-btn"))
-
-    expect(signInEmail).toHaveBeenCalledWith({
-      email: "visitor@demo.test",
-      password: "open-sesame",
-      rememberMe: true,
-    })
+    await waitFor(() => expect(signInEmail).toHaveBeenCalledWith(servedAccount))
+    expect(screen.queryByTestId("demo-signin-btn")).not.toBeInTheDocument()
   })
 
-  it("reports a failed one-click sign-in the way the form does, and lets the visitor retry", async () => {
+  it("tries once, then shows the failure the way the form does and leaves the form usable", async () => {
     installFetchMock(closed, demo)
     signInEmail.mockResolvedValue({
       data: null,
@@ -151,13 +135,52 @@ describe("<LoginPage> on a demo instance", () => {
     } as never)
     renderSignIn()
 
-    fireEvent.click(await screen.findByTestId("demo-signin-btn"))
-
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Invalid email or password"))
-    expect(screen.getByTestId("demo-signin-btn")).not.toBeDisabled()
+    expect(screen.getByTestId("auth-submit-btn")).not.toBeDisabled()
+    expect(screen.getByTestId("demo-credentials-notice")).toBeInTheDocument()
+    expect(signInEmail).toHaveBeenCalledTimes(1)
   })
 
-  it("renders neither the box nor the button outside demo mode", async () => {
+  it("does not sign straight back in after an explicit sign-out, and shows the credentials instead", async () => {
+    await signOut()
+    installFetchMock(closed, demo)
+    renderSignIn()
+
+    await screen.findByTestId("demo-credentials-notice")
+    expect(screen.getByTestId("demo-credentials-email")).toHaveTextContent(/^visitor@demo\.test$/)
+    expect(screen.getByTestId("demo-credentials-password")).toHaveTextContent(/^open-sesame$/)
+    expect(screen.getByTestId("demo-credentials-notice")).toHaveTextContent("Data resets every 6 hours.")
+    expect(signInEmail).not.toHaveBeenCalled()
+  })
+
+  it("treats the sign-out page as an explicit sign-out", async () => {
+    installFetchMock(closed, demo)
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={["/auth/sign-out"]}>
+          <Routes>
+            <Route path="/auth/sign-out" element={<LogoutPage />} />
+            <Route path="/auth/sign-in" element={<LoginPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+
+    await screen.findByTestId("demo-credentials-notice")
+    expect(authClient.signOut).toHaveBeenCalled()
+    expect(signInEmail).not.toHaveBeenCalled()
+  })
+
+  it("says every hour, not every 1 hours", async () => {
+    await signOut()
+    installFetchMock(closed, { ...demo, resetIntervalHours: 1 })
+    renderSignIn()
+
+    expect(await screen.findByTestId("demo-credentials-notice")).toHaveTextContent("Data resets every hour.")
+  })
+
+  it("neither signs in nor renders the box outside demo mode", async () => {
     const fetchMock = installFetchMock(closed, null)
     renderSignIn()
 
@@ -167,6 +190,6 @@ describe("<LoginPage> on a demo instance", () => {
     )
     await waitFor(() => expect(screen.queryByTestId("auth-signup-link")).not.toBeInTheDocument())
     expect(screen.queryByTestId("demo-credentials-notice")).not.toBeInTheDocument()
-    expect(screen.queryByTestId("demo-signin-btn")).not.toBeInTheDocument()
+    expect(signInEmail).not.toHaveBeenCalled()
   })
 })

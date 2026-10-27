@@ -48,6 +48,7 @@ import { useOnboardingDialog } from "./onboarding"
 import type React from "react"
 import { Skeleton } from "./ui/skeleton"
 import { authClient } from "@/lib/auth"
+import { signOut } from "@/lib/sign-out"
 import { useEffect, useRef, useState } from "react"
 import { usePost } from "@/hooks/use-fetch"
 
@@ -192,7 +193,7 @@ export function Sidebar() {
   const [dataOpen, setDataOpen] = useState(true)
 
   const handleLogout = async () => {
-    await authClient.signOut()
+    await signOut()
     void navigate("/auth/sign-in")
   }
 
@@ -502,7 +503,11 @@ export function Sidebar() {
                     {t("sidebar.userMenu.account")}
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
-                <DropdownMenuItem className="cursor-pointer" onClick={handleLogout}>
+                <DropdownMenuItem
+                  className="cursor-pointer"
+                  onClick={handleLogout}
+                  data-cy="sidebar-sign-out-menu-item"
+                >
                   <LogOut />
                   {t("sidebar.userMenu.logout")}
                 </DropdownMenuItem>

@@ -1,6 +1,6 @@
 import { Fingerprint } from "lucide-react"
 import type React from "react"
-import { useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useSearchParams } from "react-router"
 import { toast } from "sonner"
@@ -14,22 +14,13 @@ import { Label } from "@/components/ui/label"
 import { LegalLinks } from "@/components/legal-links"
 import { ServerUnavailableBanner } from "@/components/server-unavailable-banner"
 import { authClient } from "@/lib/auth"
+import { hasSignedOutInThisTab } from "@/lib/sign-out"
 import { envOidcProviderId, getEnvVariable, isOidcOnly } from "@/lib/runtime-config"
 import { useBackendHealth } from "@/hooks/use-backend-health"
 import { type DemoInstanceView, useDemoMode, useRegistrationStatus } from "@/hooks/queries"
 import { Info } from "lucide-react"
 
-function DemoCredentialsNotice({
-  demo,
-  loading,
-  disabled,
-  onTry,
-}: Readonly<{
-  demo: DemoInstanceView
-  loading: boolean
-  disabled: boolean
-  onTry: () => void
-}>) {
+function DemoCredentialsNotice({ demo }: Readonly<{ demo: DemoInstanceView }>) {
   const { t } = useTranslation()
   return (
     <Alert variant="default" className="mb-4" data-cy="demo-credentials-notice">
@@ -48,17 +39,6 @@ function DemoCredentialsNotice({
           </dd>
         </dl>
         <p>{t("demo.signIn.resets", { count: demo.resetIntervalHours })}</p>
-        <Button
-          type="button"
-          size="sm"
-          className="mt-1"
-          loading={loading}
-          disabled={disabled}
-          onClick={onTry}
-          data-cy="demo-signin-btn"
-        >
-          {t("demo.signIn.tryButton")}
-        </Button>
       </AlertDescription>
     </Alert>
   )
@@ -117,24 +97,35 @@ export default function LoginPage() {
     }
   }
 
-  const signInWithPassword = async (email: string, password: string) => {
-    setLoading(true)
+  const signInWithPassword = useCallback(
+    async (email: string, password: string) => {
+      setLoading(true)
 
-    const result = await authClient.signIn.email({ email, password, rememberMe: true })
+      const result = await authClient.signIn.email({ email, password, rememberMe: true })
 
-    if (result.error) {
-      toast.error(result.error.message || t("auth.login.messages.loginError"))
-    }
+      if (result.error) {
+        toast.error(result.error.message || t("auth.login.messages.loginError"))
+      }
 
-    if (result.data?.user.createdAt) {
-      toast.success(t("auth.login.messages.loginSuccess"))
-      // Force a full page reload to refresh the session state
-      window.location.href = "/dashboard"
-      return
-    }
+      if (result.data?.user.createdAt) {
+        toast.success(t("auth.login.messages.loginSuccess"))
+        // Force a full page reload to refresh the session state
+        window.location.href = "/dashboard"
+        return
+      }
 
-    setLoading(false)
-  }
+      setLoading(false)
+    },
+    [t],
+  )
+
+  // Once per visit: a failure leaves the page as it is, with the error and the form.
+  const autoSignInStarted = useRef(false)
+  useEffect(() => {
+    if (!demo || autoSignInStarted.current || hasSignedOutInThisTab()) return
+    autoSignInStarted.current = true
+    void signInWithPassword(demo.email, demo.password)
+  }, [demo, signInWithPassword])
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -183,14 +174,7 @@ export default function LoginPage() {
       dataCy="auth-card"
     >
       {backendUnavailable && <ServerUnavailableBanner />}
-      {demo && (
-        <DemoCredentialsNotice
-          demo={demo}
-          loading={loading}
-          disabled={backendUnavailable}
-          onTry={() => signInWithPassword(demo.email, demo.password)}
-        />
-      )}
+      {demo && <DemoCredentialsNotice demo={demo} />}
 
       {/* A provider named by the link, or found from the address typed below. Offered above the
           form: someone arriving on their company's own link should not have to read past a

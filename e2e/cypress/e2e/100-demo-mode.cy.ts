@@ -14,19 +14,48 @@ const DEMO_EMAIL = "demo@invoicerr.app";
 const DEMO_PASSWORD = "demo";
 
 function signInAsDemo() {
-	cy.visit("/auth/sign-in");
-	cy.get('[data-cy="auth-email-input"]').type(DEMO_EMAIL);
-	cy.get('[data-cy="auth-password-input"]').type(DEMO_PASSWORD);
-	cy.get('[data-cy="auth-submit-btn"]').click();
+	cy.visit("/");
 	cy.url({ timeout: 20000 }).should("include", "/dashboard");
 }
 
+function openSignInSignedOut() {
+	cy.visit("/auth/sign-out");
+	cy.location("pathname", { timeout: 10000 }).should("eq", "/auth/sign-in");
+	cy.get('[data-cy="demo-credentials-notice"]', { timeout: 10000 }).should(
+		"be.visible",
+	);
+}
+
 describe("Demo mode (issue #533)", () => {
-	it("shows the demo credentials on the sign-in page", () => {
-		cy.visit("/auth/sign-in");
+	it("signs a fresh visitor in automatically, with no click, and lands on the dashboard", () => {
+		cy.intercept("POST", "**/api/auth/sign-in/email").as("signIn");
+		cy.visit("/documents/invoice");
+		cy.wait("@signIn")
+			.its("request.body")
+			.should("include", { email: DEMO_EMAIL, password: DEMO_PASSWORD });
+		cy.url({ timeout: 20000 }).should("include", "/dashboard");
+		cy.get('[data-cy="demo-banner"]', { timeout: 10000 }).should("be.visible");
+	});
+
+	it("stays on the sign-in page after signing out, even across a reload", () => {
+		signInAsDemo();
+		const signIn = cy.spy().as("signIn");
+		cy.intercept("POST", "**/api/auth/sign-in/email", signIn);
+		cy.get('[data-cy="sidebar-user-menu-trigger"]', { timeout: 15000 }).click();
+		cy.get('[data-cy="sidebar-sign-out-menu-item"]').click();
+		cy.location("pathname", { timeout: 10000 }).should("eq", "/auth/sign-in");
+		cy.reload();
 		cy.get('[data-cy="demo-credentials-notice"]', { timeout: 10000 }).should(
 			"be.visible",
 		);
+		// Absence of a request can only be observed over time.
+		cy.wait(1500);
+		cy.location("pathname").should("eq", "/auth/sign-in");
+		cy.get("@signIn").should("not.have.been.called");
+	});
+
+	it("shows the demo credentials on the sign-in page after signing out", () => {
+		openSignInSignedOut();
 		cy.get('[data-cy="demo-credentials-email"]').should("have.text", DEMO_EMAIL);
 		cy.get('[data-cy="demo-credentials-password"]').should("have.text", DEMO_PASSWORD);
 		cy.get('[data-cy="demo-credentials-notice"]').should(
@@ -35,15 +64,12 @@ describe("Demo mode (issue #533)", () => {
 		);
 	});
 
-	it("signs in with the demo account in one click and lands on the dashboard", () => {
-		cy.intercept("POST", "**/api/auth/sign-in/email").as("signIn");
-		cy.visit("/auth/sign-in");
-		cy.get('[data-cy="demo-signin-btn"]', { timeout: 10000 }).click();
-		cy.wait("@signIn")
-			.its("request.body")
-			.should("include", { email: DEMO_EMAIL, password: DEMO_PASSWORD });
+	it("signs in by hand after signing out", () => {
+		openSignInSignedOut();
+		cy.get('[data-cy="auth-email-input"]').type(DEMO_EMAIL);
+		cy.get('[data-cy="auth-password-input"]').type(DEMO_PASSWORD);
+		cy.get('[data-cy="auth-submit-btn"]').click();
 		cy.url({ timeout: 20000 }).should("include", "/dashboard");
-		cy.get('[data-cy="demo-banner"]', { timeout: 10000 }).should("be.visible");
 	});
 
 	it("hides the sign-up link, since the server says sign-up is closed", () => {
@@ -51,7 +77,7 @@ describe("Demo mode (issue #533)", () => {
 		cy.intercept("GET", "**/api/invitations/can-register*", (req) => {
 			delete req.headers["if-none-match"];
 		}).as("canRegister");
-		cy.visit("/auth/sign-in");
+		openSignInSignedOut();
 		cy.wait("@canRegister")
 			.its("response.body")
 			.should("include", { allowed: false, requiresCode: false });
