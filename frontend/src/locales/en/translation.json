@@ -474,7 +474,6 @@
         "totalTTC": "Total (incl. VAT)"
       },
       "tooltips": {
-        "viewPdf": "View PDF",
         "downloadPdf": "Download PDF",
         "edit": "Edit quote",
         "sendSignature": "Send for signature",
@@ -3944,7 +3943,6 @@
         "totalTTC": "Total (incl. VAT)"
       },
       "tooltips": {
-        "viewPdf": "View PDF",
         "downloadPdf": "Download PDF",
         "edit": "Edit payment",
         "sendToClient": "Send to client",
@@ -5401,6 +5399,7 @@
       "item": {
         "fallbackTitle": "{{label}} #{{id}}"
       },
+      "previewPdf": "Preview PDF",
       "downloadPdf": "Download PDF",
       "downloadPdfError": "The PDF could not be generated.",
       "downloadPdfNotPdfOriginal": "This document was imported from another tool and its original file is not a PDF. Use \"Download original\" to get the file as issued.",

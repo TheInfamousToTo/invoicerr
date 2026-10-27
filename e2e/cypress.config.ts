@@ -683,6 +683,13 @@ export default defineConfig({
       mailpitSmtpPort: Number(process.env.MAILPIT_SMTP_PORT || 1025),
     },
     setupNodeEvents(on) {
+      // Firefox opens a downloaded PDF in its own viewer tab, which hides the app under test.
+      on("before:browser:launch", (browser, launchOptions) => {
+        if (browser.family === "firefox") {
+          launchOptions.preferences["pdfjs.disabled"] = true;
+        }
+        return launchOptions;
+      });
       on("task", {
         /**
          * Print a step to the RUNNER's stdout, not the browser console.

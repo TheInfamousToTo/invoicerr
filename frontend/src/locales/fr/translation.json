@@ -264,7 +264,6 @@
                 "totalTTC": "Total TTC"
             },
             "tooltips": {
-                "viewPdf": "Voir le PDF",
                 "downloadPdf": "Télécharger le PDF",
                 "edit": "Modifier le devis",
                 "sendSignature": "Envoyer pour signature",
@@ -2338,7 +2337,6 @@
                 "totalTTC": "Total (TTC)"
             },
             "tooltips": {
-                "viewPdf": "Voir le PDF",
                 "downloadPdf": "Télécharger le PDF",
                 "edit": "Modifier le paiement",
                 "sendToClient": "Envoyer au client",
