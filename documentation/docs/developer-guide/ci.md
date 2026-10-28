@@ -126,11 +126,11 @@ shows up first on the next deploy or the next documentation pull request.
 ## DCO check
 
 `dco.yml` runs on every pull request targeting `dev` or `main`. It reads the pull request's commits
-through the GitHub API and fails if one of them (other than a merge commit or a bot commit) has no
-`Signed-off-by` line matching its author, as required by
-[`CONTRIBUTING.md`](https://github.com/invoicerr-app/invoicerr/blob/dev/CONTRIBUTING.md).
-The failing run names each offending commit; fix it with `git rebase --signoff <base-branch>` and a
-force-push.
+through the GitHub API and fails if one of them has no `Signed-off-by` line matching its author, as
+required by [`CONTRIBUTING.md`](https://github.com/invoicerr-app/invoicerr/blob/dev/CONTRIBUTING.md).
+Merge commits, bot commits and the commits Hosted Weblate makes for translators are skipped, since
+none of them can run `git commit -s`. The failing run names each offending commit; fix it with
+`git rebase --signoff <base-branch>` and a force-push.
 
 It also runs on every merge queue entry, reading the pull request number from the queue branch
 name, so it can be a required check of the queue.
