@@ -166,6 +166,29 @@ Two rules for anyone, Renovate included, who changes `backend/package.json` or i
   `overrides` entry `"multer": "$multer"` makes both the version `backend/package.json` names. After a
   `multer` update, `npm ls multer` shows a single version, `deduped` under `@nestjs/platform-express`.
 
+## Preview images
+
+To deploy a pull request somewhere and test it, add the `preview` label to it. `docker-pr.yml` then
+builds the pull request (amd64 and arm64) and publishes `ghcr.io/invoicerr-app/invoicerr:pr-<number>`.
+Every later push to the pull request rebuilds the same tag while the label stays, and a new push
+cancels the build still running for the previous one. The run summary gives the `docker pull`
+command and the digest.
+
+- Without the label, nothing is built. Removing the label stops later rebuilds and leaves the last
+  image in place.
+- A pull request from a fork never publishes: its token cannot write packages, so the build is
+  skipped rather than failed. A maintainer who wants an image of it pushes the branch to this
+  repository first.
+- A branch with no pull request open gets an image from **Actions** > **Verify Docker Build (PR)** >
+  **Run workflow**, tagged with the branch name or with the tag typed in the form.
+
+:::info[The image is the merge result]
+Like every `pull_request` run, the build checks out the pull request merged into its base branch, not
+the branch alone. A pull request with merge conflicts gets no run at all until they are resolved.
+:::
+
+Old `pr-*` tags are not deleted automatically.
+
 ## Docker image vulnerability scanning (Trivy)
 
 Every image this repository builds and pushes gets scanned for known OS package and Node
