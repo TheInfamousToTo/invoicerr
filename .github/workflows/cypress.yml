@@ -31,7 +31,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install backend dependencies
         run: |
@@ -49,6 +49,11 @@ jobs:
         run: |
           cd e2e
           npm ci
+
+      - name: Run unit and security regression tests
+        run: |
+          npm --prefix backend test -- --runInBand
+          node --test scripts/security-regression.test.cjs
 
       - name: Wait for DB
         run: |

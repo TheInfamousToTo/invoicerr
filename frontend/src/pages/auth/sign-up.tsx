@@ -118,6 +118,7 @@ export default function SignupPage() {
         }
 
         const result = await authClient.signUp.email({
+            name: `${data.firstname} ${data.lastname}`.trim(),
             email: data.email,
             password: data.password,
             // @ts-ignore additional fields
@@ -144,8 +145,8 @@ export default function SignupPage() {
     const handleOIDCLogin = () => {
         const oidcProviderId = getEnvVariable("VITE_OIDC_PROVIDER_ID");
 
-        authClient.signIn.oauth2({
-            providerId: oidcProviderId || 'oidc',
+        authClient.signIn.social({
+            provider: oidcProviderId || 'oidc',
             callbackURL: "/dashboard",
         });
     };

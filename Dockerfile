@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM node:22-bullseye AS backend-builder
+FROM --platform=$BUILDPLATFORM node:22-bookworm AS backend-builder
 
 WORKDIR /app
 
@@ -6,14 +6,14 @@ COPY backend/package.json backend/package-lock.json ./
 COPY backend/.npmrc .npmrc
 COPY backend/prisma ./prisma
 
-RUN npm ci
+RUN PUPPETEER_SKIP_DOWNLOAD=true npm ci
 
 COPY backend/. .
 
 RUN DATABASE_URL=not_required npx prisma generate --schema=prisma/schema.prisma
 RUN npm run build
 
-FROM --platform=$BUILDPLATFORM node:22-bullseye AS frontend-builder
+FROM --platform=$BUILDPLATFORM node:22-bookworm AS frontend-builder
 
 WORKDIR /app
 
@@ -22,9 +22,30 @@ RUN npm ci
 
 COPY frontend/. .
 
-RUN npm run build
+ARG VITE_E2E_TESTING=false
+RUN VITE_E2E_TESTING=$VITE_E2E_TESTING npm run build
 
-FROM ghcr.io/invoicerr-app/server-image:latest
+FROM node:22-bookworm-slim
+
+# Install runtime packages from current Debian security repositories instead of
+# inheriting Chromium and shared libraries frozen in the external server image.
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        chromium \
+        dumb-init \
+        fonts-freefont-ttf \
+        netcat-traditional \
+        nginx \
+        openssl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Debian's nginx package enables a default site in addition to conf.d files.
+RUN rm -f /etc/nginx/sites-enabled/default
+
+WORKDIR /usr/share/nginx
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 
 ENV PLUGIN_DIR=/usr/share/nginx/plugins
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium

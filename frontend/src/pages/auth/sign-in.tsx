@@ -52,8 +52,8 @@ export default function LoginPage() {
     const handleOIDCLogin = () => {
         const oidcProviderId = getEnvVariable("VITE_OIDC_PROVIDER_ID");
 
-        authClient.signIn.oauth2({
-            providerId: oidcProviderId || 'oidc',
+        authClient.signIn.social({
+            provider: oidcProviderId || 'oidc',
             callbackURL: "/dashboard",
         });
     }
