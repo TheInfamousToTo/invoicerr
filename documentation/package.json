@@ -47,6 +47,11 @@
       "last 5 safari version"
     ]
   },
+  "overrides": {
+    "@docusaurus/core": {
+      "tinypool": "^2.1.2"
+    }
+  },
   "engines": {
     "node": ">=20.0"
   }

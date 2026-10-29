@@ -126,7 +126,6 @@ export default function SignupPage() {
         }
 
         const result = await authClient.signUp.email({
-            name: `${data.firstname} ${data.lastname}`.trim(),
             email: data.email,
             password: data.password,
             // better-auth >=1.6 requires `name` on email sign-up; derive it from the

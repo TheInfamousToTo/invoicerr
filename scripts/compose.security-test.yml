@@ -43,7 +43,7 @@ services:
     command: ["cp -a /usr/share/nginx/backend/. /validation-backend/"]
     volumes: ["backend-tools:/validation-backend"]
   e2e:
-    image: cypress/included:15.8.1
+    image: cypress/included:15.18.0
     profiles: [tests]
     network_mode: host
     working_dir: /workspace/e2e

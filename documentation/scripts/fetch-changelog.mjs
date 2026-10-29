@@ -45,6 +45,8 @@ function generatePost(release) {
     `title: ${release.tag_name}`,
     `date: ${date}`,
     'tags: [release]',
+    'mdx:',
+    '  format: md',
     '---',
   ].join('\n');
 
@@ -55,7 +57,7 @@ function generatePost(release) {
 
   const before = lines.slice(0, 10).join('\n');
   const after = lines.slice(10).join('\n');
-  return `${frontmatter}\n\n${before}\n\n{/* truncate */}\n\n${after}\n`;
+  return `${frontmatter}\n\n${before}\n\n<!-- truncate -->\n\n${after}\n`;
 }
 
 function existingTags() {

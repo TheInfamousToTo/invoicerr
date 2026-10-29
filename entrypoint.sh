@@ -14,7 +14,7 @@ EOF
 # Test containers use the same migration path before starting the application.
 # Never push the historical schema: it can drop current payment/API-key data.
 if [ "${NODE_ENV:-production}" != "production" ]; then
-    node -e "require('./src/prisma/sync-schema').syncDatabaseSchema().catch(error => { console.error(error); process.exit(1); })"
+    node -e "require('./src/prisma/sync-schema').syncDatabaseSchema().then(() => process.exit(0)).catch(error => { console.error(error); process.exit(1); })"
 fi
 
 node src/main.js &

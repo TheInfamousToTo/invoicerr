@@ -54,6 +54,10 @@ jobs:
         run: |
           npm --prefix backend test -- --runInBand
           node --test scripts/security-regression.test.cjs
+          npm --prefix backend audit --audit-level=critical
+          npm --prefix frontend audit --audit-level=critical
+          npm --prefix e2e audit --audit-level=critical
+          npm --prefix documentation audit --audit-level=critical
 
       - name: Wait for DB
         run: |
