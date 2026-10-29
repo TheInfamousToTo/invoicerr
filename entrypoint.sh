@@ -1,28 +1,8 @@
 #!/bin/sh
+set -eu
 
-# Navigate to the backend directory where the compiled code and config are
-cd /usr/share/nginx/backend/src
+cd /usr/share/nginx/backend
 
-echo "[DEBUG] - Listing files in /usr/share/nginx/backend"
-ls -la /usr/share/nginx/backend
-
-echo "[DEBUG] - Listing files in /usr/share/nginx/backend/src"
-ls -la /usr/share/nginx/backend/src
-
-echo "[DEBUG] - Listing files in /usr/share/nginx/backend/prisma"
-ls -la /usr/share/nginx/backend/prisma
-
-echo "[DEBUG] - Listing files in /usr/share/nginx/backend/src/prisma"
-ls -la /usr/share/nginx/backend/src/prisma
-
-echo "[DEBUG] - Listing files in /"
-ls -la /
-
-echo "[DEBUG] - Architecture info"
-uname -a
-
-# Create runtime config for frontend (populated from environment variables)
-echo "[DEBUG] - Writing frontend runtime config to /usr/share/nginx/html/config.json"
 mkdir -p /usr/share/nginx/html
 cat > /usr/share/nginx/html/config.json <<EOF
 {
@@ -30,19 +10,22 @@ cat > /usr/share/nginx/html/config.json <<EOF
 }
 EOF
 
-# Push database schema using the standard Prisma command
-echo "Pushing database schema..."
-npx prisma db push --accept-data-loss --schema=/usr/share/nginx/backend/prisma/schema.prisma
+# Production bootstrap applies migrations and baselines older installations.
+# Test containers use the same migration path before starting the application.
+# Never push the historical schema: it can drop current payment/API-key data.
+if [ "${NODE_ENV:-production}" != "production" ]; then
+    node -e "require('./src/prisma/sync-schema').syncDatabaseSchema().catch(error => { console.error(error); process.exit(1); })"
+fi
 
-# Start the backend service
-echo "Starting backend service..."
-node main.js &
+node src/main.js &
+backend_pid=$!
 
-# Wait for backend to be ready
-echo "Waiting for backend to start..."
 while ! nc -z localhost 3000; do
+    if ! kill -0 "$backend_pid" 2>/dev/null; then
+        wait "$backend_pid"
+        exit 1
+    fi
     sleep 1
 done
 
-echo "Backend is ready, starting nginx..."
-nginx -g "daemon off;" >/dev/null 2>&1
+exec nginx -g "daemon off;"

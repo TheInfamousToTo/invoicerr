@@ -1,31 +1,43 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Download, Edit, Eye, FileText, Plus, Signature, Trash2 } from "lucide-react"
-import { forwardRef, useEffect, useImperativeHandle, useState } from "react"
-import { useGetRaw, usePost } from "@/hooks/use-fetch"
+import { Edit, FileText, Plus, Search, Signature, Trash2 } from "lucide-react"
+import { forwardRef, useImperativeHandle, useState } from "react"
+import { usePost } from "@/hooks/use-fetch"
+import { queryKeys } from "@/lib/query-keys"
+import { useQueryClient } from "@tanstack/react-query"
 
 import BetterPagination from "../../../../components/pagination"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "../../../../components/ui/button"
+import { Input } from "@/components/ui/input"
 import type { Quote } from "@/types"
+import { CreateInvoiceFromQuoteDialog } from "@/pages/(app)/quotes/_components/create-invoice-from-quote-dialog"
 import { QuoteDeleteDialog } from "@/pages/(app)/quotes/_components/quote-delete"
-import { QuotePdfModal } from "@/pages/(app)/quotes/_components/quote-pdf-view"
 import { QuoteUpsert } from "@/pages/(app)/quotes/_components/quote-upsert"
 import { QuoteViewDialog } from "@/pages/(app)/quotes/_components/quote-view"
+import { SendConfirmationDialog } from "@/components/send-confirmation-dialog"
 import type React from "react"
 import { Spinner } from "@/components/ui/spinner"
 import { toast } from "sonner"
+import { useNavigate } from "react-router"
 import { useTranslation } from "react-i18next"
 
 interface QuoteListProps {
     quotes: Quote[]
     loading: boolean
-    title: string
-    description: string
+    title?: string
+    description?: string
+    searchTerm?: string
+    onSearchChange?: (value: string) => void
+    statusFilter?: "draft" | "sent" | "signed"
+    onStatusFilterChange?: (value: "draft" | "sent" | "signed" | undefined) => void
+    statusCounts?: { draft: number; sent: number; signed: number }
     page?: number
     pageCount?: number
     setPage?: (page: number) => void
     mutate?: () => void
     emptyState: React.ReactNode
     showCreateButton?: boolean
+    invoicingStatuses?: Record<string, number>
 }
 
 export interface QuoteListHandle {
@@ -34,47 +46,29 @@ export interface QuoteListHandle {
 
 export const QuoteList = forwardRef<QuoteListHandle, QuoteListProps>(
     (
-        { quotes, loading, title, description, page, pageCount, setPage, mutate, emptyState, showCreateButton = false },
+        { quotes, loading, title, description, searchTerm, onSearchChange, statusFilter, onStatusFilterChange, statusCounts, page, pageCount, setPage, mutate, emptyState, showCreateButton = false, invoicingStatuses },
         ref,
     ) => {
         const { t } = useTranslation()
+        const navigate = useNavigate()
+        const queryClient = useQueryClient()
         const { trigger: triggerSendForSignature, loading: signatureLoading } = usePost<{ message: string; signature: { id: string } }>(
             `/api/signatures`,
         )
-        const { trigger: triggerCreateInvoice } = usePost(`/api/invoices/create-from-quote`)
 
         const [createQuoteDialog, setCreateQuoteDialog] = useState<boolean>(false)
         const [quoteIdForSignature, setQuoteIdForSignature] = useState<string | null>(null)
         const [editQuoteDialog, setEditQuoteDialog] = useState<Quote | null>(null)
         const [viewQuoteDialog, setViewQuoteDialog] = useState<Quote | null>(null)
-        const [viewQuotePdfDialog, setViewQuotePdfDialog] = useState<Quote | null>(null)
         const [deleteQuoteDialog, setDeleteQuoteDialog] = useState<Quote | null>(null)
-        const [downloadQuotePdf, setDownloadQuotePdf] = useState<Quote | null>(null)
-
-        const { data: pdf } = useGetRaw<Response>(`/api/quotes/${downloadQuotePdf?.id}/pdf`)
+        const [sendQuoteDialog, setSendQuoteDialog] = useState<Quote | null>(null)
+        const [createInvoiceQuote, setCreateInvoiceQuote] = useState<Quote | null>(null)
 
         useImperativeHandle(ref, () => ({
             handleAddClick() {
                 setCreateQuoteDialog(true)
             },
         }))
-
-        useEffect(() => {
-            if (downloadQuotePdf && pdf) {
-                pdf.arrayBuffer().then((buffer) => {
-                    const blob = new Blob([buffer], { type: "application/pdf" })
-                    const url = URL.createObjectURL(blob)
-                    const link = document.createElement("a")
-                    link.href = url
-                    link.download = `quote-${downloadQuotePdf.number}.pdf`
-                    document.body.appendChild(link)
-                    link.click()
-                    document.body.removeChild(link)
-                    URL.revokeObjectURL(url)
-                    setDownloadQuotePdf(null) // Reset after download
-                })
-            }
-        }, [downloadQuotePdf, pdf])
 
         function handleAddClick() {
             setCreateQuoteDialog(true)
@@ -89,45 +83,41 @@ export const QuoteList = forwardRef<QuoteListHandle, QuoteListProps>(
         }
 
         function handleViewPdf(quote: Quote) {
-            setViewQuotePdfDialog(quote)
-        }
-
-        function handleDownloadPdf(quote: Quote) {
-            setDownloadQuotePdf(quote)
+            navigate(`/quotes/pdf/${quote.id}`, { state: { quote } })
         }
 
         function handleDelete(quote: Quote) {
             setDeleteQuoteDialog(quote)
         }
 
-        function handleSendForSignature(quoteId: string) {
-            setQuoteIdForSignature(quoteId)
-            triggerSendForSignature({ quoteId: quoteId })
+        function handleSendForSignature(quote: Quote) {
+            setSendQuoteDialog(quote)
+        }
+
+        function confirmSendForSignature() {
+            if (!sendQuoteDialog) return
+
+            setQuoteIdForSignature(sendQuoteDialog.id)
+            triggerSendForSignature({ quoteId: sendQuoteDialog.id })
                 .then((data) => {
                     setQuoteIdForSignature(null)
+                    setSendQuoteDialog(null)
                     if (!data || !data.signature) {
                         toast.error(t("quotes.list.messages.sendSignatureError"))
                         return
                     }
 
                     toast.success(t("quotes.list.messages.sendSignatureSuccess"))
-                    mutate && mutate()
+                    queryClient.invalidateQueries({ queryKey: queryKeys.quotes.listsAll() })
                 })
                 .catch((error) => {
+                    setQuoteIdForSignature(null)
                     console.error("Error sending quote for signature:", error)
                 })
         }
 
-        function handleCreateInvoice(quoteId: string) {
-            triggerCreateInvoice({ quoteId })
-                .then(() => {
-                    toast.success(t("quotes.list.messages.invoiceCreated"))
-                    mutate && mutate()
-                })
-                .catch((error) => {
-                    console.error("Error creating invoice from quote:", error)
-                    toast.error(t("quotes.list.messages.invoiceCreateError"))
-                })
+        function handleCreateInvoice(quote: Quote) {
+            setCreateInvoiceQuote(quote)
         }
 
         const getStatusColor = (status: string) => {
@@ -152,20 +142,67 @@ export const QuoteList = forwardRef<QuoteListHandle, QuoteListProps>(
         return (
             <>
                 <Card className="gap-0">
-                    <CardHeader className="border-b flex flex-row items-center justify-between">
-                        <div>
-                            <CardTitle className="flex items-center space-x-2">
-                                <FileText className="h-5 w-5 " />
-                                <span>{title}</span>
-                            </CardTitle>
-                            <CardDescription>{description}</CardDescription>
+                    <CardHeader className="border-b flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:justify-between">
+                        {title ? (
+                            <div>
+                                <CardTitle className="flex items-center space-x-2">
+                                    <span>{title}</span>
+                                </CardTitle>
+                                {description && <CardDescription>{description}</CardDescription>}
+                            </div>
+                        ) : onSearchChange ? (
+                            <div className="relative w-full sm:w-fit sm:flex-1 sm:max-w-sm">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                <Input
+                                    placeholder={t("quotes.search.placeholder")}
+                                    value={searchTerm}
+                                    onChange={(e) => onSearchChange(e.target.value)}
+                                    className="pl-10 w-full"
+                                />
+                            </div>
+                        ) : null}
+                        <div className="flex items-center gap-2 sm:ml-auto">
+                            {onStatusFilterChange && (
+                                <div className="flex items-center gap-2">
+                                    <Badge
+                                        onClick={() => onStatusFilterChange(statusFilter === "draft" ? undefined : "draft")}
+                                        variant="outline"
+                                        className={`cursor-pointer text-sm px-3 py-1 rounded-full transition-all border-transparent ${statusFilter === "draft"
+                                            ? "bg-yellow-500 text-white font-semibold shadow-sm scale-105"
+                                            : "bg-yellow-50 text-yellow-700/70 hover:bg-yellow-100"
+                                            }`}
+                                    >
+                                        {t("quotes.filters.draft")} ({statusCounts?.draft ?? 0})
+                                    </Badge>
+                                    <Badge
+                                        onClick={() => onStatusFilterChange(statusFilter === "sent" ? undefined : "sent")}
+                                        variant="outline"
+                                        className={`cursor-pointer text-sm px-3 py-1 rounded-full transition-all border-transparent ${statusFilter === "sent"
+                                            ? "bg-blue-600 text-white font-semibold shadow-sm scale-105"
+                                            : "bg-blue-50 text-blue-700/70 hover:bg-blue-100"
+                                            }`}
+                                    >
+                                        {t("quotes.filters.sent")} ({statusCounts?.sent ?? 0})
+                                    </Badge>
+                                    <Badge
+                                        onClick={() => onStatusFilterChange(statusFilter === "signed" ? undefined : "signed")}
+                                        variant="outline"
+                                        className={`cursor-pointer text-sm px-3 py-1 rounded-full transition-all border-transparent ${statusFilter === "signed"
+                                            ? "bg-green-600 text-white font-semibold shadow-sm scale-105"
+                                            : "bg-green-50 text-green-700/70 hover:bg-green-100"
+                                            }`}
+                                    >
+                                        {t("quotes.filters.signed")} ({statusCounts?.signed ?? 0})
+                                    </Badge>
+                                </div>
+                            )}
+                            {showCreateButton && (
+                                <Button onClick={handleAddClick}>
+                                    <Plus className="h-4 w-4 mr-0 md:mr-2" />
+                                    <span className="hidden md:inline-flex">{t("quotes.list.actions.addNew")}</span>
+                                </Button>
+                            )}
                         </div>
-                        {showCreateButton && (
-                            <Button onClick={handleAddClick}>
-                                <Plus className="h-4 w-4 mr-0 md:mr-2" />
-                                <span className="hidden md:inline-flex">{t("quotes.list.actions.addNew")}</span>
-                            </Button>
-                        )}
                     </CardHeader>
 
                     <CardContent className="p-0">
@@ -187,7 +224,14 @@ export const QuoteList = forwardRef<QuoteListHandle, QuoteListProps>(
                                                 <div className="flex-1">
                                                     <div className="flex flex-wrap items-center gap-2">
                                                         <h3 className="font-medium text-foreground break-words">
-                                                            {t("quotes.list.item.title", { number: quote.rawNumber || quote.number, title: quote.title })}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleView(quote)}
+                                                                className="underline hover:text-primary text-left"
+                                                                data-cy={`view-quote-${quote.title?.replace(/\s+/g, '-').toLowerCase()}`}
+                                                            >
+                                                                {t("quotes.list.item.title", { number: quote.rawNumber || quote.number, title: quote.title })}
+                                                            </button>
                                                         </h3>
                                                         <span
                                                             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${getStatusColor(quote.status)}`}
@@ -234,17 +278,6 @@ export const QuoteList = forwardRef<QuoteListHandle, QuoteListProps>(
 
                                             <div className="grid grid-cols-2 lg:flex justify-start sm:justify-end gap-1 md:gap-2">
                                                 <Button
-                                                    tooltip={t("quotes.list.tooltips.view")}
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => handleView(quote)}
-                                                    className="text-gray-600 hover:text-blue-600"
-                                                    dataCy={`view-quote-${quote.title?.replace(/\s+/g, '-').toLowerCase()}`}
-                                                >
-                                                    <Eye className="h-4 w-4" />
-                                                </Button>
-
-                                                <Button
                                                     tooltip={t("quotes.list.tooltips.viewPdf")}
                                                     variant="ghost"
                                                     size="icon"
@@ -252,16 +285,6 @@ export const QuoteList = forwardRef<QuoteListHandle, QuoteListProps>(
                                                     className="text-gray-600 hover:text-pink-600"
                                                 >
                                                     <FileText className="h-4 w-4" />
-                                                </Button>
-
-                                                <Button
-                                                    tooltip={t("quotes.list.tooltips.downloadPdf")}
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => handleDownloadPdf(quote)}
-                                                    className="text-gray-600 hover:text-amber-600"
-                                                >
-                                                    <Download className="h-4 w-4" />
                                                 </Button>
 
                                                 {quote.status !== "SIGNED" && (
@@ -287,7 +310,7 @@ export const QuoteList = forwardRef<QuoteListHandle, QuoteListProps>(
                                                         }
                                                         variant="ghost"
                                                         size="icon"
-                                                        onClick={() => (!signatureLoading || quoteIdForSignature !== quote.id) && handleSendForSignature(quote.id)}
+                                                        onClick={() => (!signatureLoading || quoteIdForSignature !== quote.id) && handleSendForSignature(quote)}
                                                         className="text-gray-600 hover:text-blue-600"
                                                         disabled={signatureLoading && quoteIdForSignature === quote.id}
                                                     >
@@ -298,11 +321,16 @@ export const QuoteList = forwardRef<QuoteListHandle, QuoteListProps>(
                                                 {quote.status === "SIGNED" && (
                                                     <Button
                                                         data-cy={`create-invoice-${quote.id}`}
-                                                        tooltip={t("quotes.list.tooltips.createInvoice")}
+                                                        tooltip={
+                                                            invoicingStatuses?.[quote.id] !== undefined && invoicingStatuses[quote.id] <= 0
+                                                                ? t("quotes.createInvoiceDialog.errors.quoteFullyInvoiced")
+                                                                : t("quotes.list.tooltips.createInvoice")
+                                                        }
                                                         variant="ghost"
                                                         size="icon"
-                                                        onClick={() => handleCreateInvoice(quote.id)}
+                                                        onClick={() => handleCreateInvoice(quote)}
                                                         className="text-gray-600 hover:text-green-600"
+                                                        disabled={invoicingStatuses?.[quote.id] !== undefined && invoicingStatuses[quote.id] <= 0}
                                                     >
                                                         <Plus className="h-4 w-4" />
                                                     </Button>
@@ -341,7 +369,7 @@ export const QuoteList = forwardRef<QuoteListHandle, QuoteListProps>(
                     open={createQuoteDialog}
                     onOpenChange={(open) => {
                         setCreateQuoteDialog(open)
-                        if (!open) mutate && mutate()
+                        if (!open) mutate?.()
                     }}
                 />
 
@@ -350,7 +378,7 @@ export const QuoteList = forwardRef<QuoteListHandle, QuoteListProps>(
                     quote={editQuoteDialog}
                     onOpenChange={(open) => {
                         if (!open) setEditQuoteDialog(null)
-                        mutate && mutate()
+                        mutate?.()
                     }}
                 />
 
@@ -361,18 +389,34 @@ export const QuoteList = forwardRef<QuoteListHandle, QuoteListProps>(
                     }}
                 />
 
-                <QuotePdfModal
-                    quote={viewQuotePdfDialog}
-                    onOpenChange={(open) => {
-                        if (!open) setViewQuotePdfDialog(null)
-                    }}
-                />
-
                 <QuoteDeleteDialog
                     quote={deleteQuoteDialog}
                     onOpenChange={(open: boolean) => {
                         if (!open) setDeleteQuoteDialog(null)
-                        mutate && mutate()
+                        mutate?.()
+                    }}
+                />
+
+                <SendConfirmationDialog
+                    open={sendQuoteDialog != null}
+                    onOpenChange={(open: boolean) => {
+                        if (!open) setSendQuoteDialog(null)
+                    }}
+                    title={t("quotes.sendConfirmation.title")}
+                    description={t("quotes.sendConfirmation.description")}
+                    email={sendQuoteDialog?.client.contactEmail ?? ""}
+                    emailLabel={t("quotes.sendConfirmation.emailLabel")}
+                    confirmLabel={t("quotes.sendConfirmation.confirm")}
+                    cancelLabel={t("quotes.sendConfirmation.cancel")}
+                    onConfirm={confirmSendForSignature}
+                    loading={signatureLoading && quoteIdForSignature === sendQuoteDialog?.id}
+                />
+
+                <CreateInvoiceFromQuoteDialog
+                    quote={createInvoiceQuote}
+                    onOpenChange={(open: boolean) => {
+                        if (!open) setCreateInvoiceQuote(null)
+                        mutate?.()
                     }}
                 />
             </>

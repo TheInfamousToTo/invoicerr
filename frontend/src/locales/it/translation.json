@@ -1,1 +1,44 @@
-{}
+{
+    "clients": {
+        "header": {
+            "subtitle": "Gestisci i tuoi clienti",
+            "found": "trovato",
+            "count": "{{count}} clienti {{found}}"
+        },
+        "search": {
+            "placeholder": "Cerca clienti..."
+        },
+        "actions": {
+            "addNew": "Aggiungi Nuovi Clienti"
+        },
+        "stats": {
+            "total": "Clienti Totali",
+            "active": "Attivo",
+            "inactive": "Inattivo"
+        },
+        "emptyState": {
+            "noClients": "Nessun cliente",
+            "noResults": "Nessun cliente trovato",
+            "startAdding": "Inizia creando il tuo primo cliente.",
+            "tryDifferentSearch": "Prova a modificare i termini di ricerca."
+        },
+        "list": {
+            "title": "Tutti i Clienti",
+            "description": "Gestisci e visualizza tutti i tuoi clienti in un unico posto.",
+            "status": {
+                "active": "Attivo",
+                "inactive": "Inattivo"
+            },
+            "tooltips": {
+                "view": "Visualizza i dettagli del cliente",
+                "edit": "Modifca cliente",
+                "delete": "Elimina cliente"
+            }
+        },
+        "upsert": {
+            "title": {
+                "create": "Aggiungi Nuovo Cliente"
+            }
+        }
+    }
+}

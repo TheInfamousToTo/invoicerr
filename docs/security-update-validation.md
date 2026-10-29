@@ -2,7 +2,7 @@
 
 The fix branch updates Better Auth to 1.7.14, Handlebars to 4.7.10,
 simple-git to 4.0.2, and the locked proxy-addr dependency to 2.0.8.
-Prisma's generator, client, and PostgreSQL adapter are aligned at 7.6.0 to avoid
+Prisma's generator, client, and PostgreSQL adapter are aligned at 7.8.0 to avoid
 a missing query-compiler runtime module on startup.
 The runtime image now installs Chromium and shared libraries from Debian's
 current repositories rather than inheriting the external server image.
@@ -34,7 +34,7 @@ and signing keys used to verify identity tokens.
    `trivy image --severity CRITICAL --ignore-unfixed --exit-code 1 invoicerr:critical-fixes`
    Review and report remaining unfixed findings separately; passing this gate
    does not mean the image has zero vulnerabilities.
-7. Deploy to a disposable test database and SMTP service. Run all thirteen Cypress
+7. Deploy to a disposable test database and SMTP service. Run all fifteen Cypress
    specs in `e2e/cypress/e2e`, plus an OIDC login/logout and existing-account
    sign-in check. Verify invoice/quote/receipt PDFs and email attachments.
    The Cypress reset task resets its configured database; use a dedicated test

@@ -3,11 +3,28 @@ import type { Company } from "./company";
 import type { PaymentMethod } from "./payment-method";
 
 export enum InvoiceStatus {
+    DRAFT = 'DRAFT',
     PAID = 'PAID',
     UNPAID = 'UNPAID',
     OVERDUE = 'OVERDUE',
-    SENT = 'SENT'
+    SENT = 'SENT',
+    UPCOMING = 'UPCOMING',
+    ARCHIVED = 'ARCHIVED'
 }
+
+/**
+ * Display-only mapping: UNPAID invoices are shown as SENT in the UI without
+ * touching the underlying status stored in the database.
+ */
+export function getDisplayInvoiceStatus(status: InvoiceStatus | string): InvoiceStatus {
+    return status === InvoiceStatus.UNPAID ? InvoiceStatus.SENT : (status as InvoiceStatus)
+}
+
+/**
+ * Groups raw invoice statuses into the 4 categories filterable from the invoice list:
+ * SENT/UNPAID/OVERDUE are grouped under "sent".
+ */
+export type InvoiceStatusFilterKey = "draft" | "sent" | "paid" | "archived"
 
 export enum InvoiceItemType {
     HOUR = "HOUR",
@@ -20,12 +37,14 @@ export enum InvoiceItemType {
 export interface InvoiceItem {
     id: string;
     invoiceId: string;
-    description: string;
+    name: string;
+    description?: string;
     quantity: number;
     unitPrice: number;
     vatRate: number; // 20 for 20%
     type: InvoiceItemType;
     order: number;
+    quoteItemId?: string; // Link to the originating QuoteItem when created from a quote
 }
 
 export interface Invoice {
@@ -34,6 +53,7 @@ export interface Invoice {
     rawNumber?: string; // Optional raw number for custom formats
     title?: string; // Optional title from DTOs
     quoteId?: string;
+    recurringInvoiceId?: string;
     clientId: string;
     companyId: string;
     client: Client
@@ -53,6 +73,7 @@ export interface Invoice {
     totalTTC: number;
     currency: string; // Currency code, e.g., "EUR", "USD"
     isActive: boolean;
+    payments?: { id: string; totalPaid: number }[];
 }
 
 export enum RecurrenceFrequency {
@@ -69,7 +90,8 @@ export enum RecurrenceFrequency {
 export interface RecurringInvoiceItem {
     id: string;
     recurringInvoiceId: string;
-    description: string;
+    name: string;
+    description?: string;
     quantity: number;
     unitPrice: number;
     vatRate: number; // 20 for 20%

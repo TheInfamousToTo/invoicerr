@@ -1,6 +1,6 @@
 import { APP_GUARD } from '@nestjs/core';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
+import { ApiKeysModule } from './modules/api-keys/api-keys.module';
+import { ArticlesModule } from './modules/articles/articles.module';
 import { AuthExtendedModule } from './modules/auth-extended/auth-extended.module';
 import { AuthGuard } from '@/guards/auth.guard';
 import { AuthModule } from '@thallesp/nestjs-better-auth';
@@ -10,6 +10,7 @@ import { ConfigModule } from '@nestjs/config';
 import { DangerModule } from './modules/danger/danger.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { DirectoryModule } from './modules/directory/directory.module';
+import { HealthModule } from './modules/health/health.module';
 import { InvitationsModule } from './modules/invitations/invitations.module';
 import { InvoicesModule } from './modules/invoices/invoices.module';
 import { MailService } from './mail/mail.service';
@@ -18,10 +19,11 @@ import { PaymentMethodsModule } from './modules/payment-methods/payment-methods.
 import { PluginsModule } from './modules/plugins/plugins.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { QuotesModule } from './modules/quotes/quotes.module';
-import { ReceiptsModule } from './modules/receipts/receipts.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 import { RecurringInvoicesModule } from './modules/recurring-invoices/recurring-invoices.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { SignaturesModule } from './modules/signatures/signatures.module';
+import { SireneModule } from './modules/sirene/sirene.module';
 import { StatsModule } from './modules/stats/stats.module'
 import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { LoggerModule } from './modules/logger/logger.module';
@@ -34,16 +36,24 @@ import { auth } from "./lib/auth"
     }),
     ScheduleModule.forRoot(),
     AuthModule.forRoot({
-      auth
+      auth,
+      // We register our own global AuthGuard (src/guards/auth.guard.ts) which already replicates
+      // this library's session check (and the @Public() bypass) plus an API key fallback. Without
+      // this flag, the library's own guard runs in parallel and rejects API-key requests since it
+      // has no knowledge of API keys.
+      disableGlobalAuthGuard: true,
     }),
     AuthExtendedModule,
+    ApiKeysModule,
+    ArticlesModule,
     CompanyModule,
     ClientsModule,
     QuotesModule,
     InvoicesModule,
-    ReceiptsModule,
+    PaymentsModule,
     DashboardModule,
     SignaturesModule,
+    SireneModule,
     DangerModule,
     DirectoryModule,
     PluginsModule,
@@ -52,12 +62,12 @@ import { auth } from "./lib/auth"
     StatsModule,
     WebhooksModule,
     InvitationsModule,
+    HealthModule,
     PrismaModule,
     LoggerModule,
   ],
-  controllers: [AppController],
+  controllers: [],
   providers: [
-    AppService,
     MailService,
     {
       provide: APP_GUARD,
