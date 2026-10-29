@@ -38,6 +38,12 @@ RUN npm run build
 
 FROM ghcr.io/invoicerr-app/server-image:latest
 
+# Refresh runtime security fixes, including Chromium and Debian libraries, even when
+# the shared server image has not been rebuilt since the application release.
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/*
+
 # `playwright-core` ships no browser of its own — this points it at the Chromium already baked into
 # the base image (`ghcr.io/invoicerr-app/server-image`), the same binary the old PUPPETEER_EXECUTABLE_PATH
 # used to name (render-pdf.ts still honours that variable too, as a backward-compatibility alias, for
