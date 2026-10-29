@@ -1,0 +1,63 @@
+# Disposable validation stack. All database credentials below are test-only.
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: invoicerr
+      POSTGRES_PASSWORD: invoicerr
+      POSTGRES_DB: invoicerr_db
+    ports: ["127.0.0.1:5433:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U invoicerr -d invoicerr_db"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  mailpit:
+    image: axllent/mailpit
+    ports: ["127.0.0.1:8025:8025"]
+  app:
+    image: invoicerr:critical-fixes-e2e
+    build:
+      context: ..
+      args:
+        VITE_E2E_TESTING: "true"
+    environment:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://invoicerr:invoicerr@db:5432/invoicerr_db
+      APP_URL: http://localhost:6284
+      BETTER_AUTH_URL: http://localhost:6284
+      BETTER_AUTH_SECRET: disposable-security-validation-secret-20261029
+      CORS_ORIGINS: http://localhost:6284
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      SMTP_SECURE: "false"
+      SMTP_FROM: test@local.dev
+    ports: ["127.0.0.1:6284:80"]
+    depends_on:
+      db: {condition: service_healthy}
+      mailpit: {condition: service_started}
+  backend-tools:
+    image: invoicerr:critical-fixes-e2e
+    profiles: [tests]
+    entrypoint: ["sh", "-c"]
+    command: ["cp -a /usr/share/nginx/backend/. /validation-backend/"]
+    volumes: ["backend-tools:/validation-backend"]
+  e2e:
+    image: cypress/included:15.18.0
+    profiles: [tests]
+    network_mode: host
+    working_dir: /workspace/e2e
+    entrypoint: ["sh", "-c"]
+    command: ["npm ci --no-audit --no-fund && npm run e2e:run"]
+    environment:
+      CYPRESS_INSTALL_BINARY: "0"
+      FRONTEND_URL: http://localhost:6284
+      BACKEND_URL: http://localhost:6284
+      DATABASE_URL: postgresql://invoicerr:invoicerr@localhost:5433/invoicerr_db
+    volumes:
+      - ../e2e:/workspace/e2e
+      - backend-tools:/workspace/backend
+    depends_on:
+      backend-tools: {condition: service_completed_successfully}
+volumes:
+  backend-tools:

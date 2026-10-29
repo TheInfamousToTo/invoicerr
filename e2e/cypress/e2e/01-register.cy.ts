@@ -13,6 +13,7 @@ describe('First User Registration E2E', () => {
             cy.get('[data-cy="auth-email-input"]').type('john.doe@acme.org');
             cy.get('[data-cy="auth-password-input"]').type('Super_Secret_Password123!');
             cy.get('[data-cy="auth-submit-btn"]').click();
+            cy.wait('@authRequest').its('response.statusCode').should('be.oneOf', [200, 201]);
             cy.url({ timeout: 20000 }).should('include', '/auth/sign-in');
         });
 
@@ -22,6 +23,7 @@ describe('First User Registration E2E', () => {
             cy.get('[data-cy="auth-email-input"]').type('john.doe@acme.org');
             cy.get('[data-cy="auth-password-input"]').type('Super_Secret_Password123!');
             cy.get('[data-cy="auth-submit-btn"]').click();
+            cy.wait('@authRequest').its('response.statusCode').should('eq', 200);
             cy.url({ timeout: 20000 }).should('include', '/dashboard');
             cy.getCookie('better-auth.session_token').should('exist');
         });

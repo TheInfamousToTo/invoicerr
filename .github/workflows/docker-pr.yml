@@ -17,4 +17,19 @@ jobs:
         with:
           context: .
           push: false
+          load: true
+          tags: invoicerr:pr-validation
           platforms: linux/amd64
+
+      - name: Verify runtime packages and PDF rendering
+        run: |
+          docker run --rm --entrypoint node \
+            -v "$GITHUB_WORKSPACE/scripts:/checks:ro" \
+            invoicerr:pr-validation /checks/container-smoke.cjs
+
+      - name: Reject fixable critical image vulnerabilities
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:0.74.0 image --scanners vuln \
+            --severity CRITICAL --ignore-unfixed --exit-code 1 invoicerr:pr-validation

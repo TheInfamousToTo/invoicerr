@@ -16,7 +16,7 @@ jobs:
         ports:
           - "5433:5432"
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U invoicerr -d invoicerr_db"
           --health-interval 2s
           --health-retries 10
       mailpit:
@@ -31,7 +31,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install backend dependencies
         run: |
@@ -50,11 +50,18 @@ jobs:
           cd e2e
           npm ci
 
+      - name: Run unit and security regression tests
+        run: |
+          npm --prefix backend test -- --runInBand
+          node --test scripts/security-regression.test.cjs
+          npm --prefix backend audit --audit-level=critical
+          npm --prefix frontend audit --audit-level=critical
+          npm --prefix e2e audit --audit-level=critical
+          npm --prefix documentation audit --audit-level=critical
+
       - name: Wait for DB
         run: |
-          npx wait-on tcp:5433 --timeout 60
-          npx wait-on tcp:8025 --timeout 60
-          npx wait-on tcp:1025 --timeout 60
+          ./e2e/node_modules/.bin/wait-on tcp:5433 tcp:8025 tcp:1025 --timeout 60000
 
       - name: Run backend, frontend & tests
         run: |
@@ -63,6 +70,7 @@ jobs:
           (cd $GITHUB_WORKSPACE/backend && npx dotenv -e .env.test -- node node_modules/.bin/prisma migrate dev 2>&1)
           (cd $GITHUB_WORKSPACE/backend && npm run start:test > $GITHUB_WORKSPACE/logs/backend.log 2>&1 &)
           (cd $GITHUB_WORKSPACE/frontend && npm run start:test > /dev/null 2>&1 &)
+          ./e2e/node_modules/.bin/wait-on http-get://localhost:4000/api/health http-get://localhost:6284 --timeout 120000
           (cd $GITHUB_WORKSPACE/e2e && npm run e2e:run)
 
       - name: Upload backend logs

@@ -24,8 +24,12 @@ const createOidcConfig = (): GenericOAuthConfig[] => {
         config.clientSecret = process.env.OIDC_CLIENT_SECRET;
     }
 
-    if (process.env.OIDC_JWKS_URI) {
-        config.discoveryUrl = process.env.OIDC_JWKS_URI;
+    const discoveryUrl = process.env.OIDC_DISCOVERY_URL || (process.env.OIDC_ISSUER
+        ? `${process.env.OIDC_ISSUER.replace(/\/$/, '')}/.well-known/openid-configuration`
+        : undefined);
+    if (discoveryUrl) {
+        config.discoveryUrl = discoveryUrl;
+        config.requireIdTokenVerification = true;
     } else {
         if (process.env.OIDC_AUTHORIZATION_ENDPOINT) {
             config.authorizationUrl = process.env.OIDC_AUTHORIZATION_ENDPOINT;
@@ -113,7 +117,7 @@ const userAfterCreateHook = async (user) => {
 };
 
 export const auth = betterAuth({    
-    baseUrl: process.env.APP_URL || 'http://localhost:3000',
+    baseURL: process.env.APP_URL || 'http://localhost:3000',
     trustedOrigins: ['http://localhost:5173', process.env.APP_URL, ...(process.env.CORS_ORIGINS?.split(',').map(o => o.trim()) || [])].filter((origin): origin is string => typeof origin === 'string'),
     database: prismaAdapter(prisma, {
         provider: "postgresql",

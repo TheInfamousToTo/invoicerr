@@ -3,6 +3,9 @@ import { execSync } from "child_process";
 import path from "path";
 
 export default defineConfig({
+  env: {
+    apiUrl: process.env.BACKEND_URL || "http://localhost:4000",
+  },
   e2e: {
     video: true,
     experimentalStudio: true,

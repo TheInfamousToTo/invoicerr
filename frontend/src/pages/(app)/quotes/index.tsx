@@ -1,22 +1,50 @@
-import { Card, CardContent } from "@/components/ui/card"
-import { FileText, Plus, Search } from "lucide-react"
+import { FileText, GitBranch, List, Plus, Table2 } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
-import { useGetRaw, useSse } from "@/hooks/use-fetch"
+import { authenticatedFetch, useGetRaw, usePost } from "@/hooks/use-fetch"
+import { useQuotes } from "@/hooks/queries"
+import { useQueryClient } from "@tanstack/react-query"
+import { queryKeys } from "@/lib/query-keys"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { Quote } from "@/types"
+import { CreateInvoiceFromQuoteDialog } from "@/pages/(app)/quotes/_components/create-invoice-from-quote-dialog"
 import { QuoteList } from "@/pages/(app)/quotes/_components/quote-list"
 import type { QuoteListHandle } from "@/pages/(app)/quotes/_components/quote-list"
+import { QuoteProgression } from "@/pages/(app)/quotes/_components/quote-progression"
+import { QuoteTable } from "@/pages/(app)/quotes/_components/quote-table"
+import { QuoteViewDialog } from "@/pages/(app)/quotes/_components/quote-view"
+import { usePageHeader } from "@/hooks/use-page-header"
+import { useSearchParams } from "react-router"
 import { useTranslation } from "react-i18next"
+import { toast } from "sonner"
+import { cn } from "@/lib/utils"
+
+type QuoteStatusFilter = "draft" | "sent" | "signed" | undefined
+type QuoteView = "list" | "progression" | "table"
+
+const QUOTE_VIEWS: QuoteView[] = ["list", "progression", "table"]
+
+interface QuoteInvoicingStatus {
+    remainingPercent: number
+}
 
 export default function Quotes() {
     const { t } = useTranslation()
+    const queryClient = useQueryClient()
     const quoteListRef = useRef<QuoteListHandle>(null)
     const [page, setPage] = useState(1)
-    const { data: quotes } = useSse<{ pageCount: number; quotes: Quote[] }>(`/api/quotes/sse?page=${page}`)
+    const { data: quotes } = useQuotes(page)
     const [downloadQuotePdf, setDownloadQuotePdf] = useState<Quote | null>(null)
-    const { data: pdf } = useGetRaw<Response>(`/api/quotes/${downloadQuotePdf?.id}/pdf`)
+    const [viewQuoteDialog, setViewQuoteDialog] = useState<Quote | null>(null)
+    const [createInvoiceQuote, setCreateInvoiceQuote] = useState<Quote | null>(null)
+    const [invoicingStatuses, setInvoicingStatuses] = useState<Record<string, number>>({})
+    const [statusVersion, setStatusVersion] = useState(0)
+    const { data: pdf } = useGetRaw<Response>(downloadQuotePdf ? `/api/quotes/${downloadQuotePdf.id}/pdf` : null)
+
+    const { trigger: triggerSendForSignature } = usePost<{ message: string; signature: { id: string } }>(
+        `/api/signatures`,
+    )
 
     useEffect(() => {
         if (downloadQuotePdf && pdf) {
@@ -35,14 +63,80 @@ export default function Quotes() {
         }
     }, [downloadQuotePdf, pdf])
 
+    // Load invoicing status for signed quotes so the "create invoice" buttons can
+    // be disabled when a quote is already fully invoiced.
+    useEffect(() => {
+        const signedQuotes = (quotes?.quotes || []).filter((q) => q.status === "SIGNED")
+        if (signedQuotes.length === 0) {
+            setInvoicingStatuses({})
+            return
+        }
+        const baseUrl = import.meta.env.VITE_BACKEND_URL || ""
+        Promise.all(
+            signedQuotes.map((q) =>
+                authenticatedFetch(`${baseUrl}/api/quotes/${q.id}/invoicing-status`)
+                    .then((r) => (r.ok ? r.json() : null))
+                    .then((data: QuoteInvoicingStatus | null) => [q.id, data?.remainingPercent ?? 0] as const)
+                    .catch(() => [q.id, 0] as const),
+            ),
+        ).then((entries) => {
+            setInvoicingStatuses(Object.fromEntries(entries as [string, number][]))
+        })
+    }, [quotes, statusVersion])
+
     const [searchTerm, setSearchTerm] = useState("")
+    const [statusFilter, setStatusFilter] = useState<QuoteStatusFilter>(undefined)
+    const [searchParams, setSearchParams] = useSearchParams()
+    const viewParam = searchParams.get("view")
+    const view: QuoteView = QUOTE_VIEWS.includes(viewParam as QuoteView) ? (viewParam as QuoteView) : "list"
+    const setView = (next: QuoteView) => {
+        setSearchParams((params) => {
+            const updated = new URLSearchParams(params)
+            if (next === "list") updated.delete("view")
+            else updated.set("view", next)
+            return updated
+        })
+    }
 
     const filteredQuotes =
         quotes?.quotes.filter(
             (quote) =>
-                quote.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                quote.status.toLowerCase().includes(searchTerm.toLowerCase()),
+                (quote.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    quote.rawNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    quote.number?.toString().includes(searchTerm) ||
+                    quote.client?.name?.toLowerCase().includes(searchTerm.toLowerCase())) &&
+                (!statusFilter ||
+                    (statusFilter === "draft" && quote.status === "DRAFT") ||
+                    (statusFilter === "sent" && quote.status === "SENT") ||
+                    (statusFilter === "signed" && quote.status === "SIGNED")),
         ) || []
+
+    const quoteStatusCounts = {
+        draft: quotes?.quotes.filter((q) => q.status === "DRAFT").length || 0,
+        sent: quotes?.quotes.filter((q) => q.status === "SENT").length || 0,
+        signed: quotes?.quotes.filter((q) => q.status === "SIGNED").length || 0,
+    }
+
+    usePageHeader(t("sidebar.navigation.quotes"))
+
+    const handleSendForSignature = (quote: Quote) => {
+        triggerSendForSignature({ quoteId: quote.id })
+            .then((data) => {
+                if (!data || !data.signature) {
+                    toast.error(t("quotes.list.messages.sendSignatureError"))
+                    return
+                }
+                toast.success(t("quotes.list.messages.sendSignatureSuccess"))
+                queryClient.invalidateQueries({ queryKey: queryKeys.quotes.listsAll() })
+            })
+            .catch(() => {
+                toast.error(t("quotes.list.messages.sendSignatureError"))
+            })
+    }
+
+    const handleCreateInvoiceFromQuote = (quote: Quote) => {
+        setCreateInvoiceQuote(quote)
+    }
 
     const emptyState = (
         <div className="text-center py-12">
@@ -65,103 +159,72 @@ export default function Quotes() {
     )
 
     return (
-        <div className="max-w-7xl mx-auto space-y-6 p-6">
-            <div className="flex flex-col lg:flex-row items-start lg:items-center gap-4 lg:gap-0 lg:justify-between">
-                <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                        <FileText className="h-5 w-5 text-blue-600" />
-                    </div>
-                    <div>
-                        <div className="text-sm text-primary">{t("quotes.header.subtitle")}</div>
-                        <div className="font-medium text-foreground">
-                            {t("quotes.header.count", {
-                                count: filteredQuotes.length,
-                                found: searchTerm ? t("quotes.header.found") : "",
-                            })}
-                        </div>
-                    </div>
-                </div>
-
-                <div className="flex flex-row items-center gap-4 w-full lg:w-fit lg:gap-6 lg:justify-between">
-                    <div className="relative w-full lg:w-fit">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <Input
-                            placeholder={t("quotes.search.placeholder")}
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10 w-full"
-                        />
-                    </div>
-                    <Button onClick={() => quoteListRef.current?.handleAddClick()}>
-                        <Plus className="h-4 w-4 mr-0 md:mr-2" />
-                        <span className="hidden md:inline-flex">{t("quotes.actions.addNew")}</span>
-                    </Button>
-                </div>
+        <div className={cn("mx-auto space-y-6 p-6", view === "progression" || view === "table" ? "max-w-screen-2xl" : "max-w-7xl")}>
+            <div className="flex justify-end">
+                <Tabs value={view} onValueChange={(value) => setView(value as QuoteView)}>
+                    <TabsList>
+                        <TabsTrigger value="list" data-cy="quote-view-list">
+                            <List className="h-4 w-4 mr-2" />
+                            {t("quotes.views.list")}
+                        </TabsTrigger>
+                        <TabsTrigger value="progression" data-cy="quote-view-progression">
+                            <GitBranch className="h-4 w-4 mr-2" />
+                            {t("quotes.progression.title")}
+                        </TabsTrigger>
+                        <TabsTrigger value="table" data-cy="quote-view-table">
+                            <Table2 className="h-4 w-4 mr-2" />
+                            {t("quotes.views.table")}
+                        </TabsTrigger>
+                    </TabsList>
+                </Tabs>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <Card>
-                    <CardContent>
-                        <div className="flex items-center space-x-4">
-                            <div className="p-3 bg-blue-100 rounded-lg">
-                                <FileText className="h-6 w-6 text-blue-600" />
-                            </div>
-                            <div>
-                                <p className="text-2xl font-semibold text-foreground">{quotes?.quotes.length || 0}</p>
-                                <p className="text-sm text-primary">{t("quotes.stats.total")}</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+            {view === "progression" ? (
+                <>
+                    <QuoteProgression
+                        quotes={filteredQuotes}
+                        onSend={handleSendForSignature}
+                        onResend={handleSendForSignature}
+                        onCreateInvoice={handleCreateInvoiceFromQuote}
+                        onViewQuote={setViewQuoteDialog}
+                        invoicingStatuses={invoicingStatuses}
+                    />
+                    <QuoteViewDialog
+                        quote={viewQuoteDialog}
+                        onOpenChange={(open: boolean) => {
+                            if (!open) setViewQuoteDialog(null)
+                        }}
+                    />
+                </>
+            ) : view === "table" ? (
+                <QuoteTable />
+            ) : (
+                <QuoteList
+                    ref={quoteListRef}
+                    quotes={filteredQuotes}
+                    loading={false}
+                    searchTerm={searchTerm}
+                    onSearchChange={setSearchTerm}
+                    statusFilter={statusFilter}
+                    onStatusFilterChange={setStatusFilter}
+                    statusCounts={quoteStatusCounts}
+                    page={page}
+                    pageCount={quotes?.pageCount || 1}
+                    setPage={setPage}
+                    emptyState={emptyState}
+                    showCreateButton={true}
+                    invoicingStatuses={invoicingStatuses}
+                />
+            )}
 
-                <Card>
-                    <CardContent>
-                        <div className="flex items-center space-x-4">
-                            <div className="p-3 bg-yellow-100 rounded-lg">
-                                <div className="w-6 h-6 flex items-center justify-center">
-                                    <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                                </div>
-                            </div>
-                            <div>
-                                <p className="text-2xl font-semibold text-foreground">
-                                    {quotes?.quotes.filter((c) => c.status === "DRAFT").length || 0}
-                                </p>
-                                <p className="text-sm text-primary">{t("quotes.stats.draft")}</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardContent>
-                        <div className="flex items-center space-x-4">
-                            <div className="p-3 bg-blue-100 rounded-lg">
-                                <div className="w-6 h-6 flex items-center justify-center">
-                                    <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                                </div>
-                            </div>
-                            <div>
-                                <p className="text-2xl font-semibold text-foreground">
-                                    {quotes?.quotes.filter((c) => c.status === "SIGNED").length || 0}
-                                </p>
-                                <p className="text-sm text-primary">{t("quotes.stats.signed")}</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            <QuoteList
-                ref={quoteListRef}
-                quotes={filteredQuotes}
-                loading={false}
-                title={t("quotes.list.title")}
-                description={t("quotes.list.description")}
-                page={page}
-                pageCount={quotes?.pageCount || 1}
-                setPage={setPage}
-                emptyState={emptyState}
-                showCreateButton={true}
+            <CreateInvoiceFromQuoteDialog
+                quote={createInvoiceQuote}
+                onOpenChange={(open: boolean) => {
+                    if (!open) setCreateInvoiceQuote(null)
+                    queryClient.invalidateQueries({ queryKey: queryKeys.quotes.listsAll() })
+                    queryClient.invalidateQueries({ queryKey: queryKeys.invoices.listsAll() })
+                    setStatusVersion((v) => v + 1)
+                }}
             />
         </div>
     )
