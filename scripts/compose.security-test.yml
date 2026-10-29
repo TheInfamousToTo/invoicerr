@@ -52,6 +52,7 @@ services:
     environment:
       CYPRESS_INSTALL_BINARY: "0"
       FRONTEND_URL: http://localhost:6284
+      BACKEND_URL: http://localhost:6284
       DATABASE_URL: postgresql://invoicerr:invoicerr@localhost:5433/invoicerr_db
     volumes:
       - ../e2e:/workspace/e2e
